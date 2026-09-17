@@ -13,6 +13,8 @@ New feature work follows this flow, in order:
 
 Unsure which skill applies next? `/ask-matt`.
 
+No e2e/browser automation exists here — when a ticket needs runtime proof, ask the user to test it manually and report the result before ticking boxes or committing.
+
 ## Commits
 
 Atomic: group by logical concern (a new package, a new app, a ticket-status update are separate commits), not one commit per session. Draft every message with `/caveman-commit` before running `git commit`.
