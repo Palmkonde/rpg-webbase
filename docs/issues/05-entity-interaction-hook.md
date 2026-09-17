@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**Architecture note:** see `docs/adr/0004-size-engine-event-contract-up-front.md`. The `EngineEvent` union will already reserve an `interacted` variant when 03 lands — its exact fields (e.g. `entityId`) are provisional until this ticket is implemented.
+
 - [ ] An Entity object can be authored on a Map (position only — the Engine has no concept of what it represents)
 - [ ] An interact input (e.g. a dedicated key) fires only when the Player is adjacent to/facing an Entity
 - [ ] The Engine emits an Interaction Engine Event identifying which Entity was interacted with
