@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "grid-engine": "^2.52.1",
     "phaser": "~4.0.0"
   },
   "devDependencies": {
