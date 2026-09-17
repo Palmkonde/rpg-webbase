@@ -14,13 +14,19 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }) {
     let game: Awaited<ReturnType<typeof createEngine>> | undefined
     let cancelled = false
 
-    createEngine(containerRef.current, worldConfig, maps).then((created) => {
-      if (cancelled) {
-        created.destroy(true)
-      } else {
-        game = created
-      }
-    })
+    createEngine(containerRef.current, worldConfig, maps)
+      .then((created) => {
+        if (cancelled) {
+          created.destroy(true)
+        } else {
+          game = created
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          console.error('Failed to start game engine:', error)
+        }
+      })
 
     return () => {
       cancelled = true
