@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveTilesetAssetUrl, collectTileProperties } from '../src/tiledAssets.ts'
+import { resolveTilesetAssetUrl, collectTileProperties, collectTileAnimations } from '../src/tiledAssets.ts'
 
 const tiledMapUrl = '/assets/maps/main_test.tmj'
 const origin = 'http://localhost'
@@ -78,4 +78,75 @@ test('collectTileProperties skips tiles with no properties', () => {
     ],
   }
   assert.deepEqual(collectTileProperties(raw), new Map([[65, { ge_collide: false }]]))
+})
+
+test('collectTileAnimations converts frame tileids to gids using the owning tileset firstgid', () => {
+  const raw = {
+    tilesets: [
+      {
+        name: 'animationObject',
+        firstgid: 109,
+        tiles: [
+          {
+            id: 1,
+            animation: [
+              { tileid: 1, duration: 100 },
+              { tileid: 2, duration: 100 },
+            ],
+          },
+          { id: 2 },
+        ],
+      },
+    ],
+  }
+  assert.deepEqual(
+    collectTileAnimations(raw),
+    new Map([
+      [
+        110,
+        [
+          { gid: 110, duration: 100 },
+          { gid: 111, duration: 100 },
+        ],
+      ],
+    ]),
+  )
+})
+
+test('collectTileAnimations skips tiles with no animation', () => {
+  const raw = {
+    tilesets: [
+      {
+        name: 'objects',
+        firstgid: 65,
+        tiles: [{ id: 0, image: 'fence.png' }],
+      },
+    ],
+  }
+  assert.deepEqual(collectTileAnimations(raw), new Map())
+})
+
+test('collectTileAnimations keys frames per tileset when multiple tilesets are present', () => {
+  const raw = {
+    tilesets: [
+      { name: 'ground', firstgid: 1, image: 'ground.png' },
+      {
+        name: 'animationObject',
+        firstgid: 109,
+        tiles: [{ id: 1, animation: [{ tileid: 1, duration: 100 }, { tileid: 2, duration: 150 }] }],
+      },
+    ],
+  }
+  assert.deepEqual(
+    collectTileAnimations(raw),
+    new Map([
+      [
+        110,
+        [
+          { gid: 110, duration: 100 },
+          { gid: 111, duration: 150 },
+        ],
+      ],
+    ]),
+  )
 })

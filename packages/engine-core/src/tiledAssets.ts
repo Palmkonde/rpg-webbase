@@ -3,10 +3,16 @@ interface TiledTilePropertyDef {
   value: unknown
 }
 
+interface TiledAnimationFrameDef {
+  tileid: number
+  duration: number
+}
+
 interface TiledTileDef {
   id: number
   image?: string
   properties?: TiledTilePropertyDef[]
+  animation?: TiledAnimationFrameDef[]
 }
 
 interface TiledTilesetDef {
@@ -25,28 +31,58 @@ export interface ImageToLoad {
   url: string
 }
 
+export interface AnimationFrame {
+  gid: number
+  duration: number
+}
+
 export interface TiledMapAssets {
   images: ImageToLoad[]
   tileProperties: Map<number, Record<string, unknown>>
+  tileAnimations: Map<number, AnimationFrame[]>
+}
+
+// Build a gid-keyed Map by extracting one value per tile across all tilesets, skipping tiles
+// where extract returns undefined
+function collectByTile<T>(
+  raw: TiledMapJson,
+  extract: (tile: TiledTileDef, firstgid: number) => T | undefined,
+): Map<number, T> {
+  const result = new Map<number, T>()
+
+  for (const tileset of raw.tilesets) {
+    for (const tile of tileset.tiles ?? []) {
+      const value = extract(tile, tileset.firstgid)
+      if (value !== undefined) {
+        result.set(tileset.firstgid + tile.id, value)
+      }
+    }
+  }
+
+  return result
 }
 
 // Extract properites from Tiled
 export function collectTileProperties(raw: TiledMapJson): Map<number, Record<string, unknown>> {
-  const properties = new Map<number, Record<string, unknown>>()
-
-  for (const tileset of raw.tilesets) {
-    for (const tile of tileset.tiles ?? []) {
-      if (!tile.properties || tile.properties.length === 0) continue
-      const gid = tileset.firstgid + tile.id
-      const merged: Record<string, unknown> = {}
-      for (const prop of tile.properties) {
-        merged[prop.name] = prop.value
-      }
-      properties.set(gid, merged)
+  return collectByTile(raw, (tile) => {
+    if (!tile.properties || tile.properties.length === 0) return undefined
+    const merged: Record<string, unknown> = {}
+    for (const prop of tile.properties) {
+      merged[prop.name] = prop.value
     }
-  }
+    return merged
+  })
+}
 
-  return properties
+// Extract per-tile animation frames from Tiled, keyed by the animated tile's own gid
+export function collectTileAnimations(raw: TiledMapJson): Map<number, AnimationFrame[]> {
+  return collectByTile(raw, (tile, firstgid) => {
+    if (!tile.animation || tile.animation.length === 0) return undefined
+    return tile.animation.map((frame) => ({
+      gid: firstgid + frame.tileid,
+      duration: frame.duration,
+    }))
+  })
 }
 
 export function resolveTilesetAssetUrl(embeddedPath: string, tiledMapUrl: string, origin: string): string {
@@ -74,5 +110,5 @@ export async function collectTiledMapAssets(tiledMapUrl: string): Promise<TiledM
     }
   }
 
-  return { images, tileProperties: collectTileProperties(raw) }
+  return { images, tileProperties: collectTileProperties(raw), tileAnimations: collectTileAnimations(raw) }
 }
