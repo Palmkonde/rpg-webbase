@@ -17,6 +17,8 @@ No e2e/browser automation exists here — when a ticket needs runtime proof, ask
 
 ## Commits
 
+After `/code-review`, let the user review the diff too — wait for their go-ahead before running `git commit`.
+
 Atomic: group by logical concern (a new package, a new app, a ticket-status update are separate commits), not one commit per session. Draft every message with `/caveman-commit` before running `git commit`.
 
 ## Where decisions live
