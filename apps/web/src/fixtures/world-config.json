@@ -1,6 +1,6 @@
 {
   "mapId": "main-test",
   "player": {
-    "spawn": { "x": 0, "y": 0 }
+    "spawn": { "x": 2, "y": 2 }
   }
 }

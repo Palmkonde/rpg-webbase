@@ -1,10 +1,23 @@
 import * as Phaser from 'phaser'
+import { GridEngine, Direction } from 'grid-engine'
 import { resolveMap } from './worldConfig.ts'
-import { collectTilesetImages, type ImageToLoad } from './tiledAssets.ts'
+import { collectTiledMapAssets, type ImageToLoad } from './tiledAssets.ts'
+import { loadPlayerTexture } from './playerAssets.ts'
 import type { MapDefinition, WorldConfig } from './types.ts'
 
-function createMapScene(map: MapDefinition, tilesetImages: ImageToLoad[]) {
+const PLAYER_ID = 'player'
+
+function createMapScene(
+  map: MapDefinition,
+  tilesetImages: ImageToLoad[],
+  worldConfig: WorldConfig,
+  tileProperties: Map<number, Record<string, unknown>>,
+) {
   return class MapScene extends Phaser.Scene {
+    declare gridEngine: GridEngine
+    private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
+    private wasd!: Record<'W' | 'A' | 'S' | 'D', Phaser.Input.Keyboard.Key>
+
     constructor() {
       super('MapScene')
     }
@@ -26,7 +39,49 @@ function createMapScene(map: MapDefinition, tilesetImages: ImageToLoad[]) {
       tilemap.layers.forEach((layerData, index) => {
         const layer = tilemap.createLayer(index, tilemap.tilesets, 0, 0)
         layer?.setVisible(layerData.visible)
+        layer?.forEachTile((tile) => {
+          const props = tileProperties.get(tile.index)
+          if (props) {
+            Object.assign(tile.properties, props)
+          }
+        })
       })
+
+      const playerTextureKey = loadPlayerTexture(this, tilemap.tileWidth, tilemap.tileHeight)
+      const playerSprite = this.add.sprite(0, 0, playerTextureKey)
+
+      this.gridEngine.create(tilemap, {
+        characters: [
+          {
+            id: PLAYER_ID,
+            sprite: playerSprite,
+            startPosition: { x: worldConfig.player.spawn.x, y: worldConfig.player.spawn.y },
+          },
+        ],
+      })
+
+      this.cursors = this.input.keyboard!.createCursorKeys()
+      this.wasd = this.input.keyboard!.addKeys('W,A,S,D') as Record<
+        'W' | 'A' | 'S' | 'D',
+        Phaser.Input.Keyboard.Key
+      >
+    }
+
+    update() {
+      const left = this.cursors.left.isDown || this.wasd.A.isDown
+      const right = this.cursors.right.isDown || this.wasd.D.isDown
+      const up = this.cursors.up.isDown || this.wasd.W.isDown
+      const down = this.cursors.down.isDown || this.wasd.S.isDown
+
+      if (left) {
+        this.gridEngine.move(PLAYER_ID, Direction.LEFT)
+      } else if (right) {
+        this.gridEngine.move(PLAYER_ID, Direction.RIGHT)
+      } else if (up) {
+        this.gridEngine.move(PLAYER_ID, Direction.UP)
+      } else if (down) {
+        this.gridEngine.move(PLAYER_ID, Direction.DOWN)
+      }
     }
   }
 }
@@ -37,7 +92,7 @@ export async function createEngine(
   maps: MapDefinition[],
 ): Promise<Phaser.Game> {
   const map = resolveMap(worldConfig, maps)
-  const tilesetImages = await collectTilesetImages(map.tiledMapUrl)
+  const { images: tilesetImages, tileProperties } = await collectTiledMapAssets(map.tiledMapUrl)
 
   return new Phaser.Game({
     type: Phaser.AUTO,
@@ -45,6 +100,9 @@ export async function createEngine(
     width: container.clientWidth || 640,
     height: container.clientHeight || 480,
     pixelArt: true,
-    scene: createMapScene(map, tilesetImages),
+    scene: createMapScene(map, tilesetImages, worldConfig, tileProperties),
+    plugins: {
+      scene: [{ key: 'gridEngine', plugin: GridEngine, mapping: 'gridEngine' }],
+    },
   })
 }
