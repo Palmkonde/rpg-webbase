@@ -31,6 +31,7 @@ The Engine owns:
 - Grid-based keyboard movement (desktop-first, no touch)
 - Map transitions: both edge-walk (off a map's boundary into an adjacent map) and Portal (authored teleport tiles/objects)
 - A generic "Player interacted with Entity" hook
+- Tiled-authored ambient/decorative tile animation (e.g. the campfire) — any tile carrying Tiled's per-tile `animation` metadata plays back generically, unconditional and Engine-owned like the rest of rendering, not gated by World Config. See `adr/0003-animate-tiles-by-cycling-tilemap-index.md` for the rendering mechanism.
 
 Single-player only — no multiplayer/shared-world sync.
 
@@ -38,6 +39,7 @@ Single-player only — no multiplayer/shared-world sync.
 
 - **Dialogue content, quests, XP, inventory, progression rules** — these belong to the Host/main-repo backend, not the Engine. The Engine only ever reports "Player interacted with Entity X"; it has no idea what that means.
 - **Ink language integration** for dialogue authoring — skip until needed, not designed now.
+- **Player walk-cycle / directional animation** — a different mechanism than Tiled's per-tile animation (spritesheet + grid-engine facing state); not designed yet.
 
 ## Open
 
@@ -52,5 +54,6 @@ This repo can't reach the main monorepo's real database, so player/world state i
 - Multiple Tiled maps
 - A character walking via grid-engine + keyboard
 - At least one edge-walk transition and one Portal transition wired up between maps
+- Ambient/decorative Tiled-authored tile animation renders (e.g. the campfire)
 - All driven by the local JSON fixture (no real backend)
 - No dialogue/quests/XP UI yet — out of scope for this phase
