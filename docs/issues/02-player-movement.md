@@ -4,9 +4,9 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] grid-engine is wired into the Engine for grid-based movement
-- [ ] The World Config's Spawn Point determines where the Player first appears
-- [ ] Arrow keys (or WASD) move the Player exactly one grid cell per press/hold, snapping to the grid
-- [ ] The Player cannot walk through tiles marked as blocked/collidable on the Map
+- [x] grid-engine is wired into the Engine for grid-based movement
+- [x] The World Config's Spawn Point determines where the Player first appears
+- [x] Arrow keys (or WASD) move the Player exactly one grid cell per press/hold, snapping to the grid
+- [x] The Player cannot walk through tiles marked as blocked/collidable on the Map
