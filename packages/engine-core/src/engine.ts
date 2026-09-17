@@ -1,52 +1,7 @@
 import * as Phaser from 'phaser'
 import { resolveMap } from './worldConfig.ts'
+import { collectTilesetImages, type ImageToLoad } from './tiledAssets.ts'
 import type { MapDefinition, WorldConfig } from './types.ts'
-
-interface TiledTileDef {
-  image?: string
-}
-
-interface TiledTilesetDef {
-  name: string
-  image?: string
-  tiles?: TiledTileDef[]
-}
-
-interface TiledMapJson {
-  tilesets: TiledTilesetDef[]
-}
-
-interface ImageToLoad {
-  key: string
-  url: string
-}
-
-function resolveTilesetAssetUrl(embeddedPath: string, tiledMapUrl: string): string {
-  const marker = 'tilesets/'
-  const markerIndex = embeddedPath.lastIndexOf(marker)
-  const stablePath = markerIndex === -1 ? embeddedPath : embeddedPath.slice(markerIndex)
-  const mapUrl = new URL(tiledMapUrl, window.location.origin)
-  return new URL(`../${stablePath}`, mapUrl).href
-}
-
-async function collectTilesetImages(tiledMapUrl: string): Promise<ImageToLoad[]> {
-  const response = await fetch(tiledMapUrl)
-  const raw = (await response.json()) as TiledMapJson
-  const images: ImageToLoad[] = []
-
-  for (const tileset of raw.tilesets) {
-    if (tileset.image) {
-      images.push({ key: tileset.name, url: resolveTilesetAssetUrl(tileset.image, tiledMapUrl) })
-    }
-    for (const tile of tileset.tiles ?? []) {
-      if (tile.image) {
-        images.push({ key: tile.image, url: resolveTilesetAssetUrl(tile.image, tiledMapUrl) })
-      }
-    }
-  }
-
-  return images
-}
 
 function createMapScene(map: MapDefinition, tilesetImages: ImageToLoad[]) {
   return class MapScene extends Phaser.Scene {
