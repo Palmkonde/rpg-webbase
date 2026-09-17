@@ -1,3 +1,5 @@
+import { resolveTilesetAssetUrl } from './util.ts'
+
 interface TiledTilePropertyDef {
   name: string
   value: unknown
@@ -42,8 +44,7 @@ export interface TiledMapAssets {
   tileAnimations: Map<number, AnimationFrame[]>
 }
 
-// Build a gid-keyed Map by extracting one value per tile across all tilesets, skipping tiles
-// where extract returns undefined
+// Build a gid-keyed Map by extracting one value per tile across all tilesets
 function collectByTile<T>(
   raw: TiledMapJson,
   extract: (tile: TiledTileDef, firstgid: number) => T | undefined,
@@ -83,14 +84,6 @@ export function collectTileAnimations(raw: TiledMapJson): Map<number, AnimationF
       duration: frame.duration,
     }))
   })
-}
-
-export function resolveTilesetAssetUrl(embeddedPath: string, tiledMapUrl: string, origin: string): string {
-  const marker = 'tilesets/'
-  const markerIndex = embeddedPath.lastIndexOf(marker)
-  const stablePath = markerIndex === -1 ? embeddedPath : embeddedPath.slice(markerIndex)
-  const mapUrl = new URL(tiledMapUrl, origin)
-  return new URL(`../${stablePath}`, mapUrl).href
 }
 
 export async function collectTiledMapAssets(tiledMapUrl: string): Promise<TiledMapAssets> {
