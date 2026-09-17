@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Engine core is a separate, framework-agnostic package with no Next.js/React import
-- [ ] A local JSON fixture supplies the World Config (which Map to load) to the Host
-- [ ] Loading the Host's page renders the named Tiled-authored Map inside a Phaser canvas
-- [ ] No Player, movement, or interaction exists yet — this ticket is scaffolding + static render only
+- [x] Engine core is a separate, framework-agnostic package with no Next.js/React import
+- [x] A local JSON fixture supplies the World Config (which Map to load) to the Host
+- [x] Loading the Host's page renders the named Tiled-authored Map inside a Phaser canvas
+- [x] No Player, movement, or interaction exists yet — this ticket is scaffolding + static render only
