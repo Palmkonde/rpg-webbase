@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Loading a Map with a Tiled-authored per-tile `animation` block (e.g. `main_test.tmj`'s campfire) shows the tile cycling through its authored frames, not a static first frame
-- [ ] Playback timing matches each frame's configured duration from Tiled (not hardcoded to the campfire's 100ms)
-- [ ] Works generically for any tile carrying animation metadata, not hardcoded to the campfire/`animationObject` tileset
-- [ ] No World Config involvement — animated tiles always play, same as static tiles and collision
+- [x] Loading a Map with a Tiled-authored per-tile `animation` block (e.g. `main_test.tmj`'s campfire) shows the tile cycling through its authored frames, not a static first frame
+- [x] Playback timing matches each frame's configured duration from Tiled (not hardcoded to the campfire's 100ms)
+- [x] Works generically for any tile carrying animation metadata, not hardcoded to the campfire/`animationObject` tileset
+- [x] No World Config involvement — animated tiles always play, same as static tiles and collision
