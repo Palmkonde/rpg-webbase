@@ -45,7 +45,7 @@ _Avoid_: Door, warp point
 ### Contract
 
 **World Config**:
-The data the Host supplies to the Engine describing what to render: the active Map, the Player's position, and which of that Map's Tiled-authored Entities and Portals are currently active. Entities and Portals are defined in the Map itself (in Tiled); World Config only controls which are active for a given Player, not their placement or targets. This is the Engine's entire input surface.
+The data the Host supplies to the Engine describing what to render: the active Map, the Player's position and character, and which of that Map's Tiled-authored Entities and Portals are currently active. Entities and Portals are defined in the Map itself (in Tiled); World Config only controls which are active for a given Player, not their placement or targets. This is the Engine's entire input surface.
 _Avoid_: Game state, props, initial state
 
 **Interaction**:
