@@ -26,6 +26,7 @@ Atomic: group by logical concern (a new package, a new app, a ticket-status upda
 - Hard-to-reverse architectural decisions → `docs/adr/`, sequentially numbered
 - Domain vocabulary → `CONTEXT.md`, kept a pure glossary — no implementation detail
 - Ticket completion → update the ticket file in place (tick boxes, update `Status`) as its own commit
+- Human-facing how-to reference (e.g. "what shape should this asset be") → `docs/guides/`, one topic per file — this is *how*, not *why* (that's an ADR) or *what's confirmed* (that's the spec)
 
 ## Assets
 
