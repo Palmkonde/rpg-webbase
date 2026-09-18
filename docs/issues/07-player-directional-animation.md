@@ -8,7 +8,7 @@
 
 **Architecture note:** see `docs/adr/0006-normalize-downloaded-character-sheets-into-grid-engines-canonical-layout.md` and the "Player animation & character assets" section of `docs/spec/spec.md`.
 
-- [ ] A normalized character spritesheet ("John") exists under `assets/sprites/characters/john/`, alongside the original downloaded file, matching grid-engine's canonical directional-grid layout
+- [ ] A normalized character spritesheet ("fluffy") exists under `assets/sprites/characters/fluffy/`, alongside the original downloaded file, matching grid-engine's canonical directional-grid layout
 - [ ] The Player spawns using this spritesheet instead of the placeholder rectangle
 - [ ] Moving in each of the 4 directions plays that direction's walk-cycle; releasing movement shows that direction's idle/standing frame
 - [ ] The sprite renders at the spritesheet's native pixel size — no artificial scale factor applied
