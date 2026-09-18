@@ -30,3 +30,13 @@ Atomic: group by logical concern (a new package, a new app, a ticket-status upda
 ## Assets
 
 `assets/` (Tiled maps + tileset images) is gitignored — licensed third-party content. `apps/web/public/assets/{maps,tilesets}` are symlinks into it, not copies, so Tiled edits show up without a manual re-sync.
+
+## Agent skills
+
+### Issue tracker
+
+Local markdown under `docs/issues/<NN>-<slug>.md` (numbered sequentially, no per-feature subfolder); the spec is the single, continuously-updated `docs/spec/spec.md`. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Multi-context: shared Engine↔Host vocabulary/decisions stay at the repo root (`CONTEXT.md`, `docs/adr/`); per-package `CONTEXT.md`/`docs/adr/` under `packages/engine-core/` and `apps/web/` are created lazily if package-internal vocabulary/decisions ever emerge. See `docs/agents/domain.md`.
