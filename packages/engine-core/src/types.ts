@@ -8,9 +8,17 @@ export interface MapDefinition {
   tiledMapUrl: string
 }
 
+export interface CharacterDefinition {
+  id: string
+  spriteUrl: string
+  frameWidth: number
+  frameHeight: number
+}
+
 export interface WorldConfig {
   mapId: string
   player: {
     spawn: SpawnPoint
+    characterId: string
   }
 }

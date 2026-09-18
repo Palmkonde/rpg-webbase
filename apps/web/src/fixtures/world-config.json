@@ -1,6 +1,7 @@
 {
   "mapId": "main-test",
   "player": {
-    "spawn": { "x": 2, "y": 2 }
+    "spawn": { "x": 2, "y": 2 },
+    "characterId": "fluffy"
   }
 }

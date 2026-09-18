@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { createEngine } from '@game-engine/engine-core'
 import type { WorldConfig } from '@game-engine/engine-core'
 import { maps } from './maps'
+import { characters } from './characters'
 
 export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -14,7 +15,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }) {
     let game: Awaited<ReturnType<typeof createEngine>> | undefined
     let cancelled = false
 
-    createEngine(containerRef.current, worldConfig, maps)
+    createEngine(containerRef.current, worldConfig, maps, characters)
       .then((created) => {
         if (cancelled) {
           created.destroy(true)

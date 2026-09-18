@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser'
 import { GridEngine, Direction } from 'grid-engine'
-import { resolveMap } from './worldConfig.ts'
+import { resolveCharacter, resolveMap } from './worldConfig.ts'
 import { collectTiledMapAssets, type AnimationFrame, type ImageToLoad } from './tiledAssets.ts'
 import { stepAnimation } from './tileAnimation.ts'
-import { loadPlayerTexture } from './playerAssets.ts'
-import type { MapDefinition, WorldConfig } from './types.ts'
+import { preloadPlayerSprite, resolvePlayerTexture } from './playerAssets.ts'
+import type { CharacterDefinition, MapDefinition, WorldConfig } from './types.ts'
 
 const PLAYER_ID = 'player'
 
@@ -17,6 +17,7 @@ interface AnimatedTile {
 
 function createMapScene(
   map: MapDefinition,
+  character: CharacterDefinition,
   tilesetImages: ImageToLoad[],
   worldConfig: WorldConfig,
   tileProperties: Map<number, Record<string, unknown>>,
@@ -37,6 +38,7 @@ function createMapScene(
       for (const { key, url } of tilesetImages) {
         this.load.image(key, url)
       }
+      preloadPlayerSprite(this, character)
     }
 
     create() {
@@ -70,14 +72,15 @@ function createMapScene(
       })
 
       // player texture
-      const playerTextureKey = loadPlayerTexture(this, tilemap.tileWidth, tilemap.tileHeight)
-      const playerSprite = this.add.sprite(0, 0, playerTextureKey)
+      const playerTexture = resolvePlayerTexture(this, character, tilemap.tileWidth, tilemap.tileHeight)
+      const playerSprite = this.add.sprite(0, 0, playerTexture.key)
 
       this.gridEngine.create(tilemap, {
         characters: [
           {
             id: PLAYER_ID,
             sprite: playerSprite,
+            walkingAnimationMapping: playerTexture.walkingAnimationMapping,
             startPosition: { x: worldConfig.player.spawn.x, y: worldConfig.player.spawn.y },
           },
         ],
@@ -124,8 +127,10 @@ export async function createEngine(
   container: HTMLElement,
   worldConfig: WorldConfig,
   maps: MapDefinition[],
+  characters: CharacterDefinition[],
 ): Promise<Phaser.Game> {
   const map = resolveMap(worldConfig, maps)
+  const character = resolveCharacter(worldConfig, characters)
   const { images: tilesetImages, tileProperties, tileAnimations } = await collectTiledMapAssets(map.tiledMapUrl)
 
   return new Phaser.Game({
@@ -134,7 +139,7 @@ export async function createEngine(
     width: container.clientWidth || 640,
     height: container.clientHeight || 480,
     pixelArt: true,
-    scene: createMapScene(map, tilesetImages, worldConfig, tileProperties, tileAnimations),
+    scene: createMapScene(map, character, tilesetImages, worldConfig, tileProperties, tileAnimations),
     plugins: {
       scene: [{ key: 'gridEngine', plugin: GridEngine, mapping: 'gridEngine' }],
     },

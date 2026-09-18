@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveMap } from '../src/worldConfig.ts'
-import type { MapDefinition, WorldConfig } from '../src/types.ts'
+import { resolveCharacter, resolveMap } from '../src/worldConfig.ts'
+import type { CharacterDefinition, MapDefinition, WorldConfig } from '../src/types.ts'
 
 const maps: MapDefinition[] = [
   {
@@ -10,13 +10,33 @@ const maps: MapDefinition[] = [
   },
 ]
 
+const characters: CharacterDefinition[] = [
+  {
+    id: 'fluffy',
+    spriteUrl: '/assets/sprites/characters/fluffy/fluffy.png',
+    frameWidth: 16,
+    frameHeight: 20,
+  },
+]
+
 test('resolveMap returns the matching map definition', () => {
-  const config: WorldConfig = { mapId: 'map-1', player: { spawn: { x: 0, y: 0 } } }
+  const config: WorldConfig = { mapId: 'map-1', player: { spawn: { x: 0, y: 0 }, characterId: 'fluffy' } }
   const result = resolveMap(config, maps)
   assert.equal(result.id, 'map-1')
 })
 
 test('resolveMap throws for an unknown mapId', () => {
-  const config: WorldConfig = { mapId: 'does-not-exist', player: { spawn: { x: 0, y: 0 } } }
+  const config: WorldConfig = { mapId: 'does-not-exist', player: { spawn: { x: 0, y: 0 }, characterId: 'fluffy' } }
   assert.throws(() => resolveMap(config, maps), /Unknown mapId/)
+})
+
+test('resolveCharacter returns the matching character definition', () => {
+  const config: WorldConfig = { mapId: 'map-1', player: { spawn: { x: 0, y: 0 }, characterId: 'fluffy' } }
+  const result = resolveCharacter(config, characters)
+  assert.equal(result.id, 'fluffy')
+})
+
+test('resolveCharacter throws for an unknown characterId', () => {
+  const config: WorldConfig = { mapId: 'map-1', player: { spawn: { x: 0, y: 0 }, characterId: 'does-not-exist' } }
+  assert.throws(() => resolveCharacter(config, characters), /Unknown characterId/)
 })
