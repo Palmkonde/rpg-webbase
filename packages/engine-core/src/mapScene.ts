@@ -101,6 +101,8 @@ export function createMapScene(
             sprite: playerSprite,
             walkingAnimationMapping: playerTexture.walkingAnimationMapping,
             startPosition: { x: worldConfig.player.spawn.x, y: worldConfig.player.spawn.y },
+            charLayer: "ground",
+            offsetY: -8
           },
         ],
       })
