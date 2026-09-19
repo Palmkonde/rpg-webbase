@@ -5,3 +5,15 @@ export function resolveTilesetAssetUrl(embeddedPath: string, tiledMapUrl: string
   const mapUrl = new URL(tiledMapUrl, origin)
   return new URL(`../${stablePath}`, mapUrl).href
 }
+
+export interface CameraBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+// Camera bounds start at the map's origin — Tiled maps have no negative-coordinate content.
+export function computeCameraBounds(mapWidthInPixels: number, mapHeightInPixels: number): CameraBounds {
+  return { x: 0, y: 0, width: mapWidthInPixels, height: mapHeightInPixels }
+}

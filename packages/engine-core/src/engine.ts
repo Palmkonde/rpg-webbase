@@ -4,9 +4,11 @@ import { resolveCharacter, resolveMap } from './worldConfig.ts'
 import { collectTiledMapAssets, type AnimationFrame, type ImageToLoad } from './tiledAssets.ts'
 import { stepAnimation } from './tileAnimation.ts'
 import { preloadPlayerSprite, resolvePlayerTexture } from './playerAssets.ts'
+import { computeCameraBounds } from './util.ts'
 import type { CharacterDefinition, MapDefinition, WorldConfig } from './types.ts'
 
 const PLAYER_ID = 'player'
+const CAMERA_ZOOM = 2
 
 interface AnimatedTile {
   tile: Phaser.Tilemaps.Tile
@@ -86,6 +88,15 @@ function createMapScene(
         ],
       })
 
+      // camera init
+      const camera = this.cameras.main
+      camera.setZoom(CAMERA_ZOOM)
+      camera.startFollow(playerSprite, true)
+      camera.setFollowOffset(-playerSprite.width / 2, -playerSprite.height / 2)
+      const bounds = computeCameraBounds(tilemap.widthInPixels, tilemap.heightInPixels)
+      camera.setBounds(bounds.x, bounds.y, bounds.width, bounds.height)
+
+      // input handle
       this.cursors = this.input.keyboard!.createCursorKeys()
       this.wasd = this.input.keyboard!.addKeys('W,A,S,D') as Record<
         'W' | 'A' | 'S' | 'D',

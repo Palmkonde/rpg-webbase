@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveTilesetAssetUrl } from '../src/util.ts'
+import { computeCameraBounds, resolveTilesetAssetUrl } from '../src/util.ts'
 
 const tiledMapUrl = '/assets/maps/main_test.tmj'
 const origin = 'http://localhost'
@@ -23,4 +23,19 @@ test('resolveTilesetAssetUrl ignores authoring-machine-specific prefixes before 
 test('resolveTilesetAssetUrl handles a path with no leading .. at all', () => {
   const result = resolveTilesetAssetUrl('tilesets/pack/1 Tiles/image.png', tiledMapUrl, origin)
   assert.equal(result, expected)
+})
+
+test('computeCameraBounds returns the map pixel rect starting at the origin', () => {
+  const result = computeCameraBounds(480, 480)
+  assert.deepEqual(result, { x: 0, y: 0, width: 480, height: 480 })
+})
+
+test('computeCameraBounds handles a single-tile map', () => {
+  const result = computeCameraBounds(32, 32)
+  assert.deepEqual(result, { x: 0, y: 0, width: 32, height: 32 })
+})
+
+test('computeCameraBounds handles a very large map', () => {
+  const result = computeCameraBounds(102400, 81920)
+  assert.deepEqual(result, { x: 0, y: 0, width: 102400, height: 81920 })
 })
