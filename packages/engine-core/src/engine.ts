@@ -44,24 +44,36 @@ function createMapScene(
     }
 
     create() {
+      const tilemap = this.createTilemap()
+      this.createLayers(tilemap)
+      const playerSprite = this.createPlayer(tilemap)
+      this.setupCamera(tilemap, playerSprite)
+      this.setupInput()
+    }
+
+    private createTilemap(): Phaser.Tilemaps.Tilemap {
       const tilemap = this.make.tilemap({ key: map.id })
 
       for (const tileset of tilemap.tilesets) {
         tilemap.addTilesetImage(tileset.name, tileset.name)
       }
 
+      return tilemap
+    }
+
+    private createLayers(tilemap: Phaser.Tilemaps.Tilemap) {
       tilemap.layers.forEach((layerData, index) => {
         const layer = tilemap.createLayer(index, tilemap.tilesets, 0, 0)
         layer?.setVisible(layerData.visible)
         layer?.forEachTile((tile) => {
-          
-          // Tile properties
+
+          // get Tile properties
           const props = tileProperties.get(tile.index)
           if (props) {
             Object.assign(tile.properties, props)
           }
 
-          // Tile animations
+          // get Tile animations
           const frames = tileAnimations.get(tile.index)
           if (frames && frames.length > 1) {
             const startIndex = Math.max(
@@ -72,8 +84,9 @@ function createMapScene(
           }
         })
       })
+    }
 
-      // player texture
+    private createPlayer(tilemap: Phaser.Tilemaps.Tilemap): Phaser.GameObjects.Sprite {
       const playerTexture = resolvePlayerTexture(this, character, tilemap.tileWidth, tilemap.tileHeight)
       const playerSprite = this.add.sprite(0, 0, playerTexture.key)
 
@@ -88,15 +101,21 @@ function createMapScene(
         ],
       })
 
-      // camera init
+      return playerSprite
+    }
+
+    private setupCamera(tilemap: Phaser.Tilemaps.Tilemap, playerSprite: Phaser.GameObjects.Sprite) {
       const camera = this.cameras.main
       camera.setZoom(CAMERA_ZOOM)
       camera.startFollow(playerSprite, true)
       camera.setFollowOffset(-playerSprite.width / 2, -playerSprite.height / 2)
+
+      // camera input boundary
       const bounds = computeCameraBounds(tilemap.widthInPixels, tilemap.heightInPixels)
       camera.setBounds(bounds.x, bounds.y, bounds.width, bounds.height)
+    }
 
-      // input handle
+    private setupInput() {
       this.cursors = this.input.keyboard!.createCursorKeys()
       this.wasd = this.input.keyboard!.addKeys('W,A,S,D') as Record<
         'W' | 'A' | 'S' | 'D',
