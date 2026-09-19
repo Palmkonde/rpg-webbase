@@ -43,6 +43,7 @@ function createMapScene(
       preloadPlayerSprite(this, character)
     }
 
+    // main entry
     create() {
       const tilemap = this.createTilemap()
       this.createLayers(tilemap)
@@ -66,24 +67,28 @@ function createMapScene(
         const layer = tilemap.createLayer(index, tilemap.tilesets, 0, 0)
         layer?.setVisible(layerData.visible)
         layer?.forEachTile((tile) => {
-
-          // get Tile properties
-          const props = tileProperties.get(tile.index)
-          if (props) {
-            Object.assign(tile.properties, props)
-          }
-
-          // get Tile animations
-          const frames = tileAnimations.get(tile.index)
-          if (frames && frames.length > 1) {
-            const startIndex = Math.max(
-              frames.findIndex((frame) => frame.gid === tile.index),
-              0,
-            )
-            this.animatedTiles.push({ tile, frames, frameIndex: startIndex, elapsedMs: 0 })
-          }
+          this.applyTileProperties(tile)
+          this.registerAnimatedTile(tile)
         })
       })
+    }
+
+    private applyTileProperties(tile: Phaser.Tilemaps.Tile) {
+      const props = tileProperties.get(tile.index)
+      if (props) {
+        Object.assign(tile.properties, props)
+      }
+    }
+
+    private registerAnimatedTile(tile: Phaser.Tilemaps.Tile) {
+      const frames = tileAnimations.get(tile.index)
+      if (frames && frames.length > 1) {
+        const startIndex = Math.max(
+          frames.findIndex((frame) => frame.gid === tile.index),
+          0,
+        )
+        this.animatedTiles.push({ tile, frames, frameIndex: startIndex, elapsedMs: 0 })
+      }
     }
 
     private createPlayer(tilemap: Phaser.Tilemaps.Tilemap): Phaser.GameObjects.Sprite {
@@ -124,12 +129,16 @@ function createMapScene(
     }
 
     update(_time: number, delta: number) {
+      this.handleMovementInput()
+      this.stepTileAnimations(delta)
+    }
+
+    private handleMovementInput() {
       const left = this.cursors.left.isDown || this.wasd.A.isDown
       const right = this.cursors.right.isDown || this.wasd.D.isDown
       const up = this.cursors.up.isDown || this.wasd.W.isDown
       const down = this.cursors.down.isDown || this.wasd.S.isDown
 
-      // move
       if (left) {
         this.gridEngine.move(PLAYER_ID, Direction.LEFT)
       } else if (right) {
@@ -139,8 +148,9 @@ function createMapScene(
       } else if (down) {
         this.gridEngine.move(PLAYER_ID, Direction.DOWN)
       }
+    }
 
-      // animation
+    private stepTileAnimations(delta: number) {
       for (const anim of this.animatedTiles) {
         const step = stepAnimation(anim.frames, anim.frameIndex, anim.elapsedMs, delta)
         anim.frameIndex = step.frameIndex
