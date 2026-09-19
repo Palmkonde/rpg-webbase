@@ -1,6 +1,6 @@
-import { test } from 'node:test'
-import assert from 'node:assert/strict'
 import { computeCameraBounds, resolveTilesetAssetUrl } from '../src/util.ts'
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
 
 const tiledMapUrl = '/assets/maps/main_test.tmj'
 const origin = 'http://localhost'

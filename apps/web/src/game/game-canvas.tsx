@@ -1,39 +1,45 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { createEngine } from '@game-engine/engine-core'
 import type { WorldConfig } from '@game-engine/engine-core'
-import { maps } from './maps'
 import { characters } from './characters'
+import { createEngine } from '@game-engine/engine-core'
+import { maps } from './maps'
 
-export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }) {
+const CANVAS_STYLE = { width: '100vw', height: '100vh' }
+
+export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!containerRef.current) {return}
+    const container = containerRef.current
+    if (!container) {return}
 
     let game: Awaited<ReturnType<typeof createEngine>> | undefined
     let cancelled = false
 
-    createEngine(containerRef.current, worldConfig, maps, characters)
-      .then((created) => {
+    async function start(element: HTMLElement): Promise<void> {
+      try {
+        const created = await createEngine(element, worldConfig, { maps, characters })
         if (cancelled) {
           created.destroy(true)
         } else {
           game = created
         }
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         if (!cancelled) {
           console.error('Failed to start game engine:', error)
         }
-      })
+      }
+    }
 
-    return () => {
+    start(container)
+
+    return (): void => {
       cancelled = true
       game?.destroy(true)
     }
   }, [worldConfig])
 
-  return <div ref={containerRef} style={{ width: '100vw', height: '100vh' }} />
+  return <div ref={containerRef} style={CANVAS_STYLE} />
 }

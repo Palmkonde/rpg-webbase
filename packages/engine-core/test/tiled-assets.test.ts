@@ -1,6 +1,6 @@
-import { test } from 'node:test'
-import assert from 'node:assert/strict'
 import { collectTileAnimations, collectTileProperties } from '../src/tiled-assets.ts'
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
 
 test('collectTileProperties reads a tile marked collidable on a single-image tileset', () => {
   const raw = {

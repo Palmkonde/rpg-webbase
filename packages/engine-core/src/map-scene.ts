@@ -1,11 +1,11 @@
 import * as Phaser from 'phaser'
-import type { GridEngine} from 'grid-engine';
-import { Direction } from 'grid-engine'
-import type { AnimationFrame, ImageToLoad } from './tiled-assets.ts'
-import { stepAnimation } from './tile-animation.ts'
-import { preloadPlayerSprite, resolvePlayerTexture } from './player-assets.ts'
-import { computeCameraBounds } from './util.ts'
+import type { AnimationFrame, TiledMapAssets } from './tiled-assets.ts'
 import type { CharacterDefinition, MapDefinition, WorldConfig } from './types.ts'
+import { preloadPlayerSprite, resolvePlayerTexture } from './player-assets.ts'
+import { Direction } from 'grid-engine'
+import type { GridEngine } from 'grid-engine'
+import { computeCameraBounds } from './util.ts'
+import { stepAnimation } from './tile-animation.ts'
 
 const PLAYER_ID = 'player'
 const CAMERA_ZOOM = 2
@@ -17,14 +17,14 @@ interface AnimatedTile {
   elapsedMs: number
 }
 
-export function createMapScene(
-  map: MapDefinition,
-  character: CharacterDefinition,
-  tilesetImages: ImageToLoad[],
-  worldConfig: WorldConfig,
-  tileProperties: Map<number, Record<string, unknown>>,
-  tileAnimations: Map<number, AnimationFrame[]>,
-) {
+export interface MapSceneConfig {
+  map: MapDefinition
+  character: CharacterDefinition
+  worldConfig: WorldConfig
+  assets: TiledMapAssets
+}
+
+export function createMapScene({ map, character, worldConfig, assets }: MapSceneConfig): typeof Phaser.Scene {
   return class MapScene extends Phaser.Scene {
     public declare gridEngine: GridEngine
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
@@ -35,16 +35,16 @@ export function createMapScene(
       super('MapScene')
     }
 
-    public preload() {
+    public preload(): void {
       this.load.tilemapTiledJSON(map.id, map.tiledMapUrl)
-      for (const { key, url } of tilesetImages) {
+      for (const { key, url } of assets.images) {
         this.load.image(key, url)
       }
       preloadPlayerSprite(this, character)
     }
 
     // Main entry
-    public create() {
+    public create(): void {
       const tilemap = this.createTilemap()
       this.createLayers(tilemap)
       const playerSprite = this.createPlayer(tilemap)
@@ -62,26 +62,26 @@ export function createMapScene(
       return tilemap
     }
 
-    private createLayers(tilemap: Phaser.Tilemaps.Tilemap) {
-      tilemap.layers.forEach((layerData, index) => {
+    private createLayers(tilemap: Phaser.Tilemaps.Tilemap): void {
+      for (const [index, layerData] of tilemap.layers.entries()) {
         const layer = tilemap.createLayer(index, tilemap.tilesets, 0, 0)
         layer?.setVisible(layerData.visible)
         layer?.forEachTile((tile) => {
-          this.applyTileProperties(tile)
+          MapScene.applyTileProperties(tile)
           this.registerAnimatedTile(tile)
         })
-      })
+      }
     }
 
-    private applyTileProperties(tile: Phaser.Tilemaps.Tile) {
-      const props = tileProperties.get(tile.index)
+    private static applyTileProperties(tile: Phaser.Tilemaps.Tile): void {
+      const props = assets.tileProperties.get(tile.index)
       if (props) {
         Object.assign(tile.properties, props)
       }
     }
 
-    private registerAnimatedTile(tile: Phaser.Tilemaps.Tile) {
-      const frames = tileAnimations.get(tile.index)
+    private registerAnimatedTile(tile: Phaser.Tilemaps.Tile): void {
+      const frames = assets.tileAnimations.get(tile.index)
       if (frames && frames.length > 1) {
         const startIndex = Math.max(
           frames.findIndex((frame) => frame.gid === tile.index),
@@ -92,7 +92,7 @@ export function createMapScene(
     }
 
     private createPlayer(tilemap: Phaser.Tilemaps.Tilemap): Phaser.GameObjects.Sprite {
-      const playerTexture = resolvePlayerTexture(this, character, tilemap.tileWidth, tilemap.tileHeight)
+      const playerTexture = resolvePlayerTexture(this, character, { width: tilemap.tileWidth, height: tilemap.tileHeight })
       const playerSprite = this.add.sprite(0, 0, playerTexture.key)
 
       this.gridEngine.create(tilemap, {
@@ -111,7 +111,7 @@ export function createMapScene(
       return playerSprite
     }
 
-    private setupCamera(tilemap: Phaser.Tilemaps.Tilemap, playerSprite: Phaser.GameObjects.Sprite) {
+    private setupCamera(tilemap: Phaser.Tilemaps.Tilemap, playerSprite: Phaser.GameObjects.Sprite): void {
       const camera = this.cameras.main
       camera.setZoom(CAMERA_ZOOM)
       camera.startFollow(playerSprite, true)
@@ -122,7 +122,7 @@ export function createMapScene(
       camera.setBounds(bounds.x, bounds.y, bounds.width, bounds.height)
     }
 
-    private setupInput() {
+    private setupInput(): void {
       this.cursors = this.input.keyboard!.createCursorKeys()
       this.wasd = this.input.keyboard!.addKeys('W,A,S,D') as Record<
         'W' | 'A' | 'S' | 'D',
@@ -130,12 +130,12 @@ export function createMapScene(
       >
     }
 
-    public update(_time: number, delta: number) {
+    public update(_time: number, delta: number): void {
       this.handleMovementInput()
       this.stepTileAnimations(delta)
     }
 
-    private handleMovementInput() {
+    private handleMovementInput(): void {
       const left = this.cursors.left.isDown || this.wasd.A.isDown
       const right = this.cursors.right.isDown || this.wasd.D.isDown
       const up = this.cursors.up.isDown || this.wasd.W.isDown
@@ -152,9 +152,9 @@ export function createMapScene(
       }
     }
 
-    private stepTileAnimations(delta: number) {
+    private stepTileAnimations(delta: number): void {
       for (const anim of this.animatedTiles) {
-        const step = stepAnimation(anim.frames, anim.frameIndex, anim.elapsedMs, delta)
+        const step = stepAnimation(anim, delta)
         anim.frameIndex = step.frameIndex
         anim.elapsedMs = step.elapsedMs
         if (step.changed) {

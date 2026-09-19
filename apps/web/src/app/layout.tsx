@@ -2,10 +2,12 @@ export const metadata = {
   title: 'Game Engine Playground',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+const BODY_STYLE = { margin: 0 }
+
+export default function RootLayout({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <html lang="en">
-      <body style={{ margin: 0 }}>{children}</body>
+      <body style={BODY_STYLE}>{children}</body>
     </html>
   )
 }

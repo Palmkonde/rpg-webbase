@@ -1,7 +1,7 @@
-import { test } from 'node:test'
-import assert from 'node:assert/strict'
-import { resolveCharacter, resolveMap } from '../src/world-config.ts'
 import type { CharacterDefinition, MapDefinition, WorldConfig } from '../src/types.ts'
+import { resolveCharacter, resolveMap } from '../src/world-config.ts'
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
 
 const maps: MapDefinition[] = [
   {
@@ -27,7 +27,7 @@ test('resolveMap returns the matching map definition', () => {
 
 test('resolveMap throws for an unknown mapId', () => {
   const config: WorldConfig = { mapId: 'does-not-exist', player: { spawn: { x: 0, y: 0 }, characterId: 'fluffy' } }
-  assert.throws(() => resolveMap(config, maps), /Unknown mapId/)
+  assert.throws(() => resolveMap(config, maps), /Unknown mapId/u)
 })
 
 test('resolveCharacter returns the matching character definition', () => {
@@ -38,5 +38,5 @@ test('resolveCharacter returns the matching character definition', () => {
 
 test('resolveCharacter throws for an unknown characterId', () => {
   const config: WorldConfig = { mapId: 'map-1', player: { spawn: { x: 0, y: 0 }, characterId: 'does-not-exist' } }
-  assert.throws(() => resolveCharacter(config, characters), /Unknown characterId/)
+  assert.throws(() => resolveCharacter(config, characters), /Unknown characterId/u)
 })

@@ -7,7 +7,12 @@ interface StudentSeed {
   flags: Flags
 }
 
-export function createFlagStore(seedData: StudentSeed = seed) {
+export interface FlagStore {
+  getFlags: (studentId: string) => Promise<Flags>
+  setFlags: (studentId: string, patch: Flags) => Promise<void>
+}
+
+export function createFlagStore(seedData: StudentSeed = seed): FlagStore {
   const store = new Map<string, Flags>()
 
   function seedIfNeeded(studentId: string): Flags {

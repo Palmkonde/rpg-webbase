@@ -1,6 +1,6 @@
-import { test } from 'node:test'
-import assert from 'node:assert/strict'
 import { createFlagStore, flagStore } from '../src/state/flags.ts'
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
 
 test('getFlags returns the seed flags for an unseen studentId', async () => {
   const store = createFlagStore({ studentId: 'test-student', flags: { tutorial_seen: false } })

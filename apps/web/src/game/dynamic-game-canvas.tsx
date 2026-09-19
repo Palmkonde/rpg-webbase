@@ -3,6 +3,9 @@
 import dynamic from 'next/dynamic'
 
 export const DynamicGameCanvas = dynamic(
-  () => import('./game-canvas').then((mod) => mod.GameCanvas),
+  async () => {
+    const mod = await import('./game-canvas')
+    return mod.GameCanvas
+  },
   { ssr: false },
 )

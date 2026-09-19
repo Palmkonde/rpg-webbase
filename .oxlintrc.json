@@ -51,6 +51,23 @@
     "no-console": ["error", { "allow": ["warn", "error"] }],
     "require-await": "off",
     "import/no-namespace": "off",
-    "oxc/no-rest-spread-properties": "off"
-  }
+    "oxc/no-rest-spread-properties": "off",
+
+    "unicorn/numeric-separators-style": "off",
+    "react/only-export-components": "off",
+    "max-lines-per-function": "off",
+    "init-declarations": "off",
+    "no-duplicate-imports": "off",
+    "typescript/no-non-null-assertion": "off",
+    "no-undefined": "off",
+    "no-magic-numbers": ["error", { "ignore": [-1, 0, 1, 2] }]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts"],
+      "rules": {
+        "no-magic-numbers": "off"
+      }
+    }
+  ]
 }
