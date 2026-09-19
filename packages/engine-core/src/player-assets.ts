@@ -13,7 +13,7 @@ interface PickedPlayerTexture {
   warning?: string
 }
 
-// character so a previously-loaded character's cached texture can't be mistaken for this one.
+// Character so a previously-loaded character's cached texture can't be mistaken for this one.
 export function pickPlayerTexture(character: CharacterDefinition, spriteLoaded: boolean): PickedPlayerTexture {
   const key = `player-${character.id}`
   if (spriteLoaded) {
@@ -36,7 +36,7 @@ function createPlaceholderTexture(scene: Phaser.Scene, tileWidth: number, tileHe
   const height = tileHeight * PLACEHOLDER_HEIGHT_SCALE
 
   const graphics = scene.add.graphics()
-  graphics.fillStyle(0xff5252, 1)
+  graphics.fillStyle(0xFF5252, 1)
   graphics.fillRect(0, 0, tileWidth, height)
   graphics.generateTexture(PLACEHOLDER_TEXTURE_KEY, tileWidth, height)
   graphics.destroy()

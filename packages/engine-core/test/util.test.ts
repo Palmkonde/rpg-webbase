@@ -36,6 +36,6 @@ test('computeCameraBounds handles a single-tile map', () => {
 })
 
 test('computeCameraBounds handles a very large map', () => {
-  const result = computeCameraBounds(102400, 81920)
-  assert.deepEqual(result, { x: 0, y: 0, width: 102400, height: 81920 })
+  const result = computeCameraBounds(102_400, 81_920)
+  assert.deepEqual(result, { x: 0, y: 0, width: 102_400, height: 81_920 })
 })

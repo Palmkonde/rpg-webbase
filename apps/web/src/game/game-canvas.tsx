@@ -10,7 +10,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!containerRef.current) return
+    if (!containerRef.current) {return}
 
     let game: Awaited<ReturnType<typeof createEngine>> | undefined
     let cancelled = false

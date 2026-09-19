@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveCharacter, resolveMap } from '../src/worldConfig.ts'
+import { resolveCharacter, resolveMap } from '../src/world-config.ts'
 import type { CharacterDefinition, MapDefinition, WorldConfig } from '../src/types.ts'
 
 const maps: MapDefinition[] = [

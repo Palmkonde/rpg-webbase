@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser'
 import { GridEngine } from 'grid-engine'
-import { resolveCharacter, resolveMap } from './worldConfig.ts'
-import { collectTiledMapAssets } from './tiledAssets.ts'
-import { createMapScene } from './mapScene.ts'
+import { resolveCharacter, resolveMap } from './world-config.ts'
+import { collectTiledMapAssets } from './tiled-assets.ts'
+import { createMapScene } from './map-scene.ts'
 import type { CharacterDefinition, MapDefinition, WorldConfig } from './types.ts'
 
 export async function createEngine(

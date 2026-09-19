@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { stepAnimation } from '../src/tileAnimation.ts'
-import type { AnimationFrame } from '../src/tiledAssets.ts'
+import { stepAnimation } from '../src/tile-animation.ts'
+import type { AnimationFrame } from '../src/tiled-assets.ts'
 
 const frames: AnimationFrame[] = [
   { gid: 1, duration: 100 },

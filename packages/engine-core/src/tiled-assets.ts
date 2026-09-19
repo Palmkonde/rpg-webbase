@@ -66,7 +66,7 @@ function collectByTile<T>(
 // Extract properites from Tiled
 export function collectTileProperties(raw: TiledMapJson): Map<number, Record<string, unknown>> {
   return collectByTile(raw, (tile) => {
-    if (!tile.properties || tile.properties.length === 0) return undefined
+    if (!tile.properties || tile.properties.length === 0) {return undefined}
     const merged: Record<string, unknown> = {}
     for (const prop of tile.properties) {
       merged[prop.name] = prop.value
@@ -78,7 +78,7 @@ export function collectTileProperties(raw: TiledMapJson): Map<number, Record<str
 // Extract per-tile animation frames from Tiled, keyed by the animated tile's own gid
 export function collectTileAnimations(raw: TiledMapJson): Map<number, AnimationFrame[]> {
   return collectByTile(raw, (tile, firstgid) => {
-    if (!tile.animation || tile.animation.length === 0) return undefined
+    if (!tile.animation || tile.animation.length === 0) {return undefined}
     return tile.animation.map((frame) => ({
       gid: firstgid + frame.tileid,
       duration: frame.duration,
@@ -89,7 +89,7 @@ export function collectTileAnimations(raw: TiledMapJson): Map<number, AnimationF
 export async function collectTiledMapAssets(tiledMapUrl: string): Promise<TiledMapAssets> {
   const response = await fetch(tiledMapUrl)
   const raw = (await response.json()) as TiledMapJson
-  const origin = window.location.origin
+  const {origin} = globalThis.location
   const images: ImageToLoad[] = []
 
   for (const tileset of raw.tilesets) {

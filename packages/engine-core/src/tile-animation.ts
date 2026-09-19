@@ -1,4 +1,4 @@
-import type { AnimationFrame } from './tiledAssets.ts'
+import type { AnimationFrame } from './tiled-assets.ts'
 
 export interface AnimationStep {
   frameIndex: number
@@ -7,7 +7,7 @@ export interface AnimationStep {
 }
 
 // Advances a Tiled per-tile animation by deltaMs, looping through frames per their configured durations.
-// frames must be non-empty — callers only track tiles that have animation data.
+// Frames must be non-empty — callers only track tiles that have animation data.
 export function stepAnimation(
   frames: AnimationFrame[],
   frameIndex: number,

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { PLACEHOLDER_TEXTURE_KEY, pickPlayerTexture } from '../src/playerAssets.ts'
+import { PLACEHOLDER_TEXTURE_KEY, pickPlayerTexture } from '../src/player-assets.ts'
 import type { CharacterDefinition } from '../src/types.ts'
 
 const fluffy: CharacterDefinition = {

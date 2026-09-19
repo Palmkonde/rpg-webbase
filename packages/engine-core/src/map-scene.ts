@@ -1,8 +1,9 @@
 import * as Phaser from 'phaser'
-import { GridEngine, Direction } from 'grid-engine'
-import { type AnimationFrame, type ImageToLoad } from './tiledAssets.ts'
-import { stepAnimation } from './tileAnimation.ts'
-import { preloadPlayerSprite, resolvePlayerTexture } from './playerAssets.ts'
+import type { GridEngine} from 'grid-engine';
+import { Direction } from 'grid-engine'
+import type { AnimationFrame, ImageToLoad } from './tiled-assets.ts'
+import { stepAnimation } from './tile-animation.ts'
+import { preloadPlayerSprite, resolvePlayerTexture } from './player-assets.ts'
 import { computeCameraBounds } from './util.ts'
 import type { CharacterDefinition, MapDefinition, WorldConfig } from './types.ts'
 
@@ -25,16 +26,16 @@ export function createMapScene(
   tileAnimations: Map<number, AnimationFrame[]>,
 ) {
   return class MapScene extends Phaser.Scene {
-    declare gridEngine: GridEngine
+    public declare gridEngine: GridEngine
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
     private wasd!: Record<'W' | 'A' | 'S' | 'D', Phaser.Input.Keyboard.Key>
     private animatedTiles: AnimatedTile[] = []
 
-    constructor() {
+    public constructor() {
       super('MapScene')
     }
 
-    preload() {
+    public preload() {
       this.load.tilemapTiledJSON(map.id, map.tiledMapUrl)
       for (const { key, url } of tilesetImages) {
         this.load.image(key, url)
@@ -42,8 +43,8 @@ export function createMapScene(
       preloadPlayerSprite(this, character)
     }
 
-    // main entry
-    create() {
+    // Main entry
+    public create() {
       const tilemap = this.createTilemap()
       this.createLayers(tilemap)
       const playerSprite = this.createPlayer(tilemap)
@@ -116,7 +117,7 @@ export function createMapScene(
       camera.startFollow(playerSprite, true)
       camera.setFollowOffset(-playerSprite.width / 2, -playerSprite.height / 2)
 
-      // camera input boundary
+      // Camera input boundary
       const bounds = computeCameraBounds(tilemap.widthInPixels, tilemap.heightInPixels)
       camera.setBounds(bounds.x, bounds.y, bounds.width, bounds.height)
     }
@@ -129,7 +130,7 @@ export function createMapScene(
       >
     }
 
-    update(_time: number, delta: number) {
+    public update(_time: number, delta: number) {
       this.handleMovementInput()
       this.stepTileAnimations(delta)
     }
