@@ -136,8 +136,12 @@ export async function createEngine(
   return new Phaser.Game({
     type: Phaser.AUTO,
     parent: container,
-    width: container.clientWidth || 640,
-    height: container.clientHeight || 480,
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      width: 960,
+      height: 540,
+    },
     pixelArt: true,
     scene: createMapScene(map, character, tilesetImages, worldConfig, tileProperties, tileAnimations),
     plugins: {

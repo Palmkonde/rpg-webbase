@@ -35,5 +35,5 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }) {
     }
   }, [worldConfig])
 
-  return <div ref={containerRef} style={{ width: 640, height: 480 }} />
+  return <div ref={containerRef} style={{ width: '100vw', height: '100vh' }} />
 }
