@@ -114,15 +114,81 @@ The canvas fills the browser window via Phaser's `Scale.FIT` (scaling a 960×540
 - See `adr/0007-scale-canvas-with-phaser-fit-and-fixed-camera-zoom.md` for the full rationale and rejected alternatives.
 - Future Maps intended to fill the frame edge-to-edge at the standard zoom should be authored at roughly 480×270 world units or larger; smaller Maps still render correctly (camera bounds just clamp/center) but won't fill the screen edge-to-edge.
 
+## Dialogue Scripts
+
+Confirmed 2026-09-19 via grilling session, following investigation of overlap with `issues/05-entity-interaction-hook.md`. See `CONTEXT.md`'s "Content" vocabulary (Script, Dialogue, Flag) and `adr/0008` through `adr/0011` for the rationale behind each architectural call below.
+
+Beyond the literal Phase 1 done-bar (Phase 1 explicitly excludes dialogue/quests/XP UI) — this is the first slice of Phase 2-ish "what happens after an Interaction" work, grilled now because ticket 05 (which it depends on) was already being pulled forward.
+
+### Problem Statement
+
+Ticket 05 gives the Engine a way to detect and report "the Player interacted with Entity X" (or, via ticket 03, "the Player entered Map Y"), but nothing yet lets a course/content author attach actual behavior — starting with dialogue — to that report. Without it, an Interaction or a Map-entry is an event nobody's listening to.
+
+### Solution
+
+A Host-side Script: ordinary TypeScript, authored per Entity (or per Map, for entry) via a naming convention, that runs when the corresponding Engine Event fires and produces Dialogue — using a small builder API rather than a new authoring language. Scripts can read and set small per-Student Flags, so future content can branch, even though this round's own Dialogue content stays static.
+
+### User Stories
+
+1. As a content author, I want to write a Script as plain TypeScript, so that I get full IDE/type support without learning a new authoring language.
+2. As a content author, I want a Script to be found automatically from the Entity it belongs to, so that I don't have to maintain a separate lookup table for every Entity I author.
+3. As a content author, I want to author an Entity in Tiled the same way Spawn points already are, so that I don't have to learn a second Map-authoring convention.
+4. As a content author, I want to tag an object's kind (Spawn/Entity/Portal) from a dropdown instead of typing a string, so that a typo can't silently produce an untagged object.
+5. As a Player, I want interacting with an Entity that has a Script to show me Dialogue, so that the world feels responsive instead of Entities being inert.
+6. As a Player, I want entering a Map that has a Script to show me Dialogue automatically, so that a Map can introduce itself without requiring me to interact with something first.
+7. As a Player, I want to pick from Dialogue choices when a Script offers them, so that my responses can matter.
+8. As a Player, I want the game world to remain visible and technically walkable while Dialogue is showing in v1, so that a Dialogue box doesn't need to be dismissed through a separate control scheme (accepted rough edge — see Out of Scope).
+9. As a content author, I want a Script to be able to check whether a Flag is already set, so that I can write dialogue that changes after the Player has done something once.
+10. As a content author, I want a Script to be able to set a Flag as an outcome of a choice, so that the Player's decision persists.
+11. As a Host developer, I want Flags stored per-Student, so that two different Students never see each other's progress.
+12. As a Host developer, I want Flags modeled as a local fixture shaped like a plausible future real-backend response (mirroring how `WorldConfig` is already stubbed), so that wiring a real database in later requires no redesign of the Script-facing API.
+13. As a Host developer, I want a single place to inspect a given Student's current Flags, so that debugging "why did/didn't this dialogue branch fire" is a one-place lookup, not a hunt across scattered state.
+14. As an Engine developer, I want the Engine to remain completely unaware that Scripts, Dialogue, or Flags exist, so that the Engine's public surface and its statelessness (ADR-0001) stay unchanged.
+15. As an Engine developer, I want Host-side tooling that needs to know which Entities exist on a Map to read the authored Tiled file directly, so that the Engine doesn't need a new entity-catalog API just to support Host tooling.
+16. As a ticket-05 implementer, I want the Entity-authoring convention (Tiled Custom Class, shared `objects` layer) already decided, so that I'm not guessing at something ticket 05's own checklist left open.
+17. As a future maintainer, I want it recorded that dialogue does not pause the Player in v1, so that I don't "fix" what was actually a deliberate scope cut, and know where the follow-up work (a Host→Engine pause channel) belongs.
+
+### Implementation Decisions
+
+- **Script authoring**: a Script is a TypeScript module built with a small builder/fluent API (e.g. chaining a "say a line" call with a "offer choices" call) — not a parsed DSL, not a data-only config format. See `adr/0009`.
+- **Script location convention**: an Entity's Script is found by naming convention from its `entityId` (the Tiled object's `name` field) — no explicit id-to-path lookup table in this round.
+- **Triggers**: exactly two Engine Events drive Scripts — the `interacted` event (ticket 05, keyed by `entityId`) for Entity Scripts, and the `transitioned` event's `toMapId` (ticket 03) for Map-entry Scripts. No other Engine Event drives a Script this round.
+- **Script context**: a Script receives a read-only context object exposing the current Student's Flags, so the shape supports branching now even though this round's Dialogue content doesn't branch on anything yet.
+- **Flags**: a flat per-Student key/value store (boolean/number/string values only — no nested structures, no quest/inventory modeling). Fixture-backed the same way `WorldConfig` already is, behind one small read/write module so a real backend can later replace the fixture without changing the Script-facing context shape. This requires adding a Student/player-identity field to `WorldConfig`, which does not exist today.
+- **Entity/Spawn/Portal authoring in Tiled**: all three share the Map's single `objects` object-layer; each object's kind is tagged via a Tiled Custom Class (`Entity`, `Spawn`, `Portal`), not a freeform string and not a dedicated layer per kind. Requires a Tiled Project file. See `adr/0010` and `guides/tiled-object-authoring.md`.
+- **Rendering**: Dialogue is rendered entirely by the Host (resolves the "Open" question below in favor of a Host-side overlay, not in-canvas/Phaser rendering) as a non-blocking overlay — the Engine gains no pause/resume capability in this round. See `adr/0011`.
+- **No change to ticket 05's own scope** — this feature consumes 05's `interacted` event as-is; the Tiled-authoring convention decided here fills a gap 05's checklist left implicit, rather than modifying 05's checklist itself.
+
+### Testing Decisions
+
+- Matching the existing pattern (`tileAnimation.test.ts`, `util.test.ts`): test pure logic with `node:test`/`node:assert/strict`, not Phaser/Scene/DOM internals.
+- The Flag store's get/set behavior, entityId→script-path resolution, and the Script builder API's output (does chaining produce the right internal step list) are all pure functions and get unit tests.
+- Dialogue actually rendering on screen, the overlay's non-blocking behavior, and a Script firing at the right moment during real play aren't automatable here (no e2e/browser automation, per `CLAUDE.md`) — verified manually: interact with a Scripted Entity and confirm the right Dialogue/choices appear, confirm a choice's Flag persists across a second Interaction, confirm the Player can still move while Dialogue is up (the accepted v1 rough edge).
+
+### Out of Scope
+
+- **CG (full-screen illustration) and cutscene** (a Script taking control away from the Player) — needs a Host→Engine imperative pause/resume channel that doesn't exist and isn't being built this round (`adr/0011`). Blocked on this Dialogue Script slice landing first.
+- **Raw per-step (`moved`) or tile/zone-entered Script triggers** — no concrete need yet, and a zone trigger needs a new authored Map-object type that doesn't exist.
+- **entityId→script lookup table** — only needed if one Script must serve multiple Entities; not built until that's a real case.
+- **Full quest/variable/inventory modeling** — Flags stay a flat key/value store, matching Phase 1's existing "no quests/XP UI yet" boundary.
+- **Ink language integration** — stays separately deferred (see below); this Script system is the general dispatch shell Ink could plug into later, not a replacement for it.
+- **Pausing/disabling Player movement while Dialogue is shown** — accepted v1 rough edge, not solved here.
+
+### Further Notes
+
+- See `adr/0008` for why this is Host-side rather than Unity-style Engine-side scripting.
+- This is the first content built on top of ticket 05/03's events; the ticket-dependency shape (state-collection ticket blocking the dialogue-script ticket, which is blocked by 05 and 03) is for `/to-tickets` to formalize, not fixed here.
+
 ## Explicitly out of scope / deferred
 
-- **Dialogue content, quests, XP, inventory, progression rules** — these belong to the Host/main-repo backend, not the Engine. The Engine only ever reports "Player interacted with Entity X"; it has no idea what that means.
-- **Ink language integration** for dialogue authoring — skip until needed, not designed now.
+- **Quests, XP, inventory, progression rules** beyond the Flags described above — these belong to the Host/main-repo backend, not the Engine, and Flags themselves stay a flat key/value store, not a full progression system.
+- **Ink language integration** for dialogue authoring — skip until needed, not designed now; the Dialogue Scripts system above is a separate, general dispatch mechanism Ink could plug into later, not a replacement for it.
 - **NPC/Entity sprite rendering** — the Engine has no visual representation for an Entity at all yet (ticket 05 is position + interaction-event only, no sprite). The character-animation mechanism above is deliberately generic so it can cover this later without new Engine code, but the actual wiring is deferred until Entity rendering itself is designed and built.
+- **CG/cutscene, non-Interaction/Map-entry Script triggers, entityId→script lookup tables** — see Dialogue Scripts' own Out of Scope above.
 
 ## Open
 
-- **Where does interaction/dialogue UI render** — in-canvas (Phaser draws it) vs. a React overlay outside the canvas? Explicitly left unresolved by request; revisit after Phase 1 rendering work is done. Do not assume an answer here.
+(No open items at present — the previous entry, where interaction/dialogue UI renders, was resolved by the Dialogue Scripts section above: a Host-side overlay, not in-canvas.)
 
 ## Playground-specific scaffolding
 
