@@ -1,0 +1,6 @@
+{
+  "studentId": "test-student",
+  "flags": {
+    "tutorial_seen": false
+  }
+}

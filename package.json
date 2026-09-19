@@ -6,7 +6,7 @@
     "apps/*"
   ],
   "scripts": {
-    "test": "npm test --workspace=@game-engine/engine-core",
+    "test": "npm test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "npm run dev --workspace=web",
     "lint": "oxlint",
