@@ -8,6 +8,11 @@
   "scripts": {
     "test": "npm test --workspace=@game-engine/engine-core",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "dev": "npm run dev --workspace=web"
+    "dev": "npm run dev --workspace=web",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix"
+  },
+  "devDependencies": {
+    "oxlint": "^1.83.0"
   }
 }
