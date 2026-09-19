@@ -55,3 +55,17 @@ _Avoid_: Dialogue trigger, talk, activate
 **Engine Event**:
 A fact the Engine emits outward when something happens (the Player moved, a Transition occurred, an Interaction occurred). The Host listens to these to decide what happens next.
 _Avoid_: Callback, action, message
+
+### Content
+
+**Script**:
+Host-authored code that runs when a specific Engine Event fires for a specific Entity or Map, producing Dialogue. The Engine has no knowledge that Scripts exist.
+_Avoid_: Event handler, callback, quest (a Quest is a larger, not-yet-designed concept a Script may someday drive, not what a Script is itself)
+
+**Dialogue**:
+Text and Player-facing choices that a Script shows as its output, rendered entirely by the Host.
+_Avoid_: Cutscene (a larger, not-yet-designed concept where control is taken from the Player — Dialogue never does that), text box
+
+**Flag**:
+A small, durable per-Student fact (e.g. "has talked to this Entity") that a Script can read and set, persisting across sessions.
+_Avoid_: Variable, state, quest progress
