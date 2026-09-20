@@ -63,8 +63,20 @@ Host-authored code that runs when a specific Engine Event fires for a specific E
 _Avoid_: Event handler, callback, quest (a Quest is a larger, not-yet-designed concept a Script may someday drive, not what a Script is itself)
 
 **Dialogue**:
-Text and Player-facing choices that a Script shows as its output, rendered entirely by the Host.
+Text and Player-facing choices that a Script shows as its output, rendered entirely by the Host. Each line carries a Speaker and may show a Portrait.
 _Avoid_: Cutscene (a larger, not-yet-designed concept where control is taken from the Player — Dialogue never does that), text box
+
+**Speaker**:
+The character (or narrator) a line of Dialogue is attributed to. Not necessarily the Entity whose Script produced it — a Script can voice a different character, or an unplaced narrator, within its own Dialogue.
+_Avoid_: Entity (a Speaker need not be a placed, interactable Entity on the Map)
+
+**Portrait**:
+A static illustration representing a Speaker's appearance in the Dialogue overlay, chosen per line by Expression. Lives independently of a Player/Entity's character spritesheet — a Speaker need not have one, or any in-world visual representation at all.
+_Avoid_: Sprite (a Player/Entity's animated on-map spritesheet is a different concept with a different pipeline — see `adr/0006` vs `adr/0014`), avatar
+
+**Expression**:
+The specific emotional state a Portrait depicts, chosen from a fixed, project-wide set (Neutral, Happy, Sad, Angry, Surprised) rather than authored freely per character.
+_Avoid_: Emotion, mood, pose
 
 **Flag**:
 A small, durable per-Student fact (e.g. "has talked to this Entity") that a Script can read and set, persisting across sessions.
