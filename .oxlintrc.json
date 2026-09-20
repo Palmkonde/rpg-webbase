@@ -68,6 +68,12 @@
       "rules": {
         "no-magic-numbers": "off"
       }
+    },
+    {
+      "files": ["apps/web/src/scripts/entities/**"],
+      "rules": {
+        "unicorn/filename-case": "off"
+      }
     }
   ]
 }
