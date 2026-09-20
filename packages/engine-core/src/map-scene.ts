@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser'
 import type { AnimationFrame, TiledMapAssets } from './tiled-assets.ts'
-import type { CharacterDefinition, MapDefinition, WorldConfig } from './types.ts'
+import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
 import { preloadPlayerSprite, resolvePlayerTexture } from './player-assets.ts'
 import { Direction } from 'grid-engine'
 import type { GridEngine } from 'grid-engine'
@@ -9,6 +9,7 @@ import { stepAnimation } from './tile-animation.ts'
 
 const PLAYER_ID = 'player'
 const CAMERA_ZOOM = 2
+const INTERACT_KEY = 'E'
 
 interface AnimatedTile {
   tile: Phaser.Tilemaps.Tile
@@ -22,13 +23,15 @@ export interface MapSceneConfig {
   character: CharacterDefinition
   worldConfig: WorldConfig
   assets: TiledMapAssets
+  onEvent?: (event: EngineEvent) => void
 }
 
-export function createMapScene({ map, character, worldConfig, assets }: MapSceneConfig): typeof Phaser.Scene {
+export function createMapScene({ map, character, worldConfig, assets, onEvent }: MapSceneConfig): typeof Phaser.Scene {
   return class MapScene extends Phaser.Scene {
     public declare gridEngine: GridEngine
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
     private wasd!: Record<'W' | 'A' | 'S' | 'D', Phaser.Input.Keyboard.Key>
+    private interactKey!: Phaser.Input.Keyboard.Key
     private animatedTiles: AnimatedTile[] = []
 
     public constructor() {
@@ -128,10 +131,12 @@ export function createMapScene({ map, character, worldConfig, assets }: MapScene
         'W' | 'A' | 'S' | 'D',
         Phaser.Input.Keyboard.Key
       >
+      this.interactKey = this.input.keyboard!.addKey(INTERACT_KEY)
     }
 
     public update(_time: number, delta: number): void {
       this.handleMovementInput()
+      this.handleInteractInput()
       this.stepTileAnimations(delta)
     }
 
@@ -149,6 +154,20 @@ export function createMapScene({ map, character, worldConfig, assets }: MapScene
         this.gridEngine.move(PLAYER_ID, Direction.UP)
       } else if (down) {
         this.gridEngine.move(PLAYER_ID, Direction.DOWN)
+      }
+    }
+
+    // Fires only when the Player is adjacent to/facing an Entity — the tile directly ahead of the
+    private handleInteractInput(): void {
+      // oxlint-disable-next-line new-cap -- Phaser.Input.Keyboard.JustDown is a static API function, not a constructor
+      if (!Phaser.Input.Keyboard.JustDown(this.interactKey)) {return}
+
+      const facing = this.gridEngine.getFacingPosition(PLAYER_ID)
+      const entity = assets.entities.find((candidate) => candidate.x === facing.x && candidate.y === facing.y)
+      
+      // temporary test
+      if (entity) {
+        onEvent?.({ type: 'interacted', entityId: entity.entityId })
       }
     }
 

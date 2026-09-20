@@ -1,7 +1,7 @@
 'use client'
 
+import type { EngineEvent, WorldConfig } from '@game-engine/engine-core'
 import { useEffect, useRef } from 'react'
-import type { WorldConfig } from '@game-engine/engine-core'
 import { characters } from './characters'
 import { createEngine } from '@game-engine/engine-core'
 import { maps } from './maps'
@@ -20,7 +20,13 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
 
     async function start(element: HTMLElement): Promise<void> {
       try {
-        const created = await createEngine(element, worldConfig, { maps, characters })
+        const created = await createEngine(element, {
+          worldConfig,
+          catalogs: { maps, characters },
+          onEvent: (event: EngineEvent) => {
+            console.warn('[Engine Event]', event)
+          },
+        })
         if (cancelled) {
           created.destroy(true)
         } else {

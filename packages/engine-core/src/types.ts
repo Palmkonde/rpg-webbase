@@ -22,3 +22,17 @@ export interface WorldConfig {
     characterId: string
   }
 }
+
+export interface InteractedEvent {
+  type: 'interacted'
+  entityId: string
+}
+
+export interface TransitionedEvent {
+  type: 'transitioned'
+  fromMapId: string
+  toMapId: string
+  spawn: SpawnPoint
+}
+
+export type EngineEvent = InteractedEvent | TransitionedEvent

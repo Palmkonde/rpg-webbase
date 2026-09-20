@@ -28,6 +28,26 @@ interface TiledMapJson {
   tilesets: TiledTilesetDef[]
 }
 
+interface TiledObjectDef {
+  name: string
+  type?: string
+  x: number
+  y: number
+  gid?: number
+  properties?: TiledTilePropertyDef[]
+}
+
+interface TiledLayerDef {
+  type: string
+  objects?: TiledObjectDef[]
+}
+
+interface TiledObjectsJson {
+  layers: TiledLayerDef[]
+  tilewidth: number
+  tileheight: number
+}
+
 export interface ImageToLoad {
   key: string
   url: string
@@ -38,10 +58,52 @@ export interface AnimationFrame {
   duration: number
 }
 
+export interface EntityObject {
+  entityId: string
+  x: number
+  y: number
+}
+
 export interface TiledMapAssets {
   images: ImageToLoad[]
   tileProperties: Map<number, Record<string, unknown>>
   tileAnimations: Map<number, AnimationFrame[]>
+  entities: EntityObject[]
+}
+
+const OBJECT_LAYER_TYPE = 'objectgroup'
+const ENTITY_CLASS = 'Entity'
+const ENTITY_ID_PROPERTY = 'entityId'
+
+function readEntity(object: TiledObjectDef, tilewidth: number, tileheight: number): EntityObject | undefined {
+  if (object.type !== ENTITY_CLASS) {return undefined}
+
+  const entityId = object.properties?.find((prop) => prop.name === ENTITY_ID_PROPERTY)?.value
+  if (typeof entityId !== 'string' || entityId === '') {return undefined}
+
+  const topY = object.gid === undefined ? object.y : object.y - tileheight
+  return {
+    entityId,
+    x: Math.floor(object.x / tilewidth),
+    y: Math.floor(topY / tileheight),
+  }
+}
+
+export function collectEntities(raw: TiledObjectsJson): EntityObject[] {
+  const entities: EntityObject[] = []
+
+  for (const layer of raw.layers) {
+    if (layer.type === OBJECT_LAYER_TYPE) {
+      for (const object of layer.objects ?? []) {
+        const entity = readEntity(object, raw.tilewidth, raw.tileheight)
+        if (entity) {
+          entities.push(entity)
+        }
+      }
+    }
+  }
+
+  return entities
 }
 
 // Build a gid-keyed Map by extracting one value per tile across all tilesets
@@ -106,12 +168,13 @@ function collectImages(raw: TiledMapJson, tiledMapUrl: string, origin: string): 
 
 export async function collectTiledMapAssets(tiledMapUrl: string): Promise<TiledMapAssets> {
   const response = await fetch(tiledMapUrl)
-  const raw = (await response.json()) as TiledMapJson
+  const raw = (await response.json()) as TiledMapJson & TiledObjectsJson
   const { origin } = globalThis.location
 
   return {
     images: collectImages(raw, tiledMapUrl, origin),
     tileProperties: collectTileProperties(raw),
     tileAnimations: collectTileAnimations(raw),
+    entities: collectEntities(raw),
   }
 }

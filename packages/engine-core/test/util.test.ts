@@ -1,4 +1,4 @@
-import { computeCameraBounds, resolveTilesetAssetUrl } from '../src/util.ts'
+import { computeCameraBounds, findDuplicates, resolveTilesetAssetUrl } from '../src/util.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
@@ -38,4 +38,16 @@ test('computeCameraBounds handles a single-tile map', () => {
 test('computeCameraBounds handles a very large map', () => {
   const result = computeCameraBounds(102_400, 81_920)
   assert.deepEqual(result, { x: 0, y: 0, width: 102_400, height: 81_920 })
+})
+
+test('findDuplicates returns an empty array for empty input', () => {
+  assert.deepEqual(findDuplicates([]), [])
+})
+
+test('findDuplicates returns an empty array when nothing repeats', () => {
+  assert.deepEqual(findDuplicates(['a', 'b', 'c']), [])
+})
+
+test('findDuplicates returns each value that appears more than once, once each', () => {
+  assert.deepEqual(findDuplicates(['a', 'b', 'a', 'c', 'b', 'a']), ['a', 'b'])
 })

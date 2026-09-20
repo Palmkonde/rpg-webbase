@@ -17,3 +17,16 @@ export interface CameraBounds {
 export function computeCameraBounds(mapWidthInPixels: number, mapHeightInPixels: number): CameraBounds {
   return { x: 0, y: 0, width: mapWidthInPixels, height: mapHeightInPixels }
 }
+
+// Every value that appears more than once in the input, each reported once.
+export function findDuplicates(values: string[]): string[] {
+  const seen = new Set<string>()
+  const duplicates = new Set<string>()
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicates.add(value)
+    }
+    seen.add(value)
+  }
+  return [...duplicates]
+}
