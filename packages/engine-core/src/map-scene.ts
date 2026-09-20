@@ -158,6 +158,7 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
     }
 
     // Fires only when the Player is adjacent to/facing an Entity — the tile directly ahead of the
+    // That tile need class "Entity`
     private handleInteractInput(): void {
       // oxlint-disable-next-line new-cap -- Phaser.Input.Keyboard.JustDown is a static API function, not a constructor
       if (!Phaser.Input.Keyboard.JustDown(this.interactKey)) {return}
