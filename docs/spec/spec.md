@@ -116,7 +116,7 @@ The canvas fills the browser window via Phaser's `Scale.FIT` (scaling a 960×540
 
 ## Dialogue Scripts
 
-Confirmed 2026-09-19 via grilling session, following investigation of overlap with `issues/05-entity-interaction-hook.md`. See `CONTEXT.md`'s "Content" vocabulary (Script, Dialogue, Flag) and `adr/0008` through `adr/0011` for the rationale behind each architectural call below.
+Confirmed 2026-09-19 via grilling session, following investigation of overlap with `issues/05-entity-interaction-hook.md`. See `CONTEXT.md`'s "Content" vocabulary (Script, Dialogue, Flag) and `adr/0008` through `adr/0011` for the rationale behind each architectural call below. See "Dialogue Scripts: Choices, Speakers & Localization" below for how choices, Speaker, and localization extend this.
 
 Beyond the literal Phase 1 done-bar (Phase 1 explicitly excludes dialogue/quests/XP UI) — this is the first slice of Phase 2-ish "what happens after an Interaction" work, grilled now because ticket 05 (which it depends on) was already being pulled forward.
 
@@ -150,7 +150,7 @@ A Host-side Script: ordinary TypeScript, authored per Entity (or per Map, for en
 
 ### Implementation Decisions
 
-- **Script authoring**: a Script is a TypeScript module built with a small builder/fluent API (e.g. chaining a "say a line" call with a "offer choices" call) — not a parsed DSL, not a data-only config format. See `adr/0009`.
+- **Script authoring**: a Script is a TypeScript module built with a small builder/fluent API (e.g. chaining a "say a line" call with a "offer choices" call) — not a parsed DSL, not a data-only config format. See `adr/0009`. (Choice shape — multi-Flag writes, visible/disabled conditions, nesting into a tree — and per-line Speaker are refined in "Dialogue Scripts: Choices, Speakers & Localization" below.)
 - **Script location convention**: an Entity's Script is found by naming convention from its `entityId` (the Tiled object's dedicated `entityId` property — see "Map Object Authoring" below, superseding an earlier draft of this line that said the object's `name` field) — no explicit id-to-path lookup table in this round.
 - **Triggers**: exactly two Engine Events drive Scripts — the `interacted` event (ticket 05, keyed by `entityId`) for Entity Scripts, and the `transitioned` event's `toMapId` (ticket 03) for Map-entry Scripts. No other Engine Event drives a Script this round.
 - **Script context**: a Script receives a read-only context object exposing the current Student's Flags, so the shape supports branching now even though this round's Dialogue content doesn't branch on anything yet.
@@ -170,14 +170,133 @@ A Host-side Script: ordinary TypeScript, authored per Entity (or per Map, for en
 - **CG (full-screen illustration) and cutscene** (a Script taking control away from the Player) — needs a Host→Engine imperative pause/resume channel that doesn't exist and isn't being built this round (`adr/0011`). Blocked on this Dialogue Script slice landing first.
 - **Raw per-step (`moved`) or tile/zone-entered Script triggers** — no concrete need yet, and a zone trigger needs a new authored Map-object type that doesn't exist.
 - **entityId→script lookup table** — only needed if one Script must serve multiple Entities; not built until that's a real case.
-- **Full quest/variable/inventory modeling** — Flags stay a flat key/value store, matching Phase 1's existing "no quests/XP UI yet" boundary.
-- **Ink language integration** — stays separately deferred (see below); this Script system is the general dispatch shell Ink could plug into later, not a replacement for it.
+- **Full quest/variable/inventory modeling** — Flags stay a flat key/value store, matching Phase 1's existing "no quests/XP UI yet" boundary. (Reaffirmed in "Dialogue Scripts: Choices, Speakers & Localization" below, including Flag arithmetic specifically.)
+- **Ink language integration** — stays separately deferred (see below); this Script system is the general dispatch shell Ink could plug into later, not a replacement for it. (See also `adr/0013` — non-programmer *text editing* is solved separately via a string table; only non-programmer *branching authorship* would actually reopen this.)
 - **Pausing/disabling Player movement while Dialogue is shown** — accepted v1 rough edge, not solved here.
 
 ### Further Notes
 
 - See `adr/0008` for why this is Host-side rather than Unity-style Engine-side scripting.
 - This is the first content built on top of ticket 05/03's events; the ticket-dependency shape (state-collection ticket blocking the dialogue-script ticket, which is blocked by 05 and 03) is for `/to-tickets` to formalize, not fixed here.
+
+## Dialogue Scripts: Choices, Speakers & Localization
+
+Confirmed 2026-09-20 via grilling session, following `docs/research/dialogue-and-choice-script-functionality.md`'s primary-source survey of dialogue/choice systems (Ink, Yarn Spinner, Ren'Py, RPG Maker MZ). Extends "Dialogue Scripts" above: choices grow from a flat, single-Flag round (ticket 14's original scope) into a nested tree with multi-Flag writes, and Dialogue gains a per-line Speaker. See `CONTEXT.md`'s "Content" vocabulary (Script, Dialogue, **Speaker**, Flag) and `adr/0013-dialogue-localization-is-a-string-table-not-a-reopened-adr-0009.md` for the localization rationale. ADR-0009 and ADR-0011 are both reaffirmed, not reopened.
+
+### Problem Statement
+
+Ticket 14 proves a Script can read and write one Flag through one flat round of choices — enough to show Scripts can branch and persist an outcome, but not enough to author dialogue that reads like the Undertale/visual-novel/RPG reference points this project is aiming for: a single choice rarely stands alone (it usually leads to more choices), a single Flag rarely captures a whole outcome, dialogue with more than one character has no way to say who's talking, and a designer who isn't comfortable writing TypeScript has no way to edit or translate a line of dialogue without going through a programmer.
+
+### Solution
+
+Four independent extensions to the existing Script/Dialogue/Flag mechanism, none of which reopen ADR-0009 (TypeScript builder, not a parsed DSL) or ADR-0011 (no Host→Engine pause channel): choices become a nested tree that can write multiple Flags per branch and can be hidden or shown-but-disabled; Dialogue lines gain an open-ended Speaker so a Script can voice more than one character; dialogue text resolves through a locale-keyed string table so non-technical authors can edit and translate lines without touching a Script's TypeScript structure (`adr/0013`); and a short list of adjacent asks (Flag arithmetic, Script→Host side effects, timed choices, portraits) are explicitly named and deferred rather than silently dropped.
+
+### User Stories
+
+1. As a content author, I want a choice to lead to another round of choices, so that a conversation can branch more than once instead of ending after a single pick.
+2. As a content author, I want a choice to set more than one Flag at once, so that a single decision can capture a compound outcome (e.g. both "met the merchant" and "was rude to them").
+3. As a Player, I want some choices to be hidden until I've met their condition, so that dialogue doesn't visibly list options I haven't earned yet.
+4. As a Player, I want some choices to be visible-but-locked with a reason shown when I try to pick them, so that I know what I need to do to unlock them instead of just seeing them absent.
+5. As a content author, I want to write a choice's shared "what happens next" content once as a plain TypeScript function, so that two branches that reconverge don't require me to duplicate the same dialogue lines.
+6. As a Player, I want re-interacting with a Scripted Entity to always start its dialogue from the top, so that I'm never confused about where a half-finished conversation left off.
+7. As a content author, I want a Dialogue line to carry who's speaking, so that a conversation with more than one character reads clearly instead of every line looking like it comes from one voice.
+8. As a content author, I want a Script to attribute a line to a character other than the Entity it's attached to (including a narrator with no Entity in the world), so that a single Script can stage a scene with more than one speaker.
+9. As a Player, I want an unattributed line to default to the Entity's own name, so that simple one-voice Scripts don't need to repeat the speaker on every line.
+10. As a designer who doesn't write TypeScript, I want to edit and translate a line of dialogue text without touching a Script file, so that I'm not blocked on a programmer for routine content changes.
+11. As a Host developer, I want dialogue text to resolve through a locale-keyed lookup instead of being hardcoded inline in a Script, so that adding a language later doesn't mean editing every Script.
+12. As a Host developer, I want the locale a line resolves against to be fixture-stubbed today (mirroring how `WorldConfig` and Flags already are), so that a real backend/locale-selection mechanism can replace it later with no redesign of the Script-facing API.
+13. As a future maintainer, I want it recorded that Flags stay arithmetic-free and quest/item-free even though the student-state model will eventually need both, so that I don't "helpfully" widen Flag into something `CONTEXT.md`'s glossary already says to avoid.
+14. As a future maintainer, I want the Flag store's async get/set shape to stay generic, so that a sibling Quest/Item store can be added later without changing the Script-facing `ctx` contract.
+15. As a future maintainer, I want it recorded that a Script→Host side-effect channel (playing a sound, swapping a portrait, granting an item) was considered and explicitly deferred, so that I build the concrete feature's own API when it's actually needed instead of guessing at a generic hook now.
+16. As a future maintainer, I want it recorded that timed/auto-advancing choices were considered and rejected, so that I don't reopen ADR-0011's declined pause channel chasing a feature nobody asked for.
+17. As a future maintainer, I want it recorded that portrait/expression art is wanted but explicitly backlogged behind this work, so that it's a known future ticket, not a forgotten idea.
+18. As a future maintainer, I want it recorded why the localization fix is a string table rather than a reopened ADR-0009, so that I understand the narrower, cheaper path was a deliberate choice, not an oversight (`adr/0013`).
+
+### Implementation Decisions
+
+- **Choice shape**: a `.choice()` step takes display text, an optional `visible` condition (Flag-based; false ⇒ the choice is omitted from the rendered list entirely), an optional `enabled` condition plus a `disabledReason` (false ⇒ the choice renders but isn't selectable; attempting to pick it surfaces the reason instead), and a set of Flag-writes to apply as its outcome — supersedes ticket 14's original single-Flag-per-choice scope.
+- **Choice nesting**: a choice's outcome can itself return another set of choices via the same builder, so Dialogue is a tree, not a single flat round — supersedes the "Script authoring" bullet in "Dialogue Scripts" above, which only demonstrated one flat "say a line"/"offer choices" step.
+- **Branch reconvergence**: no dedicated "gather"/merge-point primitive is built. Two branches that need the same continuation content share it by both calling the same plain TypeScript function/closure — ADR-0009's "plain TypeScript, not a parsed DSL" already provides this for free.
+- **Dialogue position on re-interact**: a Script always runs from the top on every `interacted`/`transitioned` event; no "current node" is persisted per Student per Script. A half-finished tree simply restarts.
+- **Speaker**: each Dialogue line gains an optional `speaker` field (a plain string, not tied to `entityId`); when omitted, it defaults to the owning Entity's display name. A Script may set a different speaker per line, including one with no corresponding Entity (e.g. a narrator). (A Portrait/Expression is bundled onto this same per-line option — see "Dialogue Portraits & Expressions" below.)
+- **Localization**: dialogue line text resolves through a small, pure, locale-keyed lookup function (a string table) rather than being passed as an inline literal — content/translation edits happen in that table, not in a Script's TypeScript. Locale itself is fixture-stubbed for now (a hardcoded default, matching how `WorldConfig`/Flags are already stubbed) — a Player-facing language switcher is not built this round. See `adr/0013` for why this doesn't reopen ADR-0009.
+- **Flags stay unchanged**: still a flat, per-Student, boolean/number/string key/value store with no arithmetic operations — reaffirmed, not widened, despite student-state eventually growing quests/items. The Flag store's existing async get/set interface already stays generic enough (mirroring `WorldConfig`'s fixture-backed pattern) for a future sibling Quest/Item store to be added without changing the Script-facing `ctx` contract.
+- **No Script→Host side-effect channel**: not built this round. A Script triggering something beyond a Flag write (sound, portrait swap, granting an item) gets its own purpose-built API when that concrete feature is actually designed, rather than a speculative generic hook now.
+
+### Testing Decisions
+
+- Same pattern as "Dialogue Scripts" above (`node:test`/`node:assert/strict`, pure functions only): the extended `ScriptBuilder`'s output — a choice's Flag-writes, `visible`/`enabled` conditions, nested choice trees, and each line's resolved `speaker` — gets unit tests alongside the existing builder-output tests.
+- The new locale-resolution lookup function gets its own unit tests (given a key and a locale, returns the expected text; a missing key/locale falls back predictably) — a new, small pure module tested the same way `flags.ts` already is.
+- Everything past those two seams — hidden vs. disabled choices actually rendering differently in the overlay, a disabled choice's reason actually surfacing on click, a real playthrough navigating a multi-level tree, a line's speaker actually rendering distinctly per line, and restart-at-top behavior on re-interact — isn't automatable here (no e2e/browser automation, per `CLAUDE.md`) and is verified manually: interact with a Scripted Entity offering a tree of choices, confirm hidden choices are absent and disabled ones show their reason on click, confirm two speakers in one exchange render distinctly, and confirm re-interacting restarts the conversation from the top.
+
+### Out of Scope
+
+- **Flag arithmetic** (increment/compare on numeric Flags) — considered and declined; Flags stay simple set/overwrite. Revisit only if a concrete counter-driven need shows up, not speculatively.
+- **Quest/Item modeling** — still belongs entirely to a future, separate concept, not a widened Flag. This round only confirms the Flag store's interface won't need to change shape when that future work lands.
+- **A generic Script→Host side-effect channel** — deferred; see Implementation Decisions above.
+- **Timed/auto-advancing choices** — declined outright; would risk reopening ADR-0011's declined Host→Engine pause channel for no concrete benefit identified.
+- **Portrait/expression art and its asset pipeline** — wanted, but explicitly backlogged behind this work; no `assets/` convention for character-expression art exists yet, and building one is its own, separate research/spec effort. (Now scoped in "Dialogue Portraits & Expressions" below.)
+- **A Player-facing locale switcher** — the string-table mechanism is built and tested; actually letting a Player choose a language is a later, separate concern.
+- **Random/weighted line variation, one Script calling another, an in-script jump/goto** — considered; all three are already achievable in plain TypeScript with zero builder changes (ADR-0009's whole premise), so none get dedicated builder syntax until a concrete authoring pain point shows up.
+- **Save/resume mid-dialogue** — a non-issue given restart-at-top above; nothing to resume.
+
+### Further Notes
+
+- See `docs/research/dialogue-and-choice-script-functionality.md` for the primary-source survey (Ink, Yarn Spinner, Ren'Py, RPG Maker MZ) this section's decisions were grilled against.
+- See `adr/0013-dialogue-localization-is-a-string-table-not-a-reopened-adr-0009.md` for why localization doesn't reopen ADR-0009, and what would actually trigger reopening it (a designer needing to build/rearrange branching structure, not just edit line text).
+- `CONTEXT.md`'s "Content" section gained a new **Speaker** term as part of this round.
+- This section's scope (tree-shaped choices, multi-Flag writes, Speaker, locale string table) supersedes ticket 14's original flat/single-Flag/no-Speaker assumptions for whatever ticket(s) `/to-tickets` produces from this section — ticket 14 itself, if already in flight or done, is not retroactively rewritten.
+
+## Dialogue Portraits & Expressions
+
+Confirmed 2026-09-20 via grilling session, following up on "Dialogue Scripts: Choices, Speakers & Localization"'s deferred Portrait/Expression item. See `CONTEXT.md`'s "Content" vocabulary (Speaker, **Portrait**, **Expression**) and `adr/0014-dialogue-portraits-are-a-standalone-asset-type.md` for why Portrait storage is independent of the existing character-spritesheet pipeline (`adr/0006`).
+
+### Problem Statement
+
+A Dialogue line can now carry a Speaker, but nothing lets a Script show what that Speaker looks like — Undertale/visual-novel-style dialogue routinely pairs a line with a character illustration that changes with the character's emotional state, and this project has no path to that at all: no asset location for this kind of art, no way for a Script to select one, and no defined fallback when one doesn't exist.
+
+### Solution
+
+A line's presentation options grow to include an optional Portrait, selected by a fixed Expression value alongside its Speaker. Portrait art lives in its own asset location, independent of the existing per-character spritesheet/normalization pipeline (`adr/0006`, `adr/0014`) — a Speaker (including a narrator) can have Portrait art without needing an on-map character sprite at all, or vice versa. A line with no matching Portrait art simply renders text-only, exactly as it does today.
+
+### User Stories
+
+1. As a content author, I want to select a Portrait and Expression for a line alongside its Speaker, so that dialogue can show what a character looks like as they speak, not just their name.
+2. As a Player, I want a character's Portrait to change with their Expression, so that dialogue reads with the emotional nuance Undertale/visual-novel dialogue has.
+3. As a content author, I want to pick a line's Expression from a fixed, known set (Neutral, Happy, Sad, Angry, Surprised), so that I'm choosing from a real vocabulary instead of inventing an arbitrary string that might not match any art.
+4. As a content author, I want a Speaker with no drawn Portrait for a given Expression to just show text, so that I'm never blocked from shipping dialogue by incomplete art.
+5. As a content author, I want a narrator (a Speaker with no Entity or on-map sprite) to be able to have a Portrait too, so that scene-setting narration isn't second-class next to character dialogue.
+6. As a Host developer, I want Portrait art stored independently of `assets/sprites/characters/<name>/`'s normalization pipeline, so that a static illustration isn't forced through machinery built for animated walk-cycle sheets.
+7. As a Host developer, I want a Portrait's resolution (Speaker + Expression → asset) to be a pure, testable function, so that I can verify "no art for this combination" falls back correctly without a running browser.
+8. As a future maintainer, I want it recorded why Portrait art doesn't reuse the character-spritesheet pipeline, so that I don't "fix" what was actually a deliberate decoupling (`adr/0014`).
+9. As a future maintainer, I want the Expression vocabulary's small starting set recorded as deliberately minimal, so that extending it later (adding a member + matching art) reads as expected growth, not a missed requirement.
+
+### Implementation Decisions
+
+- **Expression**: a fixed, closed TypeScript union/enum — `Neutral | Happy | Sad | Angry | Surprised` — not a freeform string. A Script can only request a value from this set.
+- **Portrait selection**: bundled into the same per-line presentation options as Speaker (e.g. `.say(text, { speaker, portrait: 'happy' })`), not a separate builder step — both describe how a line is presented, not what it says.
+- **Portrait storage**: independent of `assets/sprites/characters/<name>/` and ADR-0006's raw/normalized pipeline. Keyed directly by whatever string a Script uses as `speaker`, with no dependency on that Speaker having an Entity, a Player character, or a spritesheet at all. See `adr/0014`.
+- **Resolution/fallback**: a small pure function resolves (Speaker, Expression) to a Portrait asset reference or `undefined`; `undefined` means the line renders text-only, with no warning — a missing Portrait for a valid Expression is an expected content-authoring gap, not a bug (the closed Expression type already rules out a typo'd value).
+- **No relationship to Entity/Player sprite rendering**: this is purely a Dialogue-overlay (Host-rendered, `adr/0011`) concern; it does not touch, require, or wait on the still-unbuilt NPC/Entity sprite rendering work.
+
+### Testing Decisions
+
+- The `ScriptBuilder`'s output gains coverage for a line's `portrait`/Expression fields, alongside its existing `speaker` coverage — same seam, same pattern (`node:test`, pure function assertions on what `build()` returns).
+- The new Portrait-resolution function gets its own unit tests, modeled on the existing `resolvePlayerTexture`/`pickPlayerTexture` split in `player-assets.ts`: given a Speaker and Expression, returns the expected asset reference, or `undefined` when no matching art exists.
+- Everything past those two seams — the overlay actually rendering a Portrait image, swapping it per Expression, and falling back to text-only when one is missing — isn't automatable here (no e2e/browser automation, per `CLAUDE.md`) and is verified manually: interact with a Scripted Entity whose lines cycle through a few Expressions and confirm the Portrait changes, and confirm a line with no matching Portrait art still renders correctly as text-only.
+
+### Out of Scope
+
+- **An Expression beyond the initial five** (Neutral, Happy, Sad, Angry, Surprised) — extend only when a real line actually needs one; the set is deliberately minimal, not exhaustive.
+- **Portrait art normalization/authoring pipeline details** (image dimensions, format, how a non-technical author adds new art) — this section confirms *where* Portrait art lives and how it's referenced, not the art-production workflow itself.
+- **Portrait animation or transition effects** (fading, sliding, lip-sync-style movement) — static images only.
+- **Any relationship to NPC/Entity on-map sprite rendering** — that remains its own, separately-deferred, unbuilt concern (see "Explicitly out of scope / deferred").
+
+### Further Notes
+
+- See `adr/0014-dialogue-portraits-are-a-standalone-asset-type.md` for the full rationale against reusing the character-spritesheet pipeline.
+- `CONTEXT.md`'s "Content" section gained **Portrait** and **Expression** as part of this round.
+- This section supersedes "Dialogue Scripts: Choices, Speakers & Localization"'s Out of Scope note that backlogged Portrait/expression art — that item is now scoped here.
 
 ## Map Object Authoring: Layer Flexibility & Dedicated Identity
 
@@ -244,6 +363,8 @@ Class-tagged Spawn/Entity/Portal objects can now live on any number of object la
 - **Ink language integration** for dialogue authoring — skip until needed, not designed now; the Dialogue Scripts system above is a separate, general dispatch mechanism Ink could plug into later, not a replacement for it.
 - **NPC/Entity sprite rendering** — the Engine has no visual representation for an Entity at all yet (ticket 05 is position + interaction-event only, no sprite). The character-animation mechanism above is deliberately generic so it can cover this later without new Engine code, but the actual wiring is deferred until Entity rendering itself is designed and built.
 - **CG/cutscene, non-Interaction/Map-entry Script triggers, entityId→script lookup tables** — see Dialogue Scripts' own Out of Scope above.
+- **Flag arithmetic, a Script→Host side-effect channel, timed/auto-advancing choices, a Player-facing locale switcher** — see "Dialogue Scripts: Choices, Speakers & Localization"'s own Out of Scope above.
+- **Portrait art normalization pipeline, Portrait animation, and any tie-in to NPC/Entity sprite rendering** — see "Dialogue Portraits & Expressions"'s own Out of Scope above (Portrait/Expression itself is no longer deferred — it's scoped there).
 
 ## Open
 
