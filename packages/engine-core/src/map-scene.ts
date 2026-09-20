@@ -166,7 +166,6 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
       const facing = this.gridEngine.getFacingPosition(PLAYER_ID)
       const entity = assets.entities.find((candidate) => candidate.x === facing.x && candidate.y === facing.y)
       
-      // temporary test
       if (entity) {
         onEvent?.({ type: 'interacted', entityId: entity.entityId })
       }
