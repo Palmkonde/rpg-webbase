@@ -8,4 +8,10 @@ export const characters: CharacterDefinition[] = [
     frameWidth: 16,
     frameHeight: 20,
   },
+  {
+    id: 'temmie',
+    spriteUrl: '/assets/sprites/characters/temmie/temmie.png',
+    frameWidth: 32,
+    frameHeight: 32,
+  }
 ]
