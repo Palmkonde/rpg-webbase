@@ -1,6 +1,7 @@
 'use client'
 
-import type { Dialogue } from '../scripts/script.ts'
+import type { Choice, Dialogue } from '../scripts/script.ts'
+import { useCallback } from 'react'
 
 // Non-blocking per ADR-0011: no Host→Engine pause channel exists, so this never stops the Player.
 const OVERLAY_STYLE = {
@@ -21,14 +22,30 @@ const CLOSE_LABEL = 'Close'
 export function DialogueOverlay({
   dialogue,
   onDismiss,
+  onChoose,
 }: {
   dialogue: Dialogue
   onDismiss: () => void
+  onChoose: (choice: Choice) => void
 }): React.ReactElement {
+  // Dispatches by position, not `flag` — `flag` is optional now (a no-op choice) and not guaranteed unique.
+  const handleChoiceClick = useCallback((event: React.MouseEvent<HTMLButtonElement>): void => {
+    const { index } = event.currentTarget.dataset
+    const choice = dialogue.choices?.[Number(index)]
+    if (choice) {
+      onChoose(choice)
+    }
+  }, [dialogue.choices, onChoose])
+
   return (
     <div style={OVERLAY_STYLE}>
       {dialogue.lines.map((line) => (
         <p key={line}>{line}</p>
+      ))}
+      {dialogue.choices?.map((choice, index) => (
+        <button data-index={index} key={choice.text} onClick={handleChoiceClick} type="button">
+          {choice.text}
+        </button>
       ))}
       <button onClick={onDismiss} type="button">
         {CLOSE_LABEL}

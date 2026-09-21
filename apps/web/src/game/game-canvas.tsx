@@ -1,8 +1,9 @@
 'use client'
 
+import type { Choice, Dialogue } from '../scripts/script.ts'
 import type { EngineEvent, WorldConfig } from '@game-engine/engine-core'
+import { currentStudentId, flagStore } from '../state/flags.ts'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Dialogue } from '../scripts/script.ts'
 import { DialogueOverlay } from '../temp-ui/dialogue-overlay.tsx'
 import { characters } from './characters'
 import { createEngine } from '@game-engine/engine-core'
@@ -19,6 +20,17 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
     setDialogue(undefined)
   }, [])
 
+  const selectChoice = useCallback(async (choice: Choice): Promise<void> => {
+    try {
+      if (choice.flag) {
+        await flagStore.setFlags(currentStudentId, { [choice.flag]: true })
+      }
+      setDialogue(undefined)
+    } catch (error: unknown) {
+      console.error('Failed to persist Flag:', error)
+    }
+  }, [])
+
   useEffect(() => {
     const container = containerRef.current
     if (!container) {return}
@@ -30,7 +42,8 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
       console.warn('[Engine Event]', event)
       if (event.type !== 'interacted') {return}
 
-      const result = await runEntityScript(event.entityId, { flags: {} })
+      const flags = await flagStore.getFlags(currentStudentId)
+      const result = await runEntityScript(event.entityId, { flags })
       if (!cancelled && result) {
         setDialogue(result)
       }
@@ -70,7 +83,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
   return (
     <>
       <div ref={containerRef} style={CANVAS_STYLE} />
-      {dialogue && <DialogueOverlay dialogue={dialogue} onDismiss={dismissDialogue} />}
+      {dialogue && <DialogueOverlay dialogue={dialogue} onChoose={selectChoice} onDismiss={dismissDialogue} />}
     </>
   )
 }

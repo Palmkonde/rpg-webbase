@@ -35,3 +35,5 @@ export function createFlagStore(seedData: StudentSeed = seed): FlagStore {
 
 // The Host's single shared store, seeded from the local fixture.
 export const flagStore = createFlagStore()
+
+export const currentStudentId: string = seed.studentId

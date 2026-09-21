@@ -4,26 +4,38 @@ export interface ScriptContext {
   flags: Readonly<Flags>
 }
 
+export interface Choice {
+  text: string
+  flag?: string
+}
+
 export interface Dialogue {
   lines: string[]
+  choices?: Choice[]
 }
 
 export interface ScriptBuilder {
   say: (text: string) => ScriptBuilder
+  choice: (text: string, flag?: string) => ScriptBuilder
   build: () => Dialogue
 }
 
 export function createScript(): ScriptBuilder {
   const lines: string[] = []
+  const choices: Choice[] = []
   const builder: ScriptBuilder = {
 
-    // Dialogue choices (a `choice()` step here) land in ticket 14 — not needed for ticket 12's static line.
     say(text) {
       lines.push(text)
       return builder
     },
+    // No flag ⇒ a no-op choice that just ends the round without a Flag write.
+    choice(text, flag) {
+      choices.push(flag === undefined ? { text } : { text, flag })
+      return builder
+    },
     build() {
-      return { lines: [...lines] }
+      return { lines: [...lines], ...(choices.length > 0 ? { choices: [...choices] } : {}) }
     },
 
   }
