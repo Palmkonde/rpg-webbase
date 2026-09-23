@@ -4,8 +4,11 @@ export interface ScriptContext {
   flags: Readonly<Flags>
 }
 
+export type Expression = 'Neutral' | 'Happy' | 'Sad' | 'Angry' | 'Surprised'
+
 export interface SayOptions {
   speaker?: string
+  expression?: Expression
 }
 
 export interface DialogueLine extends SayOptions {
@@ -45,7 +48,12 @@ export function createScript(defaultSpeaker?: string): ScriptBuilder {
 
     say(text, options) {
       const speaker = options?.speaker ?? defaultSpeaker
-      lines.push({ text, ...(speaker === undefined ? {} : { speaker }) })
+      const expression = options?.expression
+      lines.push({
+        text,
+        ...(speaker === undefined ? {} : { speaker }),
+        ...(expression === undefined ? {} : { expression }),
+      })
       return builder
     },
     choice(text, options) {

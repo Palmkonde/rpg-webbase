@@ -2,6 +2,7 @@
 
 import type { Choice, Dialogue, DialogueLine } from '../scripts/script.ts'
 import { useCallback, useState } from 'react'
+import { resolvePortrait } from '../state/portraits.ts'
 
 // Non-blocking per ADR-0011: no Host→Engine pause channel exists, so this never stops the Player.
 const OVERLAY_STYLE = {
@@ -41,6 +42,19 @@ const LINE_BUTTON_STYLE = {
 const LINE_BUTTON_DONE_STYLE = {
   ...LINE_BUTTON_STYLE,
   cursor: 'default',
+} as const
+
+// Display size only — how big art is drawn/exported is out of this ticket's scope, per spec's "Dialogue Portraits & Expressions" Out of Scope.
+const PORTRAIT_SIZE = 64
+
+// `float`, not a flex wrapper `<div>`, to stay phrasing content inside the `<button>` (see the `<span>`-not-`<p>` note below).
+const PORTRAIT_STYLE = {
+  float: 'left',
+  width: `${PORTRAIT_SIZE}px`,
+  height: `${PORTRAIT_SIZE}px`,
+  marginRight: '0.75rem',
+  borderRadius: '0.25rem',
+  objectFit: 'cover',
 } as const
 
 // `<span>`, not `<p>`, since `<button>`'s content model only allows phrasing content — `display: block` recreates the paragraph-like stacking.
@@ -108,6 +122,7 @@ export function DialogueOverlay({
 }): React.ReactElement {
   const [blockedReason, setBlockedReason] = useState<string | undefined>()
   const { currentLine, hasMoreLines, advance } = usePaginatedLines(dialogue)
+  const portrait = resolvePortrait(currentLine?.speaker, currentLine?.expression)
 
   // Dispatches by position, not `flags` — `flags` is optional (a no-op choice) and, even set, isn't a per-choice id.
   const handleChoiceClick = useCallback((event: React.MouseEvent<HTMLButtonElement>): void => {
@@ -136,6 +151,10 @@ export function DialogueOverlay({
           style={hasMoreLines ? LINE_BUTTON_STYLE : LINE_BUTTON_DONE_STYLE}
           type="button"
         >
+          {/* Plain `<img>`, not `next/image`: a 64px dialogue thumbnail has no LCP stake, and this repo's
+              `react/forbid-component-props` rule forbids passing `style` to a Component like `next/image`'s `Image`. */}
+          {/* oxlint-disable-next-line next/no-img-element */}
+          {portrait !== undefined && <img alt="" height={PORTRAIT_SIZE} src={portrait} style={PORTRAIT_STYLE} width={PORTRAIT_SIZE} />}
           {currentLine.speaker !== undefined && <span style={SPEAKER_LABEL_STYLE}>{currentLine.speaker}</span>}
           <span style={currentLine.speaker === undefined ? LINE_TEXT_STYLE : SPEAKER_LINE_TEXT_STYLE}>
             {currentLine.text}

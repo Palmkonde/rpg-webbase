@@ -51,6 +51,27 @@ test('say() can override the default speaker per line', () => {
   ])
 })
 
+test('say() with no expression omits the expression field entirely', () => {
+  const dialogue = createScript().say('Hello.').build()
+  assert.equal('expression' in dialogue.lines[0], false)
+})
+
+test('say() attaches the line\'s Expression alongside its Speaker', () => {
+  const dialogue = createScript('Campfire').say('Howdy!', { expression: 'Happy' }).build()
+  assert.deepEqual(dialogue.lines, [{ text: 'Howdy!', speaker: 'Campfire', expression: 'Happy' }])
+})
+
+test('say() can set an Expression per line, cycling across a round', () => {
+  const dialogue = createScript('Campfire')
+    .say('Howdy!', { expression: 'Neutral' })
+    .say('Nice to meet you!', { expression: 'Happy' })
+    .build()
+  assert.deepEqual(dialogue.lines, [
+    { text: 'Howdy!', speaker: 'Campfire', expression: 'Neutral' },
+    { text: 'Nice to meet you!', speaker: 'Campfire', expression: 'Happy' },
+  ])
+})
+
 test('createScript supports multiple choices in one flat round', () => {
   const dialogue = createScript()
     .choice('Yes', { flags: { agreed: true } })
