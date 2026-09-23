@@ -2,7 +2,7 @@
 
 ## 1. Purpose and scope
 
-Ticket 14 (`docs/issues/14-dialogue-scripts-read-write-flags.md`) is the first slice where a Script does more than emit a static line: it reads a Flag to branch, and a Dialogue choice writes a Flag back. That slice is scoped tightly (one flat per-Student Flag store, `.say()` only, one flag set per choice). Before deciding what comes *after* ticket 14, this note asks a narrower question than "how should dialogue work here": what does the *feature surface* of dialogue/choice scripting look like in systems that solo/small-team narrative-heavy games actually ship with — Undertale, visual novels, JRPGs — so that gaps between "what ticket 14 builds" and "what that feature surface contains" can be named, prioritized, and (separately, later) run through this repo's own `/grill-with-docs` → `/to-spec` → `/to-tickets` pipeline. This note does not propose designs, does not touch ADR-0009 (TypeScript builder, not a parsed DSL) or ADR-0011 (no pause channel) as settled, and does not write tickets.
+Ticket 14 (github.com/Palmkonde/rpg-webbase/issues/14) is the first slice where a Script does more than emit a static line: it reads a Flag to branch, and a Dialogue choice writes a Flag back. That slice is scoped tightly (one flat per-Student Flag store, `.say()` only, one flag set per choice). Before deciding what comes *after* ticket 14, this note asks a narrower question than "how should dialogue work here": what does the *feature surface* of dialogue/choice scripting look like in systems that solo/small-team narrative-heavy games actually ship with — Undertale, visual novels, JRPGs — so that gaps between "what ticket 14 builds" and "what that feature surface contains" can be named, prioritized, and (separately, later) run through this repo's own `/grill-with-docs` → `/to-spec` → `/to-tickets` pipeline. This note does not propose designs, does not touch ADR-0009 (TypeScript builder, not a parsed DSL) or ADR-0011 (no pause channel) as settled, and does not write tickets.
 
 ## 2. Feature catalogue
 
@@ -115,5 +115,5 @@ Prioritized by how directly they bear on "what's the next ticket after 14," not 
 - `CONTEXT.md` ("Content" section: Script, Dialogue, Flag)
 - `apps/web/src/scripts/script.ts`, `apps/web/src/scripts/run-entity-script.ts`, `apps/web/src/scripts/entities/CampFire.ts`
 - `apps/web/src/state/flags.ts`
-- `docs/issues/14-dialogue-scripts-read-write-flags.md`, `docs/issues/13-map-entry-dialogue-script.md`
+- Tickets #14, #13 (github.com/Palmkonde/rpg-webbase/issues/14, /13)
 - `docs/agents/domain.md` ("Flag ADR conflicts" convention)

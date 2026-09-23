@@ -27,7 +27,7 @@ Atomic: group by logical concern (a new package, a new app, a ticket-status upda
 
 - Hard-to-reverse architectural decisions → `docs/adr/`, sequentially numbered
 - Domain vocabulary → `CONTEXT.md`, kept a pure glossary — no implementation detail
-- Ticket completion → update the ticket file in place (tick boxes, update `Status`) as its own commit
+- Ticket completion → close the GitHub issue (`Closes #NN` in the implementing commit); no separate ticket-status commit, and acceptance-criteria checkboxes aren't ticked live — the issue's open/closed state is the "is this finished" signal
 - Human-facing how-to reference (e.g. "what shape should this asset be") → `docs/guides/`, one topic per file — this is *how*, not *why* (that's an ADR) or *what's confirmed* (that's the spec)
 
 ## Assets
@@ -38,7 +38,7 @@ Atomic: group by logical concern (a new package, a new app, a ticket-status upda
 
 ### Issue tracker
 
-Local markdown under `docs/issues/<NN>-<slug>.md` (numbered sequentially, no per-feature subfolder); the spec is the single, continuously-updated `docs/spec/spec.md`. See `docs/agents/issue-tracker.md`.
+GitHub Issues on this repo's `origin` (`Palmkonde/rpg-webbase`), via the `gh` CLI; the spec is the single, continuously-updated `docs/spec/spec.md`, never published to the tracker. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
