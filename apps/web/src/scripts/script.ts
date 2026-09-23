@@ -4,9 +4,15 @@ export interface ScriptContext {
   flags: Readonly<Flags>
 }
 
-export interface Choice {
+export interface ChoiceOptions {
+  flags?: Flags
+  visible?: boolean
+  enabled?: boolean
+  disabledReason?: string
+}
+
+export interface Choice extends ChoiceOptions {
   text: string
-  flag?: string
 }
 
 export interface Dialogue {
@@ -16,7 +22,7 @@ export interface Dialogue {
 
 export interface ScriptBuilder {
   say: (text: string) => ScriptBuilder
-  choice: (text: string, flag?: string) => ScriptBuilder
+  choice: (text: string, options?: ChoiceOptions) => ScriptBuilder
   build: () => Dialogue
 }
 
@@ -29,9 +35,8 @@ export function createScript(): ScriptBuilder {
       lines.push(text)
       return builder
     },
-    // No flag ⇒ a no-op choice that just ends the round without a Flag write.
-    choice(text, flag) {
-      choices.push(flag === undefined ? { text } : { text, flag })
+    choice(text, options) {
+      choices.push({ text, ...options })
       return builder
     },
     build() {

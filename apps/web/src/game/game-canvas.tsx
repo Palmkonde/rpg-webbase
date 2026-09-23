@@ -22,12 +22,12 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
 
   const selectChoice = useCallback(async (choice: Choice): Promise<void> => {
     try {
-      if (choice.flag) {
-        await flagStore.setFlags(currentStudentId, { [choice.flag]: true })
+      if (choice.flags) {
+        await flagStore.setFlags(currentStudentId, choice.flags)
       }
       setDialogue(undefined)
     } catch (error: unknown) {
-      console.error('Failed to persist Flag:', error)
+      console.error('Failed to persist Flags:', error)
     }
   }, [])
 

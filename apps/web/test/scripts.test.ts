@@ -21,22 +21,22 @@ test('createScript with no choice() calls omits choices from the built Dialogue'
 test('createScript chains say() and choice() into lines plus a flat choices list', () => {
   const dialogue = createScript()
     .say('Howdy!')
-    .choice('Nice to meet you!', 'talked_to_campfire')
+    .choice('Nice to meet you!', { flags: { talked_to_campfire: true } })
     .build()
   assert.deepEqual(dialogue, {
     lines: ['Howdy!'],
-    choices: [{ text: 'Nice to meet you!', flag: 'talked_to_campfire' }],
+    choices: [{ text: 'Nice to meet you!', flags: { talked_to_campfire: true } }],
   })
 })
 
 test('createScript supports multiple choices in one flat round', () => {
   const dialogue = createScript()
-    .choice('Yes', 'agreed')
-    .choice('No', 'declined')
+    .choice('Yes', { flags: { agreed: true } })
+    .choice('No', { flags: { declined: true } })
     .build()
   assert.deepEqual(dialogue.choices, [
-    { text: 'Yes', flag: 'agreed' },
-    { text: 'No', flag: 'declined' },
+    { text: 'Yes', flags: { agreed: true } },
+    { text: 'No', flags: { declined: true } },
   ])
 })
 
@@ -47,12 +47,37 @@ test('createScript supports a no-op choice with no Flag to set', () => {
 
 test('createScript mixes Flag-setting and no-op choices in the same round', () => {
   const dialogue = createScript()
-    .choice('Yes', 'agreed')
+    .choice('Yes', { flags: { agreed: true } })
     .choice('Never mind')
     .build()
   assert.deepEqual(dialogue.choices, [
-    { text: 'Yes', flag: 'agreed' },
+    { text: 'Yes', flags: { agreed: true } },
     { text: 'Never mind' },
+  ])
+})
+
+test('createScript supports a choice that writes multiple Flags at once', () => {
+  const dialogue = createScript()
+    .choice('Nice to meet you!', { flags: { met_merchant: true, was_polite: true } })
+    .build()
+  assert.deepEqual(dialogue.choices, [
+    { text: 'Nice to meet you!', flags: { met_merchant: true, was_polite: true } },
+  ])
+})
+
+test('createScript supports a choice with a visible condition', () => {
+  const dialogue = createScript()
+    .choice('Secret option', { visible: false })
+    .build()
+  assert.deepEqual(dialogue.choices, [{ text: 'Secret option', visible: false }])
+})
+
+test('createScript supports a choice with an enabled condition and a disabledReason', () => {
+  const dialogue = createScript()
+    .choice('Buy the sword', { disabledReason: 'Not enough gold.', enabled: false })
+    .build()
+  assert.deepEqual(dialogue.choices, [
+    { text: 'Buy the sword', disabledReason: 'Not enough gold.', enabled: false },
   ])
 })
 
@@ -71,8 +96,25 @@ test('runEntityScript returns undefined when no Script is authored for the entit
 
 test('runEntityScript threads ctx.flags into the Script, letting it branch and offer a Flag-setting choice', async () => {
   const first = await runEntityScript('CampFire', { flags: {} })
-  assert.ok(first?.choices?.some((choice) => choice.flag === 'talked_to_campfire'))
+  assert.ok(first?.choices?.some((choice) => choice.flags?.talked_to_campfire === true))
 
   const second = await runEntityScript('CampFire', { flags: { talked_to_campfire: true } })
-  assert.equal(second?.choices, undefined)
+  assert.ok(second?.choices && second.choices.length > 0)
+})
+
+test('runEntityScript: a choice hidden on first interaction becomes visible once its Flag is set', async () => {
+  const first = await runEntityScript('CampFire', { flags: {} })
+  const secretChoiceFirst = first?.choices?.find((choice) => choice.text === 'Ask what the campfire has seen')
+  assert.equal(secretChoiceFirst?.visible, false)
+
+  const second = await runEntityScript('CampFire', { flags: { was_polite_to_campfire: true } })
+  const secretChoiceSecond = second?.choices?.find((choice) => choice.text === 'Ask what the campfire has seen')
+  assert.equal(secretChoiceSecond?.visible, true)
+})
+
+test('runEntityScript: a choice can be visible but disabled with a reason', async () => {
+  const dialogue = await runEntityScript('CampFire', { flags: {} })
+  const firewoodChoice = dialogue?.choices?.find((choice) => choice.text === 'Warm your hands')
+  assert.equal(firewoodChoice?.enabled, false)
+  assert.equal(firewoodChoice?.disabledReason, 'You need firewood first.')
 })
