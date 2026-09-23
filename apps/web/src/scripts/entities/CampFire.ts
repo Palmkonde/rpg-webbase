@@ -1,4 +1,5 @@
 import type { Dialogue, Script, ScriptContext } from '../script.ts'
+import { currentLocale, resolveLine } from '../../state/strings.ts'
 import { createScript } from '../script.ts'
 
 const SPEAKER = 'Campfire'
@@ -29,7 +30,8 @@ function campFireScript(ctx: ScriptContext): Dialogue {
   }
 
   return createScript(SPEAKER)
-    .say(metBefore ? 'Huh? talk to me again?' : 'Howdy! am campfire!')
+    // Resolved through the string table (ticket 19), not an inline literal like the other lines here — proves the mechanism end-to-end.
+    .say(resolveLine(metBefore ? 'campfire.greeting_returning' : 'campfire.greeting', currentLocale))
     .choice('Nice to meet you!', {
       // Two independent Flags in one outcome — contrast with "Sup man?" below, which writes only one.
       flags: { talked_to_campfire: true, was_polite_to_campfire: true },

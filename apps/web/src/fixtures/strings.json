@@ -1,0 +1,13 @@
+{
+  "locale": "en",
+  "table": {
+    "en": {
+      "campfire.greeting": "Howdy! am campfire!",
+      "campfire.greeting_returning": "Huh? talk to me again?"
+    },
+    "th": {
+      "campfire.greeting": "สวัสดี! ฉันคือกองไฟ!",
+      "campfire.greeting_returning": "หืม? มาคุยกับฉันอีกแล้วเหรอ?"
+    }
+  }
+}
