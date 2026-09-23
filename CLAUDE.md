@@ -8,7 +8,7 @@ New feature work follows this flow, in order:
 
 1. `/grill-with-docs` — sharpen the idea, writing decisions into `CONTEXT.md` and `docs/adr/`
 2. `/to-spec` — collapse the grilled thread into `docs/spec/spec.md`
-3. `/to-tickets` — split the spec into tracer-bullet tickets under `docs/issues/` (see existing files there for the format)
+3. `/to-tickets` — split the spec into tracer-bullet tickets, published as GitHub issues (see `docs/agents/issue-tracker.md` for the convention)
 4. `/implement` per ticket
 
 Unsure which skill applies next? `/ask-matt`.
