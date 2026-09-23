@@ -4,12 +4,20 @@ export interface ScriptContext {
   flags: Readonly<Flags>
 }
 
+export interface SayOptions {
+  speaker?: string
+}
+
+export interface DialogueLine extends SayOptions {
+  text: string
+}
+
 export interface ChoiceOptions {
   flags?: Flags
   visible?: boolean
   enabled?: boolean
   disabledReason?: string
-  
+
   //  Adding to script dialogue
   next?: Script
 }
@@ -19,23 +27,25 @@ export interface Choice extends ChoiceOptions {
 }
 
 export interface Dialogue {
-  lines: string[]
+  lines: DialogueLine[]
   choices?: Choice[]
 }
 
 export interface ScriptBuilder {
-  say: (text: string) => ScriptBuilder
+  say: (text: string, options?: SayOptions) => ScriptBuilder
   choice: (text: string, options?: ChoiceOptions) => ScriptBuilder
   build: () => Dialogue
 }
 
-export function createScript(): ScriptBuilder {
-  const lines: string[] = []
+// `defaultSpeaker` is the owning Entity's display name — a Script author supplies it once (see entities/CampFire.ts) since nothing else in the Host/Engine boundary carries it (Tiled's `name` field is an authoring label, not Player-facing text).
+export function createScript(defaultSpeaker?: string): ScriptBuilder {
+  const lines: DialogueLine[] = []
   const choices: Choice[] = []
   const builder: ScriptBuilder = {
 
-    say(text) {
-      lines.push(text)
+    say(text, options) {
+      const speaker = options?.speaker ?? defaultSpeaker
+      lines.push({ text, ...(speaker === undefined ? {} : { speaker }) })
       return builder
     },
     choice(text, options) {

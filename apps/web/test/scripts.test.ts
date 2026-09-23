@@ -6,7 +6,7 @@ import { test } from 'node:test'
 
 test('createScript builds Dialogue from chained say() calls, in order', () => {
   const dialogue = createScript().say('Hello.').say('Nice day, isn\'t it?').build()
-  assert.deepEqual(dialogue, { lines: ['Hello.', 'Nice day, isn\'t it?'] })
+  assert.deepEqual(dialogue, { lines: [{ text: 'Hello.' }, { text: 'Nice day, isn\'t it?' }] })
 })
 
 test('createScript with no say() calls builds an empty line list', () => {
@@ -25,9 +25,30 @@ test('createScript chains say() and choice() into lines plus a flat choices list
     .choice('Nice to meet you!', { flags: { talked_to_campfire: true } })
     .build()
   assert.deepEqual(dialogue, {
-    lines: ['Howdy!'],
+    lines: [{ text: 'Howdy!' }],
     choices: [{ text: 'Nice to meet you!', flags: { talked_to_campfire: true } }],
   })
+})
+
+test('say() with no speaker and no default omits the speaker field entirely', () => {
+  const dialogue = createScript().say('Hello.').build()
+  assert.equal('speaker' in dialogue.lines[0], false)
+})
+
+test('say() defaults an unattributed line to the Script\'s default speaker', () => {
+  const dialogue = createScript('Campfire').say('Howdy!').build()
+  assert.deepEqual(dialogue.lines, [{ text: 'Howdy!', speaker: 'Campfire' }])
+})
+
+test('say() can override the default speaker per line', () => {
+  const dialogue = createScript('Campfire')
+    .say('Howdy!')
+    .say('The wind picks up.', { speaker: 'Narrator' })
+    .build()
+  assert.deepEqual(dialogue.lines, [
+    { text: 'Howdy!', speaker: 'Campfire' },
+    { text: 'The wind picks up.', speaker: 'Narrator' },
+  ])
 })
 
 test('createScript supports multiple choices in one flat round', () => {
@@ -95,7 +116,7 @@ test('createScript supports a choice whose outcome returns another set of choice
   const northChoice = dialogue.choices?.[0]
   assert.equal(typeof northChoice?.next, 'function')
   assert.deepEqual(northChoice?.next?.({ flags: {} }), {
-    lines: ['You arrive at a cave.'],
+    lines: [{ text: 'You arrive at a cave.' }],
     choices: [{ text: 'Enter' }],
   })
 })
@@ -125,9 +146,9 @@ test('createScript supports a multi-level branching tree (three rounds deep)', (
   const dialogue = createScript().say('Round 1').choice('Go deeper', { next: roundTwo }).build()
 
   const secondRound = dialogue.choices?.[0].next?.({ flags: {} })
-  assert.deepEqual(secondRound?.lines, ['Round 2'])
+  assert.deepEqual(secondRound?.lines, [{ text: 'Round 2' }])
   const thirdRound = secondRound?.choices?.[0].next?.({ flags: {} })
-  assert.deepEqual(thirdRound, { lines: ['Round 3'] })
+  assert.deepEqual(thirdRound, { lines: [{ text: 'Round 3' }] })
 })
 
 test('runEntityScript finds and runs a Script by entityId naming convention', async () => {
@@ -135,7 +156,21 @@ test('runEntityScript finds and runs a Script by entityId naming convention', as
   const dialogue = await runEntityScript('CampFire', { flags: {} })
   assert.ok(dialogue)
   assert.ok(dialogue.lines.length > 0)
-  assert.ok(dialogue.lines.every((line) => typeof line === 'string'))
+  assert.ok(dialogue.lines.every((line) => typeof line.text === 'string'))
+})
+
+test('runEntityScript: CampFire\'s lines default to its own name, with a narrator line staged deeper in the tree', async () => {
+  const first = await runEntityScript('CampFire', { flags: {} })
+  assert.ok(first?.lines.every((line) => line.speaker === 'Campfire'))
+
+  const seenChoice = first?.choices?.find((choice) => choice.text === 'Ask what the campfire has seen')
+  const memories = seenChoice?.next?.({ flags: { was_polite_to_campfire: true } })
+  assert.ok(memories?.lines.some((line) => line.speaker === 'Narrator'))
+  assert.ok(memories?.lines.some((line) => line.speaker === 'Campfire'))
+
+  // The branch reconvergence point (both memories choices lead here) also stays attributed to 'Campfire'.
+  const ending = memories?.choices?.[0]?.next?.({ flags: {} })
+  assert.ok(ending?.lines.every((line) => line.speaker === 'Campfire'))
 })
 
 test('runEntityScript returns undefined when no Script is authored for the entityId', async () => {
