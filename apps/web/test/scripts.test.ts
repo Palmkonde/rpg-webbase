@@ -1,3 +1,4 @@
+import type { Dialogue } from '../src/scripts/script.ts'
 import assert from 'node:assert/strict'
 import { createScript } from '../src/scripts/script.ts'
 import { runEntityScript } from '../src/scripts/run-entity-script.ts'
@@ -79,6 +80,54 @@ test('createScript supports a choice with an enabled condition and a disabledRea
   assert.deepEqual(dialogue.choices, [
     { text: 'Buy the sword', disabledReason: 'Not enough gold.', enabled: false },
   ])
+})
+
+function caveRound(): Dialogue {
+  return createScript().say('You arrive at a cave.').choice('Enter').build()
+}
+
+test('createScript supports a choice whose outcome returns another set of choices (nested tree)', () => {
+  const dialogue = createScript()
+    .say('Which path?')
+    .choice('Go north', { next: caveRound })
+    .build()
+
+  const northChoice = dialogue.choices?.[0]
+  assert.equal(typeof northChoice?.next, 'function')
+  assert.deepEqual(northChoice?.next?.({ flags: {} }), {
+    lines: ['You arrive at a cave.'],
+    choices: [{ text: 'Enter' }],
+  })
+})
+
+function sharedContinuation(): Dialogue {
+  return createScript().say('You both end up here.').build()
+}
+
+test('createScript supports branch reconvergence: two choices share the same next function/closure', () => {
+  const dialogue = createScript()
+    .choice('Path A', { next: sharedContinuation })
+    .choice('Path B', { next: sharedContinuation })
+    .build()
+
+  assert.equal(dialogue.choices?.[0].next, dialogue.choices?.[1].next)
+  assert.deepEqual(dialogue.choices?.[0].next?.({ flags: {} }), dialogue.choices?.[1].next?.({ flags: {} }))
+})
+
+function roundThree(): Dialogue {
+  return createScript().say('Round 3').build()
+}
+function roundTwo(): Dialogue {
+  return createScript().say('Round 2').choice('Go deeper again', { next: roundThree }).build()
+}
+
+test('createScript supports a multi-level branching tree (three rounds deep)', () => {
+  const dialogue = createScript().say('Round 1').choice('Go deeper', { next: roundTwo }).build()
+
+  const secondRound = dialogue.choices?.[0].next?.({ flags: {} })
+  assert.deepEqual(secondRound?.lines, ['Round 2'])
+  const thirdRound = secondRound?.choices?.[0].next?.({ flags: {} })
+  assert.deepEqual(thirdRound, { lines: ['Round 3'] })
 })
 
 test('runEntityScript finds and runs a Script by entityId naming convention', async () => {

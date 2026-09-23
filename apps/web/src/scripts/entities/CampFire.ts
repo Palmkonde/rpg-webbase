@@ -1,6 +1,20 @@
 import type { Dialogue, Script, ScriptContext } from '../script.ts'
 import { createScript } from '../script.ts'
 
+// Both campFireMemories branches reconverge here via the same closure — no dedicated merge-point primitive needed (spec's "Branch reconvergence").
+function campFireMemoryEnding(): Dialogue {
+  return createScript().say('...they moved on, same as you will.').build()
+}
+
+// A second round nested under "Ask what the campfire has seen" — proves a choice's outcome can offer another round of choices.
+function campFireMemories(): Dialogue {
+  return createScript()
+    .say('I remember the first Student who ever spoke to me.')
+    .choice('Ask what happened to them', { next: campFireMemoryEnding })
+    .choice('Never mind', { next: campFireMemoryEnding })
+    .build()
+}
+
 // Demo content for the `CampFire` Entity authored on the main-test Map — proves the pipe end to end.
 function campFireScript(ctx: ScriptContext): Dialogue {
   const metBefore = ctx.flags.talked_to_campfire
@@ -19,7 +33,7 @@ function campFireScript(ctx: ScriptContext): Dialogue {
       visible: !metBefore,
     })
     .choice('Sup man?', { flags: { talked_to_campfire: true }, visible: !metBefore })
-    .choice('Ask what the campfire has seen', { visible: Boolean(wasPolite) })
+    .choice('Ask what the campfire has seen', { next: campFireMemories, visible: Boolean(wasPolite) })
     .choice('Warm your hands', {
       disabledReason: 'You need firewood first.',
       enabled: Boolean(ctx.flags.has_firewood),

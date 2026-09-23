@@ -12,6 +12,17 @@ import { runEntityScript } from '../scripts/run-entity-script.ts'
 
 const CANVAS_STYLE = { width: '100vw', height: '100vh' }
 
+async function persistChoiceFlags(choice: Choice): Promise<boolean> {
+  if (!choice.flags) {return true}
+  try {
+    await flagStore.setFlags(currentStudentId, choice.flags)
+    return true
+  } catch (error: unknown) {
+    console.error('Failed to persist Flags:', error)
+    return false
+  }
+}
+
 export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dialogue, setDialogue] = useState<Dialogue | undefined>()
@@ -21,13 +32,17 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
   }, [])
 
   const selectChoice = useCallback(async (choice: Choice): Promise<void> => {
-    try {
-      if (choice.flags) {
-        await flagStore.setFlags(currentStudentId, choice.flags)
-      }
+    if (!(await persistChoiceFlags(choice))) {return}
+    if (!choice.next) {
       setDialogue(undefined)
+      return
+    }
+
+    try {
+      const flags = await flagStore.getFlags(currentStudentId)
+      setDialogue(choice.next({ flags }))
     } catch (error: unknown) {
-      console.error('Failed to persist Flags:', error)
+      console.error('Script failed:', error)
     }
   }, [])
 

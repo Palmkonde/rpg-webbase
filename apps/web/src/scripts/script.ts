@@ -9,6 +9,9 @@ export interface ChoiceOptions {
   visible?: boolean
   enabled?: boolean
   disabledReason?: string
+  
+  //  Adding to script dialogue
+  next?: Script
 }
 
 export interface Choice extends ChoiceOptions {
