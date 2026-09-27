@@ -32,7 +32,7 @@ async function persistChoiceFlags(choice: Choice): Promise<boolean> {
 export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dialogue, setDialogue] = useState<Dialogue | undefined>()
-  const [cgFrameIndex, setCgFrameIndex] = useState<number | undefined>(bootCgFrames ? 0 : undefined)
+  const [cgFrameIndex, setCgFrameIndex] = useState<number | undefined>()
   const cgHandleRef = useRef<ReturnType<typeof playCG> | null>(null)
 
   const dismissDialogue = useCallback((): void => {

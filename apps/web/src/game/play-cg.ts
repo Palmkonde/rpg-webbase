@@ -1,3 +1,4 @@
+import { currentStudentId, flagStore, runOnce } from '../state/flags.ts'
 import { resolveCg } from '../state/cg.ts'
 import { stepCgSlideshow } from '../state/cg-slideshow.ts'
 
@@ -50,9 +51,17 @@ export function playCG(id: string, onFrame: (frameIndex: number) => void): CgHan
   const { promise, resolve } = createCgDeferred()
   const loop: CgLoop = { frameIndex: 0, frameCount: frames.length, finished: false, onFrame, resolve }
 
+  // Guards advance/skip against a phantom mount (React Strict Mode) whose runOnce check is still pending.
+  let started = false
+  const done = runOnce({ store: flagStore, studentId: currentStudentId }, id, () => {
+    started = true
+    onFrame(0)
+    return promise
+  })
+
   return {
-    done: promise,
-    advance: () => {applyCgStep(loop, stepCgSlideshow({ frameIndex: loop.frameIndex }, { type: 'advance' }, loop.frameCount))},
-    skip: () => {applyCgStep(loop, stepCgSlideshow({ frameIndex: loop.frameIndex }, { type: 'skip' }, loop.frameCount))},
+    done,
+    advance: () => {if (started) {applyCgStep(loop, stepCgSlideshow({ frameIndex: loop.frameIndex }, { type: 'advance' }, loop.frameCount))}},
+    skip: () => {if (started) {applyCgStep(loop, stepCgSlideshow({ frameIndex: loop.frameIndex }, { type: 'skip' }, loop.frameCount))}},
   }
 }
