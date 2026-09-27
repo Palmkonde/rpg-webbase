@@ -8,7 +8,10 @@ import type { PausableScene } from './map-scene.ts'
 import { collectTiledMapAssets } from './tiled-assets.ts'
 import { findDuplicates } from './util.ts'
 
-export type Engine = Phaser.Game & PausableScene
+export interface EngineHandle {
+  destroy: () => void
+  setPaused: (paused: boolean) => void
+}
 
 export interface ContentCatalogs {
   maps: MapDefinition[]
@@ -29,7 +32,7 @@ function warnDuplicateEntityIds(mapId: string, entities: EntityObject[]): void {
   }
 }
 
-export async function createEngine(container: HTMLElement, options: CreateEngineOptions): Promise<Engine> {
+export async function createEngine(container: HTMLElement, options: CreateEngineOptions): Promise<EngineHandle> {
   const { worldConfig, catalogs, onEvent } = options
   const map = resolveMap(worldConfig, catalogs.maps)
   const character = resolveCharacter(worldConfig, catalogs.characters)
@@ -50,11 +53,12 @@ export async function createEngine(container: HTMLElement, options: CreateEngine
     plugins: {
       scene: [{ key: 'gridEngine', plugin: GridEngine, mapping: 'gridEngine' }],
     },
-  }) as Engine
+  })
 
-  game.setPaused = (paused: boolean): void => {
-    game.scene.getScene<Phaser.Scene & PausableScene>(MAP_SCENE_KEY).setPaused(paused)
+  return {
+    destroy: () => {game.destroy(true)},
+    setPaused: (paused: boolean) => {
+      game.scene.getScene<Phaser.Scene & PausableScene>(MAP_SCENE_KEY).setPaused(paused)
+    },
   }
-
-  return game
 }

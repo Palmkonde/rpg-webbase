@@ -92,7 +92,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
           },
         })
         if (cancelled) {
-          created.destroy(true)
+          created.destroy()
         } else {
           game = created
         }
@@ -120,7 +120,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
     return (): void => {
       cancelled = true
       cgHandleRef.current?.skip()
-      game?.destroy(true)
+      game?.destroy()
     }
   }, [worldConfig])
 
