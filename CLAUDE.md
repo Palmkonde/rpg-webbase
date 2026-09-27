@@ -23,6 +23,10 @@ After `/code-review`, let the user review the diff too — wait for their go-ahe
 
 Atomic: group by logical concern (a new package, a new app, a ticket-status update are separate commits), not one commit per session. 
 
+## Comments
+
+One clause, not a paragraph packed onto one line. A function's name carries the what; a comment earns its place only for a non-obvious why (an ADR reference, a lint-rule workaround), and stays to a single short sentence even then.
+
 ## Where decisions live
 
 - Hard-to-reverse architectural decisions → `docs/adr/`, sequentially numbered
