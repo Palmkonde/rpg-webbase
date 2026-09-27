@@ -59,7 +59,7 @@ _Avoid_: Callback, action, message
 ### Content
 
 **Script**:
-Host-authored code that runs when a specific Engine Event fires for a specific Entity or Map, producing Dialogue or a Cutscene. The Engine has no knowledge that Scripts exist.
+Host-authored code that runs when a specific Engine Event fires for a specific Entity or Map, producing Dialogue, a Cutscene, or a CG. The Engine has no knowledge that Scripts exist.
 _Avoid_: Event handler, callback, quest (a Quest is a larger, not-yet-designed concept a Script may someday drive, not what a Script is itself)
 
 **Dialogue**:
@@ -67,12 +67,12 @@ Text and Player-facing choices that a Script shows as its output, rendered entir
 _Avoid_: Cutscene (a separate concept, below, that always takes control from the Player — Dialogue never does), text box
 
 **Cutscene**:
-A Script that takes control away from the Player for its duration: a sequence of Dialogue, Choice, and Movement steps triggered by an Interaction, during which the Player can't move or interact with anything else. Plays at most once per Student, gated by a Flag.
+A Script that takes control away from the Player for its duration: a sequence of Dialogue, Choice, and Movement steps, during which the Player can't move or interact with anything else. Plays at most once per Student, gated by a Flag.
 _Avoid_: Dialogue (never takes control from the Player; a Cutscene always does), Scene (Phaser's own rendering-container concept, distinct from this domain)
 
 **CG**:
-A full-screen illustrated slideshow shown independent of any Entity — static art and captions that advance on a timer and can be skipped. Has no Dialogue/Choice/Movement steps and isn't triggered by an Interaction, but plays at most once per Student like a Cutscene does.
-_Avoid_: Cutscene (a CG has no in-world component and never takes control via Movement/Choice steps — it's the simpler of the two), splash screen
+A full-screen illustrated slideshow — static art and captions the Player advances by clicking, and can skip entirely. Has no Dialogue/Choice/Movement steps and never takes control through them the way a Cutscene does; that structural difference, not what triggers it, is what separates the two. Freezes the Player for its duration the same way a Cutscene does whenever a Script plays one mid-game, and plays at most once per Student.
+_Avoid_: Cutscene (differ only in structure — no Dialogue/Choice/Movement steps — not in trigger; a CG can be a Script's output the same way a Cutscene can), splash screen
 
 **Speaker**:
 The character (or narrator) a line of Dialogue is attributed to. Not necessarily the Entity whose Script produced it — a Script can voice a different character, or an unplaced narrator, within its own Dialogue.
