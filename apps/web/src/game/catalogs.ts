@@ -1,4 +1,4 @@
-import type { CharacterDefinition } from '@game-engine/engine-core'
+import type { CharacterDefinition, MapDefinition } from '@game-engine/engine-core'
 
 // Players characters assets path
 export const characters: CharacterDefinition[] = [
@@ -13,5 +13,12 @@ export const characters: CharacterDefinition[] = [
     spriteUrl: '/assets/sprites/characters/temmie/temmie.png',
     frameWidth: 32,
     frameHeight: 32,
-  }
+  },
+]
+
+export const maps: MapDefinition[] = [
+  {
+    id: 'main-test',
+    tiledMapUrl: '/assets/maps/main_test.tmj',
+  },
 ]

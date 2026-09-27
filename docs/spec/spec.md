@@ -373,7 +373,7 @@ Dialogue never takes control from the Player and never moves anyone — by desig
 
 Two new, independent content types, both gated by the existing Flag mechanism so each plays at most once per Student:
 
-- **CG**: a full-screen illustrated slideshow — static art and captions that auto-advance on a timer and can be skipped — shown independent of any Entity (its first use is the game's intro at boot).
+- **CG**: a full-screen illustrated slideshow — static art and captions the Player advances by clicking, and can skip entirely — shown independent of any Entity (its first use is the game's intro at boot).
 - **Cutscene**: a Script that takes control away from the Player for its duration, playing an ordered sequence of Dialogue, Choice, and Movement steps, triggered the same way Dialogue is (an NPC Interaction).
 
 Both route through one shared helper that checks the Student's Flags, skips if already seen, and marks the Flag on completion — "don't replay" is automatic, not something each caller has to remember. Making Cutscene's Player-freeze possible required the Host→Engine pause channel `adr/0011` deliberately deferred; that channel is built here as the smallest thing that satisfies it (`adr/0016`).
@@ -381,7 +381,7 @@ Both route through one shared helper that checks the Student's Flags, skips if a
 ### User Stories
 
 1. As a Player, I want to watch an intro CG when the game starts, so that the story is set up before I take control, matching the reference points (Undertale) this project is aiming for.
-2. As a Player, I want the CG's frames to advance automatically, so that I can watch it like a slideshow rather than clicking through every image.
+2. As a Player, I want to click to advance the CG's frames, so that I move through the slideshow at my own pace instead of waiting on a timer.
 3. As a Player, I want to skip the CG entirely, so that a restarted session doesn't force me to sit through the same intro every time.
 4. As a Player, I want a CG I've already seen to not play again, so that it never interrupts a later session.
 5. As a content author, I want a CG's captions to resolve through the same locale string table Dialogue already uses, so that a CG's narration is translatable the same way Dialogue text is.
@@ -406,12 +406,12 @@ Both route through one shared helper that checks the Student's Flags, skips if a
 24. As a future maintainer, I want it recorded why Cutscene needed its own step-runner instead of reusing Dialogue's rendering, so that I don't try to "simplify" it back into Dialogue's one-shot model (`adr/0017`).
 25. As a future maintainer, I want it recorded why the Host→Engine pause channel is a single imperative flag rather than a World Config field, so that I understand it was a deliberate call, not an oversight (`adr/0016`).
 26. As a Host developer, I want the Cutscene step-runner to be a pure function, so that its sequencing logic (what comes next given an event) is verifiable without a running Phaser instance.
-27. As a Host developer, I want the CG slideshow's pacing to be a pure function mirroring the existing ambient tile-animation stepper (`stepAnimation`), so that its timing/skip logic is verifiable the same way.
+27. As a Host developer, I want the CG slideshow's stepping to be a pure function, so that its advance/skip logic is verifiable without a running Phaser instance.
 
 ### Implementation Decisions
 
 - **Terminology**: "CG" and "Cutscene" are the two content types, matching the split `CONTEXT.md`/this spec already reserved for them (see "Dialogue Scripts" Out of Scope, now resolved here).
-- **CG pacing**: frames auto-advance on a timer and are skippable via input — a pure "slideshow stepper" function (given the current frame index and an elapsed-time/advance/skip event, returns the next frame index or `done`) mirrors the existing pattern used for ambient tile animation's `stepAnimation`.
+- **CG pacing**: the Player advances frames by clicking, and can skip the whole CG via a separate control — a pure "slideshow stepper" function (given the current frame index and an advance/skip event, returns the next frame index or `done`).
 - **CG content**: captions/narration resolve through the existing locale string table (same `resolveLine` mechanism Dialogue uses); art resolves through a Portrait-style decoupled asset registry (same pattern as `adr/0014`, keyed by an arbitrary per-frame id, no relationship to the character-spritesheet pipeline).
 - **CG trigger**: `playCG(id)` is a general primitive callable from anywhere; the only caller this round is game boot (the intro).
 - **Cutscene freeze**: for its duration, the Player is fully frozen — both movement and interact input are disabled via the new Engine `setPaused` flag (`adr/0016`).
@@ -427,10 +427,10 @@ Both route through one shared helper that checks the Student's Flags, skips if a
 
 - Matching the existing pattern (`node:test`/`node:assert/strict`, pure functions only, no mocking framework): the Cutscene step-runner, the CG slideshow-stepper, the `runOnce` flag-gate helper, and the extended `ScriptBuilder`'s Movement-step output all get unit tests.
 - **Cutscene step-runner**: given a step list and a sequence of completion events (advance-click, choice-picked, move-finished), asserts the resulting step-index progression and the terminal `done` state, including an event that doesn't match the current step's expected completion (ignored, not advanced).
-- **CG slideshow-stepper**: given the current frame index and an elapsed-time/advance/skip event, asserts the next frame index or `done` — same shape of test as `tile-animation.test.ts`'s existing `stepAnimation` coverage.
+- **CG slideshow-stepper**: given the current frame index and an advance/skip event, asserts the next frame index or `done`.
 - **`runOnce`**: given a Flags object and an id, asserts an already-seen id skips without invoking `playFn`, and a not-yet-seen id invokes `playFn` and sets the flag — alongside `flags.ts`'s existing tests.
 - **`ScriptBuilder` Movement output**: does chaining `.moveTo(...)` alongside `.say()`/`.choice()` produce the right step list — same pattern as the existing Dialogue/Choice builder-output tests.
-- Everything past those seams — the pause flag actually disabling input in a running Scene, grid-engine's `moveTo` actually walking a sprite, the CG slideshow actually rendering full-screen art and timing correctly on screen, the dialogue overlay actually freezing during a Cutscene — isn't automatable here (no e2e/browser automation, per `CLAUDE.md`) and is verified manually: trigger a test Cutscene via NPC interact and confirm the Player freezes, an NPC walks to the Player's position, Dialogue plays, and re-interacting afterward does nothing (flag already set); watch the CG intro at boot and confirm it auto-advances, is skippable, and doesn't replay on a second boot within the same session (Flags being in-memory means a full page refresh does reset it — expected, not a bug).
+- Everything past those seams — the pause flag actually disabling input in a running Scene, grid-engine's `moveTo` actually walking a sprite, the CG slideshow actually rendering full-screen art and timing correctly on screen, the dialogue overlay actually freezing during a Cutscene — isn't automatable here (no e2e/browser automation, per `CLAUDE.md`) and is verified manually: trigger a test Cutscene via NPC interact and confirm the Player freezes, an NPC walks to the Player's position, Dialogue plays, and re-interacting afterward does nothing (flag already set); watch the CG intro at boot and confirm clicking advances frames, skip jumps straight to gameplay, and it doesn't replay on a second boot within the same session (Flags being in-memory means a full page refresh does reset it — expected, not a bug).
 
 ### Out of Scope
 
