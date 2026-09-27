@@ -10,6 +10,11 @@ import { stepAnimation } from './tile-animation.ts'
 const PLAYER_ID = 'player'
 const CAMERA_ZOOM = 2
 const INTERACT_KEY = 'E'
+export const MAP_SCENE_KEY = 'MapScene'
+
+export interface PausableScene {
+  setPaused: (paused: boolean) => void
+}
 
 interface AnimatedTile {
   tile: Phaser.Tilemaps.Tile
@@ -27,15 +32,25 @@ export interface MapSceneConfig {
 }
 
 export function createMapScene({ map, character, worldConfig, assets, onEvent }: MapSceneConfig): typeof Phaser.Scene {
-  return class MapScene extends Phaser.Scene {
+  return class MapScene extends Phaser.Scene implements PausableScene {
     public declare gridEngine: GridEngine
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
     private wasd!: Record<'W' | 'A' | 'S' | 'D', Phaser.Input.Keyboard.Key>
     private interactKey!: Phaser.Input.Keyboard.Key
     private animatedTiles: AnimatedTile[] = []
+    private paused = false
 
     public constructor() {
-      super('MapScene')
+      super(MAP_SCENE_KEY)
+    }
+
+    public setPaused(paused: boolean): void {
+      this.paused = paused
+
+      // Drains a keypress latched during the pause so it can't fire a stale interact on resume (JustDown).
+      if (!paused) {
+        this.interactKey.reset()
+      }
     }
 
     public preload(): void {
@@ -141,18 +156,15 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
     }
 
     private handleMovementInput(): void {
-      const left = this.cursors.left.isDown || this.wasd.A.isDown
-      const right = this.cursors.right.isDown || this.wasd.D.isDown
-      const up = this.cursors.up.isDown || this.wasd.W.isDown
-      const down = this.cursors.down.isDown || this.wasd.S.isDown
+      if (this.paused) {return}
 
-      if (left) {
+      if (this.cursors.left.isDown || this.wasd.A.isDown) {
         this.gridEngine.move(PLAYER_ID, Direction.LEFT)
-      } else if (right) {
+      } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
         this.gridEngine.move(PLAYER_ID, Direction.RIGHT)
-      } else if (up) {
+      } else if (this.cursors.up.isDown || this.wasd.W.isDown) {
         this.gridEngine.move(PLAYER_ID, Direction.UP)
-      } else if (down) {
+      } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
         this.gridEngine.move(PLAYER_ID, Direction.DOWN)
       }
     }
@@ -160,6 +172,8 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
     // Fires only when the Player is adjacent to/facing an Entity — the tile directly ahead of the
     // That tile need class "Entity`
     private handleInteractInput(): void {
+      if (this.paused) {return}
+
       // oxlint-disable-next-line new-cap -- Phaser.Input.Keyboard.JustDown is a static API function, not a constructor
       if (!Phaser.Input.Keyboard.JustDown(this.interactKey)) {return}
 

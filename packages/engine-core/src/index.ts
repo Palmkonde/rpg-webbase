@@ -1,5 +1,5 @@
 export { createEngine } from './engine.ts'
-export type { ContentCatalogs, CreateEngineOptions } from './engine.ts'
+export type { ContentCatalogs, CreateEngineOptions, Engine } from './engine.ts'
 
 export { resolveCharacter, resolveMap } from './world-config.ts'
 
