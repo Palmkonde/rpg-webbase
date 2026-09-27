@@ -1,8 +1,12 @@
-import type { Dialogue, Script, ScriptContext } from '../script.ts'
+import type { CutsceneTrigger, Dialogue, Script, ScriptContext } from '../script.ts'
 import { currentLocale, resolveLine } from '../../state/strings.ts'
 import { createScript } from '../script.ts'
 
 const SPEAKER = 'Campfire'
+
+function campFireStory(): CutsceneTrigger {
+  return { type: 'cutscene', id: 'campfire-story' }
+}
 
 // Both campFireMemories branches reconverge here via the same closure — no dedicated merge-point primitive needed (spec's "Branch reconvergence").
 function campFireMemoryEnding(): Dialogue {
@@ -43,6 +47,7 @@ function campFireScript(ctx: ScriptContext): Dialogue {
     })
     .choice('Sup man?', { flags: { talked_to_campfire: true }, visible: !metBefore })
     .choice('Ask what the campfire has seen', { next: campFireMemories, visible: Boolean(wasPolite) })
+    .choice('Ask for a story', { next: campFireStory })
     .choice('Warm your hands', {
       disabledReason: 'You need firewood first.',
       enabled: Boolean(ctx.flags.has_firewood),

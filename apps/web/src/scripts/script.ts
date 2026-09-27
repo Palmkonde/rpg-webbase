@@ -34,6 +34,13 @@ export interface Dialogue {
   choices?: Choice[]
 }
 
+export interface CutsceneTrigger {
+  type: 'cutscene'
+  id: string
+}
+
+export type ScriptResult = Dialogue | CutsceneTrigger
+
 export interface ScriptBuilder {
   say: (text: string, options?: SayOptions) => ScriptBuilder
   choice: (text: string, options?: ChoiceOptions) => ScriptBuilder
@@ -68,4 +75,4 @@ export function createScript(defaultSpeaker?: string): ScriptBuilder {
   return builder
 }
 
-export type Script = (ctx: ScriptContext) => Dialogue
+export type Script = (ctx: ScriptContext) => ScriptResult

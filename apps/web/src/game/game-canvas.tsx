@@ -1,17 +1,16 @@
 'use client'
 
-import type { Choice, Dialogue } from '../scripts/script.ts'
 import type { EngineEvent, WorldConfig } from '@game-engine/engine-core'
 import { characters, maps } from './catalogs.ts'
-import { currentStudentId, flagStore } from '../state/flags.ts'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CgOverlay } from '../temp-ui/cg-overlay.tsx'
 import type { CgStep } from './play-cg.ts'
+import { CutsceneOverlay } from '../temp-ui/cutscene-overlay.tsx'
 import { DialogueOverlay } from '../temp-ui/dialogue-overlay.tsx'
 import { createEngine } from '@game-engine/engine-core'
 import { playCG } from './play-cg.ts'
 import { resolveCg } from '../state/cg.ts'
-import { runEntityScript } from '../scripts/run-entity-script.ts'
+import { useScriptPlayback } from './use-script-playback.ts'
 
 const CANVAS_STYLE = { width: '100vw', height: '100vh' }
 
@@ -19,26 +18,13 @@ const CANVAS_STYLE = { width: '100vw', height: '100vh' }
 const BOOT_CG_ID = 'intro'
 const bootCgFrames = resolveCg(BOOT_CG_ID)
 
-async function persistChoiceFlags(choice: Choice): Promise<boolean> {
-  if (!choice.flags) {return true}
-  try {
-    await flagStore.setFlags(currentStudentId, choice.flags)
-    return true
-  } catch (error: unknown) {
-    console.error('Failed to persist Flags:', error)
-    return false
-  }
-}
-
 export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [dialogue, setDialogue] = useState<Dialogue | undefined>()
   const [cgStep, setCgStep] = useState<CgStep | undefined>()
   const cgHandleRef = useRef<ReturnType<typeof playCG> | null>(null)
 
-  const dismissDialogue = useCallback((): void => {
-    setDialogue(undefined)
-  }, [])
+  // oxlint-disable-next-line unicorn/no-useless-undefined -- this useRef overload requires an argument; omitting it doesn't typecheck.
+  const engineRef = useRef<Awaited<ReturnType<typeof createEngine>> | undefined>(undefined)
 
   const advanceCg = useCallback((): void => {
     cgHandleRef.current?.advance()
@@ -48,36 +34,18 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
     cgHandleRef.current?.skip()
   }, [])
 
-  const selectChoice = useCallback(async (choice: Choice): Promise<void> => {
-    if (!(await persistChoiceFlags(choice))) {return}
-    if (!choice.next) {
-      setDialogue(undefined)
-      return
-    }
-
-    try {
-      const flags = await flagStore.getFlags(currentStudentId)
-      setDialogue(choice.next({ flags }))
-    } catch (error: unknown) {
-      console.error('Script failed:', error)
-    }
-  }, [])
+  const { dialogue, cutsceneLine, dismissDialogue, advanceCutscene, selectChoice, runInteraction } = useScriptPlayback(engineRef)
 
   useEffect(() => {
     const container = containerRef.current
     if (!container) {return}
 
-    let game: Awaited<ReturnType<typeof createEngine>> | undefined
     let cancelled = false
 
     async function handleEvent(event: EngineEvent): Promise<void> {
       console.warn('[Engine Event]', event)
-      if (event.type !== 'interacted') {return}
-
-      const flags = await flagStore.getFlags(currentStudentId)
-      const result = await runEntityScript(event.entityId, { flags })
-      if (!cancelled && result) {
-        setDialogue(result)
+      if (event.type === 'interacted') {
+        await runInteraction(event.entityId, () => cancelled)
       }
     }
 
@@ -95,7 +63,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
         if (cancelled) {
           created.destroy()
         } else {
-          game = created
+          engineRef.current = created
         }
       } catch (error: unknown) {
         if (!cancelled) {
@@ -122,9 +90,10 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
     return (): void => {
       cancelled = true
       cgHandleRef.current?.skip()
-      game?.destroy()
+      engineRef.current?.destroy()
+      engineRef.current = undefined
     }
-  }, [worldConfig])
+  }, [worldConfig, runInteraction])
 
   return (
     <>
@@ -138,6 +107,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
         />
       )}
       {dialogue && <DialogueOverlay dialogue={dialogue} onChoose={selectChoice} onDismiss={dismissDialogue} />}
+      {cutsceneLine && <CutsceneOverlay line={cutsceneLine} onAdvance={advanceCutscene} />}
     </>
   )
 }

@@ -1,8 +1,14 @@
-import type { Dialogue } from '../src/scripts/script.ts'
+import type { Dialogue, ScriptResult } from '../src/scripts/script.ts'
 import assert from 'node:assert/strict'
 import { createScript } from '../src/scripts/script.ts'
 import { runEntityScript } from '../src/scripts/run-entity-script.ts'
 import { test } from 'node:test'
+
+function expectDialogue(result: ScriptResult | undefined): Dialogue {
+  assert.ok(result, 'expected a Script result')
+  assert.ok(!('type' in result), 'expected Dialogue, not a CG/Cutscene trigger')
+  return result
+}
 
 test('createScript builds Dialogue from chained say() calls, in order', () => {
   const dialogue = createScript().say('Hello.').say('Nice day, isn\'t it?').build()
@@ -166,32 +172,31 @@ function roundTwo(): Dialogue {
 test('createScript supports a multi-level branching tree (three rounds deep)', () => {
   const dialogue = createScript().say('Round 1').choice('Go deeper', { next: roundTwo }).build()
 
-  const secondRound = dialogue.choices?.[0].next?.({ flags: {} })
-  assert.deepEqual(secondRound?.lines, [{ text: 'Round 2' }])
-  const thirdRound = secondRound?.choices?.[0].next?.({ flags: {} })
+  const secondRound = expectDialogue(dialogue.choices?.[0].next?.({ flags: {} }))
+  assert.deepEqual(secondRound.lines, [{ text: 'Round 2' }])
+  const thirdRound = expectDialogue(secondRound.choices?.[0].next?.({ flags: {} }))
   assert.deepEqual(thirdRound, { lines: [{ text: 'Round 3' }] })
 })
 
 test('runEntityScript finds and runs a Script by entityId naming convention', async () => {
   // Asserts shape, not exact copy — the demo Script's flavor text is content, free to change.
-  const dialogue = await runEntityScript('CampFire', { flags: {} })
-  assert.ok(dialogue)
+  const dialogue = expectDialogue(await runEntityScript('CampFire', { flags: {} }))
   assert.ok(dialogue.lines.length > 0)
   assert.ok(dialogue.lines.every((line) => typeof line.text === 'string'))
 })
 
 test('runEntityScript: CampFire\'s lines default to its own name, with a narrator line staged deeper in the tree', async () => {
-  const first = await runEntityScript('CampFire', { flags: {} })
-  assert.ok(first?.lines.every((line) => line.speaker === 'Campfire'))
+  const first = expectDialogue(await runEntityScript('CampFire', { flags: {} }))
+  assert.ok(first.lines.every((line) => line.speaker === 'Campfire'))
 
-  const seenChoice = first?.choices?.find((choice) => choice.text === 'Ask what the campfire has seen')
-  const memories = seenChoice?.next?.({ flags: { was_polite_to_campfire: true } })
-  assert.ok(memories?.lines.some((line) => line.speaker === 'Narrator'))
-  assert.ok(memories?.lines.some((line) => line.speaker === 'Campfire'))
+  const seenChoice = first.choices?.find((choice) => choice.text === 'Ask what the campfire has seen')
+  const memories = expectDialogue(seenChoice?.next?.({ flags: { was_polite_to_campfire: true } }))
+  assert.ok(memories.lines.some((line) => line.speaker === 'Narrator'))
+  assert.ok(memories.lines.some((line) => line.speaker === 'Campfire'))
 
   // The branch reconvergence point (both memories choices lead here) also stays attributed to 'Campfire'.
-  const ending = memories?.choices?.[0]?.next?.({ flags: {} })
-  assert.ok(ending?.lines.every((line) => line.speaker === 'Campfire'))
+  const ending = expectDialogue(memories.choices?.[0]?.next?.({ flags: {} }))
+  assert.ok(ending.lines.every((line) => line.speaker === 'Campfire'))
 })
 
 test('runEntityScript returns undefined when no Script is authored for the entityId', async () => {
@@ -200,26 +205,34 @@ test('runEntityScript returns undefined when no Script is authored for the entit
 })
 
 test('runEntityScript threads ctx.flags into the Script, letting it branch and offer a Flag-setting choice', async () => {
-  const first = await runEntityScript('CampFire', { flags: {} })
-  assert.ok(first?.choices?.some((choice) => choice.flags?.talked_to_campfire === true))
+  const first = expectDialogue(await runEntityScript('CampFire', { flags: {} }))
+  assert.ok(first.choices?.some((choice) => choice.flags?.talked_to_campfire === true))
 
-  const second = await runEntityScript('CampFire', { flags: { talked_to_campfire: true } })
-  assert.ok(second?.choices && second.choices.length > 0)
+  const second = expectDialogue(await runEntityScript('CampFire', { flags: { talked_to_campfire: true } }))
+  assert.ok(second.choices && second.choices.length > 0)
 })
 
 test('runEntityScript: a choice hidden on first interaction becomes visible once its Flag is set', async () => {
-  const first = await runEntityScript('CampFire', { flags: {} })
-  const secretChoiceFirst = first?.choices?.find((choice) => choice.text === 'Ask what the campfire has seen')
+  const first = expectDialogue(await runEntityScript('CampFire', { flags: {} }))
+  const secretChoiceFirst = first.choices?.find((choice) => choice.text === 'Ask what the campfire has seen')
   assert.equal(secretChoiceFirst?.visible, false)
 
-  const second = await runEntityScript('CampFire', { flags: { was_polite_to_campfire: true } })
-  const secretChoiceSecond = second?.choices?.find((choice) => choice.text === 'Ask what the campfire has seen')
+  const second = expectDialogue(await runEntityScript('CampFire', { flags: { was_polite_to_campfire: true } }))
+  const secretChoiceSecond = second.choices?.find((choice) => choice.text === 'Ask what the campfire has seen')
   assert.equal(secretChoiceSecond?.visible, true)
 })
 
 test('runEntityScript: a choice can be visible but disabled with a reason', async () => {
-  const dialogue = await runEntityScript('CampFire', { flags: {} })
-  const firewoodChoice = dialogue?.choices?.find((choice) => choice.text === 'Warm your hands')
+  const dialogue = expectDialogue(await runEntityScript('CampFire', { flags: {} }))
+  const firewoodChoice = dialogue.choices?.find((choice) => choice.text === 'Warm your hands')
   assert.equal(firewoodChoice?.enabled, false)
   assert.equal(firewoodChoice?.disabledReason, 'You need firewood first.')
 })
+
+test('runEntityScript: a choice can trigger a Cutscene instead of another Dialogue round', async () => {
+  const first = expectDialogue(await runEntityScript('CampFire', { flags: {} }))
+  const storyChoice = first.choices?.find((choice) => choice.text === 'Ask for a story')
+  const result = storyChoice?.next?.({ flags: {} })
+  assert.deepEqual(result, { type: 'cutscene', id: 'campfire-story' })
+})
+
