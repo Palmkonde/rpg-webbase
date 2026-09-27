@@ -32,6 +32,10 @@ _Avoid_: NPC, object, actor
 The Map coordinate the Player appears at on entering a Map, whether as a Map's default entry point or a Portal's target.
 _Avoid_: Start position, entry tile
 
+**Zone**:
+A Tiled-authored rectangular region on a Map whose Script runs the moment the Player's position transitions into it — not an explicit action, unlike an Entity Interaction. Plays at most once per Student, gated the same way a CG/Cutscene already is.
+_Avoid_: Trigger area, collision box (this project has no pixel-level collision concept — the Player's position is always a single grid tile)
+
 ### Movement
 
 **Transition**:
@@ -53,13 +57,13 @@ The event fired when the Player triggers an Entity. The Engine only detects and 
 _Avoid_: Dialogue trigger, talk, activate
 
 **Engine Event**:
-A fact the Engine emits outward when something happens (the Player moved, a Transition occurred, an Interaction occurred). The Host listens to these to decide what happens next.
+A fact the Engine emits outward when something happens (the Player moved, a Transition occurred, an Interaction occurred, a Zone was entered). The Host listens to these to decide what happens next.
 _Avoid_: Callback, action, message
 
 ### Content
 
 **Script**:
-Host-authored code that runs when a specific Engine Event fires for a specific Entity or Map, producing Dialogue, a Cutscene, or a CG. The Engine has no knowledge that Scripts exist.
+Host-authored code that runs when a specific Engine Event fires for a specific Entity, Zone, or Map, producing Dialogue, a Cutscene, or a CG. The Engine has no knowledge that Scripts exist.
 _Avoid_: Event handler, callback, quest (a Quest is a larger, not-yet-designed concept a Script may someday drive, not what a Script is itself)
 
 **Dialogue**:
