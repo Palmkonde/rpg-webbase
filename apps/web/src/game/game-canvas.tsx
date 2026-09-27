@@ -112,6 +112,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
         cgHandleRef.current = handle
         await handle.done
         if (cancelled) {return}
+        setCgStep(undefined)
       }
       await start(element)
     }
