@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser'
-import type { AnimationFrame, TiledMapAssets } from './tiled-assets.ts'
+import type { AnimationFrame, TileCoord, TiledMapAssets } from './tiled-assets.ts'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
 import { preloadPlayerSprite, resolvePlayerTexture } from './player-assets.ts'
 import { Direction } from 'grid-engine'
@@ -12,8 +12,12 @@ const CAMERA_ZOOM = 2
 const INTERACT_KEY = 'E'
 export const MAP_SCENE_KEY = 'MapScene'
 
-export interface PausableScene {
+// Type-only export, deliberately — see the Host-side use in apps/web/src/state/cutscene.ts for why.
+export type PlayerCharId = typeof PLAYER_ID
+
+export interface HostScene {
   setPaused: (paused: boolean) => void
+  moveTo: (charId: string, targetPos: TileCoord) => Promise<void>
 }
 
 interface AnimatedTile {
@@ -32,7 +36,7 @@ export interface MapSceneConfig {
 }
 
 export function createMapScene({ map, character, worldConfig, assets, onEvent }: MapSceneConfig): typeof Phaser.Scene {
-  return class MapScene extends Phaser.Scene implements PausableScene {
+  return class MapScene extends Phaser.Scene implements HostScene {
     public declare gridEngine: GridEngine
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
     private wasd!: Record<'W' | 'A' | 'S' | 'D', Phaser.Input.Keyboard.Key>
@@ -51,6 +55,20 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
       if (!paused) {
         this.interactKey.reset()
       }
+    }
+
+    // Wraps grid-engine's own moveTo/pathfinding — resolves once on its one-shot completion signal, success or not.
+    public moveTo(charId: string, targetPos: TileCoord): Promise<void> {
+
+      // oxlint-disable-next-line promise/avoid-new
+      return new Promise((resolve) => {
+        this.gridEngine.moveTo(charId, targetPos).subscribe(({ result }) => {
+          if (result) {
+            console.warn(`[engine] moveTo(${charId} -> ${targetPos.x},${targetPos.y}) did not complete: ${result}`)
+          }
+          resolve()
+        })
+      })
     }
 
     public preload(): void {

@@ -1,5 +1,6 @@
 export { createEngine } from './engine.ts'
 export type { ContentCatalogs, CreateEngineOptions, EngineHandle } from './engine.ts'
+export type { PlayerCharId } from './map-scene.ts'
 
 export { resolveCharacter, resolveMap } from './world-config.ts'
 

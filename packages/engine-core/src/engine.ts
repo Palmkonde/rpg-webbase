@@ -1,16 +1,17 @@
 import * as Phaser from 'phaser'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
 import { MAP_SCENE_KEY, createMapScene } from './map-scene.ts'
+import type { TileCoord, ZoneObject } from './tiled-assets.ts'
 import { collectTiledMapAssets, findOverlappingZoneIds } from './tiled-assets.ts'
 import { resolveCharacter, resolveMap } from './world-config.ts'
 import { GridEngine } from 'grid-engine'
-import type { PausableScene } from './map-scene.ts'
-import type { ZoneObject } from './tiled-assets.ts'
+import type { HostScene } from './map-scene.ts'
 import { findDuplicates } from './util.ts'
 
 export interface EngineHandle {
   destroy: () => void
   setPaused: (paused: boolean) => void
+  moveTo: (charId: string, targetPos: TileCoord) => Promise<void>
 }
 
 export interface ContentCatalogs {
@@ -38,6 +39,10 @@ function warnOverlappingZones(mapId: string, zones: ZoneObject[]): void {
   if (overlapping.length > 0) {
     console.warn(`[engine] Map "${mapId}" has overlapping Zone(s): ${overlapping.join(', ')}`)
   }
+}
+
+function getMapScene(game: Phaser.Game): Phaser.Scene & HostScene {
+  return game.scene.getScene<Phaser.Scene & HostScene>(MAP_SCENE_KEY)
 }
 
 export async function createEngine(container: HTMLElement, options: CreateEngineOptions): Promise<EngineHandle> {
@@ -69,8 +74,7 @@ export async function createEngine(container: HTMLElement, options: CreateEngine
 
   return {
     destroy: () => {game.destroy(true)},
-    setPaused: (paused: boolean) => {
-      game.scene.getScene<Phaser.Scene & PausableScene>(MAP_SCENE_KEY).setPaused(paused)
-    },
+    setPaused: (paused: boolean) => {getMapScene(game).setPaused(paused)},
+    moveTo: (charId: string, targetPos: TileCoord) => getMapScene(game).moveTo(charId, targetPos),
   }
 }
