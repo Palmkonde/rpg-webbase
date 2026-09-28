@@ -3,8 +3,8 @@ export type { ContentCatalogs, CreateEngineOptions, EngineHandle } from './engin
 
 export { resolveCharacter, resolveMap } from './world-config.ts'
 
-export { collectEntities } from './tiled-assets.ts'
-export type { EntityObject } from './tiled-assets.ts'
+export { collectEntities, collectZones, findOverlappingZoneIds } from './tiled-assets.ts'
+export type { EntityObject, TileCoord, ZoneObject } from './tiled-assets.ts'
 
 export { findDuplicates } from './util.ts'
 
