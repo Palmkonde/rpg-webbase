@@ -47,7 +47,7 @@ export function useScriptPlayback(engineRef: RefObject<EngineHandle | undefined>
       const engine = engineRef.current
       if (engine) {
         setDialogue(undefined)
-        const handle = playCutscene(result.id, engine.setPaused, setCutsceneLine)
+        const handle = playCutscene(result.id, { setPaused: engine.setPaused, onLine: setCutsceneLine, moveTo: engine.moveTo })
         cutsceneHandleRef.current = handle
         await handle.done
         setCutsceneLine(undefined)

@@ -37,3 +37,38 @@ test('stepCutscene steps through a whole Dialogue-only sequence to a terminal do
   assert.deepEqual(progression, [1, 2, 3])
   assert.equal(stepCutscene(state, ADVANCE, STEPS).done, true)
 })
+
+const MOVE_FINISHED: CutsceneEvent = { type: 'move-finished' }
+
+const MOVEMENT_STEPS: CutsceneStep[] = [
+  { type: 'dialogue', line: { text: 'Come here.' } },
+  { type: 'movement', charId: 'player', targetPos: { x: 3, y: 4 } },
+  { type: 'dialogue', line: { text: 'Good.' } },
+]
+
+test('stepCutscene move-finished moves past a Movement step to the next one', () => {
+  const state: CutsceneRunnerState = { stepIndex: 1 }
+  assert.deepEqual(stepCutscene(state, MOVE_FINISHED, MOVEMENT_STEPS), { stepIndex: 2, done: false })
+})
+
+test('stepCutscene ignores advance-click while a Movement step is current', () => {
+  const state: CutsceneRunnerState = { stepIndex: 1 }
+  assert.deepEqual(stepCutscene(state, ADVANCE, MOVEMENT_STEPS), { stepIndex: 1, done: false })
+})
+
+test('stepCutscene ignores move-finished while a Dialogue step is current', () => {
+  const state: CutsceneRunnerState = { stepIndex: 0 }
+  assert.deepEqual(stepCutscene(state, MOVE_FINISHED, MOVEMENT_STEPS), { stepIndex: 0, done: false })
+})
+
+test('stepCutscene steps through a Dialogue/Movement/Dialogue sequence to a terminal done state', () => {
+  let state: CutsceneRunnerState = { stepIndex: 0 }
+  const events: CutsceneEvent[] = [ADVANCE, MOVE_FINISHED, ADVANCE]
+  const progression = events.map((event) => {
+    state = stepCutscene(state, event, MOVEMENT_STEPS)
+    return state.stepIndex
+  })
+
+  assert.deepEqual(progression, [1, 2, 3])
+  assert.equal(stepCutscene(state, ADVANCE, MOVEMENT_STEPS).done, true)
+})

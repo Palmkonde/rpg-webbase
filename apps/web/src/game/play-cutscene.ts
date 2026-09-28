@@ -1,7 +1,8 @@
-import type { CutsceneRunnerState, CutsceneStepResult } from '../state/cutscene-runner.ts'
 import { currentStudentId, flagStore, runOnce } from '../state/flags.ts'
+import type { CutsceneRunnerState } from '../state/cutscene-runner.ts'
 import type { CutsceneStep } from '../state/cutscene.ts'
 import type { DialogueLine } from '../scripts/script.ts'
+import type { TileCoord } from '@game-engine/engine-core'
 import { resolveCutscene } from '../state/cutscene.ts'
 import { stepCutscene } from '../state/cutscene-runner.ts'
 
@@ -10,79 +11,80 @@ export interface CutsceneHandle {
   advance: () => void
 }
 
-interface CutsceneLoop {
-  stepIndex: number
-  steps: CutsceneStep[]
-  finished: boolean
-  onLine: (line: DialogueLine) => void
-  resolve: () => void
+export interface CutsceneCallbacks {
+  setPaused: (paused: boolean) => void
+  onLine: (line: DialogueLine | undefined) => void
+  moveTo: (charId: string, targetPos: TileCoord) => Promise<void>
+}
+
+interface AdvanceGate {
+  wait: () => Promise<void>
+  signal: () => void
 }
 
 function noop(): void {
   return undefined
 }
 
-// Bridges the loop's completion to a Promise.
-function createCutsceneDeferred(): { promise: Promise<void>; resolve: () => void } {
-  let resolveDeferred!: () => void
+// A signal() with nothing waiting (e.g. a stray click during a Movement step) is safely ignored.
+function createAdvanceGate(): AdvanceGate {
+  let resolveWait: (() => void) | undefined
 
-  // oxlint-disable-next-line promise/avoid-new
-  const promise = new Promise<void>((resolve) => {
-    resolveDeferred = resolve
-  })
-  return { promise, resolve: resolveDeferred }
-}
-
-function emitLine(loop: CutsceneLoop): void {
-  loop.onLine(loop.steps[loop.stepIndex].line)
-}
-
-function applyCutsceneStep(loop: CutsceneLoop, result: CutsceneStepResult): void {
-  if (loop.finished) {return}
-
-  loop.stepIndex = result.stepIndex
-  if (!result.done) {
-    emitLine(loop)
-    return
+  return {
+    wait() {
+      // oxlint-disable-next-line promise/avoid-new
+      return new Promise((resolve) => {
+        resolveWait = resolve
+      })
+    },
+    signal() {
+      resolveWait?.()
+      resolveWait = undefined
+    },
   }
-  loop.finished = true
-  loop.resolve()
 }
 
-export function playCutscene(
-  id: string,
-  setPaused: (paused: boolean) => void,
-  onLine: (line: DialogueLine) => void,
-): CutsceneHandle {
+// Drives the pure stepCutscene reducer to completion.
+async function runSteps(steps: CutsceneStep[], callbacks: CutsceneCallbacks, gate: AdvanceGate): Promise<void> {
+  let state: CutsceneRunnerState = { stepIndex: 0 }
+
+  while (state.stepIndex < steps.length) {
+    const step = steps[state.stepIndex]
+
+    if (step.type === 'dialogue') {
+      callbacks.onLine(step.line)
+      
+      // oxlint-disable-next-line no-await-in-loop -- steps are a strict sequence, each waiting on the previous one's own completion signal.
+      await gate.wait()
+      state = stepCutscene(state, { type: 'advance-click' }, steps)
+    } else {
+
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- onLine's param is required; this is the "no line" case, not an omission.
+      callbacks.onLine(undefined)
+
+      // oxlint-disable-next-line no-await-in-loop -- see above.
+      await callbacks.moveTo(step.charId, step.targetPos)
+      state = stepCutscene(state, { type: 'move-finished' }, steps)
+    }
+  }
+}
+
+export function playCutscene(id: string, callbacks: CutsceneCallbacks): CutsceneHandle {
   const steps = resolveCutscene(id)
 
   if (!steps || steps.length === 0) {
     return { done: Promise.resolve(), advance: noop }
   }
 
-  const { promise, resolve } = createCutsceneDeferred()
-  const loop: CutsceneLoop = { stepIndex: 0, steps, finished: false, onLine, resolve }
-
-  // Guards advance against a phantom mount (React Strict Mode) whose runOnce check is still pending.
-  let started = false
+  const gate = createAdvanceGate()
   const done = runOnce({ store: flagStore, studentId: currentStudentId }, id, async () => {
-    started = true
-    setPaused(true)
-    emitLine(loop)
+    callbacks.setPaused(true)
     try {
-      await promise
+      await runSteps(steps, callbacks, gate)
     } finally {
-      setPaused(false)
+      callbacks.setPaused(false)
     }
   })
 
-  return {
-    done,
-    advance: () => {
-      if (started) {
-        const state: CutsceneRunnerState = { stepIndex: loop.stepIndex }
-        applyCutsceneStep(loop, stepCutscene(state, { type: 'advance-click' }, loop.steps))
-      }
-    },
-  }
+  return { done, advance: gate.signal }
 }

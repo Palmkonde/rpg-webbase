@@ -4,18 +4,23 @@ export interface CutsceneRunnerState {
   stepIndex: number
 }
 
-// Choice-picked/move-finished join this as a union once issues #26/#27 need it (see adr/0017).
-export interface CutsceneEvent {
-  type: 'advance-click'
-}
+// Choice-picked joins this as a union once issue #27 needs it (see adr/0017).
+export type CutsceneEvent = { type: 'advance-click' } | { type: 'move-finished' }
 
 export interface CutsceneStepResult {
   stepIndex: number
   done: boolean
 }
 
+function expectedEvent(step: CutsceneStep): CutsceneEvent['type'] {
+  return step.type === 'movement' ? 'move-finished' : 'advance-click'
+}
+
 export function stepCutscene(state: CutsceneRunnerState, event: CutsceneEvent, steps: CutsceneStep[]): CutsceneStepResult {
-  if (event.type !== 'advance-click') {
+  const currentStep = steps[state.stepIndex]
+
+  // A mismatched event (or none current, already done) is ignored rather than advanced.
+  if (!currentStep || event.type !== expectedEvent(currentStep)) {
     return { stepIndex: state.stepIndex, done: state.stepIndex >= steps.length }
   }
 
