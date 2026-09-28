@@ -2,38 +2,25 @@
 
 import type { EngineEvent, WorldConfig } from '@game-engine/engine-core'
 import { characters, maps } from './catalogs.ts'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { CgOverlay } from '../temp-ui/cg-overlay.tsx'
-import type { CgStep } from './play-cg.ts'
 import { CutsceneOverlay } from '../temp-ui/cutscene-overlay.tsx'
 import { DialogueOverlay } from '../temp-ui/dialogue-overlay.tsx'
 import { createEngine } from '@game-engine/engine-core'
-import { playCG } from './play-cg.ts'
-import { resolveCg } from '../state/cg.ts'
+import { useCgPlayback } from './use-cg-playback.ts'
 import { useScriptPlayback } from './use-script-playback.ts'
 
 const CANVAS_STYLE = { width: '100vw', height: '100vh' }
 
-// A future mid-game CG reuses playCG the same way, no re-plumbing needed.
 const BOOT_CG_ID = 'intro'
-const bootCgFrames = resolveCg(BOOT_CG_ID)
 
 export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [cgStep, setCgStep] = useState<CgStep | undefined>()
-  const cgHandleRef = useRef<ReturnType<typeof playCG> | null>(null)
 
   // oxlint-disable-next-line unicorn/no-useless-undefined -- this useRef overload requires an argument; omitting it doesn't typecheck.
   const engineRef = useRef<Awaited<ReturnType<typeof createEngine>> | undefined>(undefined)
 
-  const advanceCg = useCallback((): void => {
-    cgHandleRef.current?.advance()
-  }, [])
-
-  const skipCg = useCallback((): void => {
-    cgHandleRef.current?.skip()
-  }, [])
-
+  const { cgFrames, cgStep, advanceCg, skipCg, playCgById } = useCgPlayback()
   const { dialogue, cutsceneLine, dismissDialogue, advanceCutscene, selectChoice, runInteraction } = useScriptPlayback(engineRef)
 
   useEffect(() => {
@@ -73,15 +60,8 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
     }
 
     async function boot(element: HTMLElement): Promise<void> {
-      if (bootCgFrames) {
-        const handle = playCG(BOOT_CG_ID, (step) => {
-          if (!cancelled) {setCgStep(step)}
-        })
-        cgHandleRef.current = handle
-        await handle.done
-        if (cancelled) {return}
-        setCgStep(undefined)
-      }
+      await playCgById(BOOT_CG_ID, () => cancelled)
+      if (cancelled) {return}
       await start(element)
     }
 
@@ -89,18 +69,18 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
 
     return (): void => {
       cancelled = true
-      cgHandleRef.current?.skip()
+      skipCg()
       engineRef.current?.destroy()
       engineRef.current = undefined
     }
-  }, [worldConfig, runInteraction])
+  }, [worldConfig, runInteraction, playCgById, skipCg])
 
   return (
     <>
       <div ref={containerRef} style={CANVAS_STYLE} />
-      {cgStep && bootCgFrames && (
+      {cgStep && cgFrames && (
         <CgOverlay
-          frame={bootCgFrames[cgStep.frameIndex]}
+          frame={cgFrames[cgStep.frameIndex]}
           hasMore={cgStep.hasMore}
           onAdvance={advanceCg}
           onSkip={skipCg}
