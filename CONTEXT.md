@@ -21,12 +21,24 @@ A single Tiled-authored area the Player walks around in, typically corresponding
 _Avoid_: Level, Scene, World (Scene is Phaser's own rendering-container concept, distinct from this domain's Map)
 
 **Player**:
-The grid-bound character controlled by the student, rendered and moved by the Engine.
-_Avoid_: Character, avatar, student (a Student is the real person; the Player is their in-Engine representation)
+The Student's in-Engine representation: grid-bound, rendered and moved by the Engine.
+_Avoid_: Character (as a synonym for the Player role — a Player *has* a Character, see that entry, but isn't one), avatar, student (a Student is the real person; the Player is their in-Engine representation)
+
+**Character**:
+The animated sprite-sheet appearance a Player or Character Entity walks and idles with, always normalized to a fixed four-direction grid regardless of source art completeness (ADR-0006).
+_Avoid_: Sprite, avatar
 
 **Entity**:
-An interactable object placed on a Map — an NPC, sign, item, etc. — that the Player can trigger an Interaction with. The Engine treats every Entity generically; what it represents narratively is the Host's concern.
+An interactable object placed on a Map — an NPC, sign, item, etc. — that the Player can trigger an Interaction with. The Engine treats every Entity generically; what it represents narratively is the Host's concern. Every Entity is either a Character Entity or a Prop Entity, depending on whether it has a Character.
 _Avoid_: NPC, object, actor
+
+**Character Entity**:
+An Entity that has a Character: registered and animated the same way the Player is, and eligible to be the target of a Cutscene's Movement or Follow step.
+_Avoid_: NPC, movable Entity, animated Entity
+
+**Prop Entity**:
+An Entity with no Character: a fixed picture at a fixed Map position, drawn from the Tiled object's own tile — interactable, but never a Movement or Follow target.
+_Avoid_: Static Entity, decoration
 
 **Spawn Point**:
 The Map coordinate the Player appears at on entering a Map, whether as a Map's default entry point or a Portal's target.
@@ -49,7 +61,7 @@ _Avoid_: Door, warp point
 ### Contract
 
 **World Config**:
-The data the Host supplies to the Engine describing what to render: the active Map, the Player's position and character, and which of that Map's Tiled-authored Entities and Portals are currently active. Entities and Portals are defined in the Map itself (in Tiled); World Config only controls which are active for a given Player, not their placement or targets. This is the Engine's entire input surface.
+The data the Host supplies to the Engine describing what to render in the live game: the active Map, and the Player's position and Character. Entities, Zones, and Portals are defined in the Map itself (in Tiled) and are always live once their Map loads, not gated by World Config (ADR-0021). This is the Engine's entire input surface — distinct from Tiled's own editor preview of a placed object, a separate design-time-only concern.
 _Avoid_: Game state, props, initial state
 
 **Interaction**:
