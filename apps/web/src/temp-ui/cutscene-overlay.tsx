@@ -1,6 +1,7 @@
 'use client'
 
-import type { DialogueLine } from '../scripts/script.ts'
+import type { Choice, DialogueLine } from '../scripts/script.ts'
+import { useCallback, useState } from 'react'
 
 // Unlike DialogueOverlay there is no Close control — a Cutscene takes control from the Player for its duration (spec's "Cutscene freeze"), it isn't dismissible.
 const OVERLAY_STYLE = {
@@ -39,19 +40,65 @@ const LINE_TEXT_STYLE = {
   margin: 0,
 } as const
 
+const DISABLED_CHOICE_STYLE = {
+  opacity: 0.5,
+  cursor: 'not-allowed',
+} as const
+
 export function CutsceneOverlay({
+  choices,
   line,
   onAdvance,
+  onChoose,
 }: {
-  line: DialogueLine
+  choices: Choice[] | undefined
+  line: DialogueLine | undefined
   onAdvance: () => void
+  onChoose: (choice: Choice) => void
 }): React.ReactElement {
+  const [blockedReason, setBlockedReason] = useState<string | undefined>()
+
+  // Dispatches by position: `flags` is optional and, even set, isn't a per-choice id.
+  const handleChoiceClick = useCallback((event: React.MouseEvent<HTMLButtonElement>): void => {
+    const { index } = event.currentTarget.dataset
+    const choice = choices?.[Number(index)]
+    if (!choice) {return}
+    if (choice.enabled === false) {
+      setBlockedReason(choice.disabledReason)
+      return
+    }
+    setBlockedReason(undefined)
+    onChoose(choice)
+  }, [choices, onChoose])
+
+  const visibleChoices = choices
+    ?.map((choice, index) => ({ choice, index }))
+    .filter(({ choice }) => choice.visible !== false)
+
   return (
     <div style={OVERLAY_STYLE}>
-      <button onClick={onAdvance} style={LINE_BUTTON_STYLE} type="button">
-        {line.speaker !== undefined && <span style={SPEAKER_LABEL_STYLE}>{line.speaker}</span>}
-        <span style={LINE_TEXT_STYLE}>{line.text}</span>
-      </button>
+      {line && (
+        <button onClick={onAdvance} style={LINE_BUTTON_STYLE} type="button">
+          {line.speaker !== undefined && <span style={SPEAKER_LABEL_STYLE}>{line.speaker}</span>}
+          <span style={LINE_TEXT_STYLE}>{line.text}</span>
+        </button>
+      )}
+      {visibleChoices?.map(({ choice, index }) => {
+        const isDisabled = choice.enabled === false
+        return (
+          <button
+            aria-disabled={isDisabled}
+            data-index={index}
+            key={choice.text}
+            onClick={handleChoiceClick}
+            style={isDisabled ? DISABLED_CHOICE_STYLE : undefined}
+            type="button"
+          >
+            {choice.text}
+          </button>
+        )
+      })}
+      {blockedReason && <p aria-live="polite">{blockedReason}</p>}
     </div>
   )
 }

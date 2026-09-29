@@ -72,3 +72,43 @@ test('stepCutscene steps through a Dialogue/Movement/Dialogue sequence to a term
   assert.deepEqual(progression, [1, 2, 3])
   assert.equal(stepCutscene(state, ADVANCE, MOVEMENT_STEPS).done, true)
 })
+
+const CHOICE_PICKED: CutsceneEvent = { type: 'choice-picked' }
+
+const CHOICE_STEPS: CutsceneStep[] = [
+  { type: 'dialogue', line: { text: 'Pick one.' } },
+  { type: 'choice', choices: [{ text: 'A' }, { text: 'B' }] },
+  { type: 'dialogue', line: { text: 'Chosen.' } },
+]
+
+test('stepCutscene choice-picked moves past a Choice step to the next one', () => {
+  const state: CutsceneRunnerState = { stepIndex: 1 }
+  assert.deepEqual(stepCutscene(state, CHOICE_PICKED, CHOICE_STEPS), { stepIndex: 2, done: false })
+})
+
+test('stepCutscene ignores advance-click while a Choice step is current', () => {
+  const state: CutsceneRunnerState = { stepIndex: 1 }
+  assert.deepEqual(stepCutscene(state, ADVANCE, CHOICE_STEPS), { stepIndex: 1, done: false })
+})
+
+test('stepCutscene ignores move-finished while a Choice step is current', () => {
+  const state: CutsceneRunnerState = { stepIndex: 1 }
+  assert.deepEqual(stepCutscene(state, MOVE_FINISHED, CHOICE_STEPS), { stepIndex: 1, done: false })
+})
+
+test('stepCutscene ignores choice-picked while a Dialogue step is current', () => {
+  const state: CutsceneRunnerState = { stepIndex: 0 }
+  assert.deepEqual(stepCutscene(state, CHOICE_PICKED, CHOICE_STEPS), { stepIndex: 0, done: false })
+})
+
+test('stepCutscene steps through a Dialogue/Choice/Dialogue sequence to a terminal done state', () => {
+  let state: CutsceneRunnerState = { stepIndex: 0 }
+  const events: CutsceneEvent[] = [ADVANCE, CHOICE_PICKED, ADVANCE]
+  const progression = events.map((event) => {
+    state = stepCutscene(state, event, CHOICE_STEPS)
+    return state.stepIndex
+  })
+
+  assert.deepEqual(progression, [1, 2, 3])
+  assert.equal(stepCutscene(state, ADVANCE, CHOICE_STEPS).done, true)
+})

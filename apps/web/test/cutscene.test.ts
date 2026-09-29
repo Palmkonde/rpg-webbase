@@ -39,3 +39,46 @@ test('createCutscene moveTo() accepts any charId string, not just the Player\'s'
   const steps = createCutscene().moveTo('CampFire', { x: 8, y: 13 }).build()
   assert.deepEqual(steps, [{ type: 'movement', charId: 'CampFire', targetPos: { x: 8, y: 13 } }])
 })
+
+test('createCutscene choice() builds a Choice step with one Choice', () => {
+  const steps = createCutscene().choice('Ask about the embers').build()
+  assert.deepEqual(steps, [{ type: 'choice', choices: [{ text: 'Ask about the embers' }] }])
+})
+
+test('createCutscene consecutive choice() calls group into one Choice step', () => {
+  const steps = createCutscene()
+    .choice('Ask about the embers')
+    .choice('Ask about the stars overhead')
+    .build()
+
+  assert.deepEqual(steps, [
+    { type: 'choice', choices: [{ text: 'Ask about the embers' }, { text: 'Ask about the stars overhead' }] },
+  ])
+})
+
+test('createCutscene choice() after say() starts a new Choice step', () => {
+  const steps = createCutscene()
+    .say('Well?')
+    .choice('Yes')
+    .choice('No')
+    .say('Understood.')
+    .build()
+
+  assert.deepEqual(steps, [
+    { type: 'dialogue', line: { text: 'Well?' } },
+    { type: 'choice', choices: [{ text: 'Yes' }, { text: 'No' }] },
+    { type: 'dialogue', line: { text: 'Understood.' } },
+  ])
+})
+
+test('createCutscene choice() carries ChoiceOptions onto the Choice', () => {
+  const steps = createCutscene().choice('Ask', { flags: { asked: true }, visible: false }).build()
+  assert.deepEqual(steps, [{ type: 'choice', choices: [{ text: 'Ask', flags: { asked: true }, visible: false }] }])
+})
+
+test('createCutscene build() output is unaffected by a later choice() call', () => {
+  const builder = createCutscene().choice('First')
+  const before = builder.build()
+  builder.choice('Second')
+  assert.deepEqual(before, [{ type: 'choice', choices: [{ text: 'First' }] }])
+})

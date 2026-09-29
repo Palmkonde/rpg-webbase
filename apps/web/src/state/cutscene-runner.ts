@@ -4,8 +4,7 @@ export interface CutsceneRunnerState {
   stepIndex: number
 }
 
-// Choice-picked joins this as a union once issue #27 needs it (see adr/0017).
-export type CutsceneEvent = { type: 'advance-click' } | { type: 'move-finished' }
+export type CutsceneEvent = { type: 'advance-click' } | { type: 'move-finished' } | { type: 'choice-picked' }
 
 export interface CutsceneStepResult {
   stepIndex: number
@@ -13,7 +12,9 @@ export interface CutsceneStepResult {
 }
 
 function expectedEvent(step: CutsceneStep): CutsceneEvent['type'] {
-  return step.type === 'movement' ? 'move-finished' : 'advance-click'
+  if (step.type === 'movement') {return 'move-finished'}
+  if (step.type === 'choice') {return 'choice-picked'}
+  return 'advance-click'
 }
 
 export function stepCutscene(state: CutsceneRunnerState, event: CutsceneEvent, steps: CutsceneStep[]): CutsceneStepResult {

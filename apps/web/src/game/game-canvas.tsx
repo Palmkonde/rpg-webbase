@@ -21,7 +21,9 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
   const engineRef = useRef<Awaited<ReturnType<typeof createEngine>> | undefined>(undefined)
 
   const { cgFrames, cgStep, advanceCg, skipCg, playCgById } = useCgPlayback()
-  const { dialogue, cutsceneLine, dismissDialogue, advanceCutscene, selectChoice, runInteraction } = useScriptPlayback(engineRef, playCgById)
+  const {
+    dialogue, cutsceneLine, cutsceneChoices, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction,
+  } = useScriptPlayback(engineRef, playCgById)
 
   useEffect(() => {
     const container = containerRef.current
@@ -87,7 +89,9 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
         />
       )}
       {dialogue && <DialogueOverlay dialogue={dialogue} onChoose={selectChoice} onDismiss={dismissDialogue} />}
-      {cutsceneLine && <CutsceneOverlay line={cutsceneLine} onAdvance={advanceCutscene} />}
+      {(cutsceneLine !== undefined || cutsceneChoices !== undefined) && (
+        <CutsceneOverlay choices={cutsceneChoices} line={cutsceneLine} onAdvance={advanceCutscene} onChoose={pickCutsceneChoice} />
+      )}
     </>
   )
 }
