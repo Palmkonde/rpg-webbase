@@ -1,4 +1,4 @@
-import type { CutsceneTrigger, Dialogue, Script, ScriptContext } from '../script.ts'
+import type { CgTrigger, CutsceneTrigger, Dialogue, Script, ScriptContext } from '../script.ts'
 import { currentLocale, resolveLine } from '../../state/strings.ts'
 import { createScript } from '../script.ts'
 
@@ -6,6 +6,14 @@ const SPEAKER = 'Campfire'
 
 function campFireStory(): CutsceneTrigger {
   return { type: 'cutscene', id: 'campfire-story' }
+}
+
+// Branches between Dialogue and a CG by Flag, same as campFireScript already does for Dialogue variations.
+function campFireVision(ctx: ScriptContext): Dialogue | CgTrigger {
+  if (!ctx.flags.was_polite_to_campfire) {
+    return createScript(SPEAKER).say('The flames don\'t stir for someone who was rude to them.').build()
+  }
+  return { type: 'cg', id: 'campfire-vision' }
 }
 
 // Both campFireMemories branches reconverge here via the same closure — no dedicated merge-point primitive needed (spec's "Branch reconvergence").
@@ -48,6 +56,7 @@ function campFireScript(ctx: ScriptContext): Dialogue {
     .choice('Sup man?', { flags: { talked_to_campfire: true }, visible: !metBefore })
     .choice('Ask what the campfire has seen', { next: campFireMemories, visible: Boolean(wasPolite) })
     .choice('Ask for a story', { next: campFireStory })
+    .choice('Ask Campfire to show CG again', { next: campFireVision })
     .choice('Warm your hands', {
       disabledReason: 'You need firewood first.',
       enabled: Boolean(ctx.flags.has_firewood),

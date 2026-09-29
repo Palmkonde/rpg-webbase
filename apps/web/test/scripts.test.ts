@@ -236,3 +236,17 @@ test('runEntityScript: a choice can trigger a Cutscene instead of another Dialog
   assert.deepEqual(result, { type: 'cutscene', id: 'campfire-story' })
 })
 
+test('runEntityScript: a choice can trigger a CG instead of another Dialogue round', async () => {
+  const first = expectDialogue(await runEntityScript('CampFire', { flags: {} }))
+  const visionChoice = first.choices?.find((choice) => choice.text === 'Ask Campfire to show CG again')
+  const result = visionChoice?.next?.({ flags: { was_polite_to_campfire: true } })
+  assert.deepEqual(result, { type: 'cg', id: 'campfire-vision' })
+})
+
+test('runEntityScript: that same choice falls back to Dialogue when the Flag condition isn\'t met', async () => {
+  const first = expectDialogue(await runEntityScript('CampFire', { flags: {} }))
+  const visionChoice = first.choices?.find((choice) => choice.text === 'Ask Campfire to show CG again')
+  const result = expectDialogue(visionChoice?.next?.({ flags: {} }))
+  assert.ok(result.lines.length > 0)
+})
+

@@ -3,10 +3,37 @@
 import type { Choice, Dialogue, DialogueLine, ScriptResult } from '../scripts/script.ts'
 import { currentStudentId, flagStore } from '../state/flags.ts'
 import { useCallback, useRef, useState } from 'react'
+import type { CgPlayback } from './use-cg-playback.ts'
 import type { EngineHandle } from '@game-engine/engine-core'
 import type { RefObject } from 'react'
 import { playCutscene } from './play-cutscene.ts'
 import { runEntityScript } from '../scripts/run-entity-script.ts'
+
+async function playCgTrigger(options: { engine: EngineHandle; playCgById: CgPlayback['playCgById']; id: string }): Promise<void> {
+  const { engine, playCgById, id } = options
+  engine.setPaused(true)
+
+  try {
+    await playCgById(id, () => false)
+  } finally {
+    engine.setPaused(false)
+  }
+}
+
+async function playCutsceneTrigger(options: {
+  engine: EngineHandle
+  id: string
+  onLine: (line: DialogueLine | undefined) => void
+  handleRef: RefObject<ReturnType<typeof playCutscene> | null>
+}): Promise<void> {
+  const { engine, id, onLine, handleRef } = options
+  const handle = playCutscene(id, { setPaused: engine.setPaused, onLine, moveTo: engine.moveTo })
+  handleRef.current = handle
+  await handle.done
+
+  // oxlint-disable-next-line unicorn/no-useless-undefined -- onLine's param is required; this is the "no line" case, not an omission.
+  onLine(undefined)
+}
 
 async function persistChoiceFlags(choice: Choice): Promise<boolean> {
   if (!choice.flags) {return true}
@@ -28,7 +55,7 @@ export interface ScriptPlayback {
   runInteraction: (entityId: string, isStale: () => boolean) => Promise<void>
 }
 
-export function useScriptPlayback(engineRef: RefObject<EngineHandle | undefined>): ScriptPlayback {
+export function useScriptPlayback(engineRef: RefObject<EngineHandle | undefined>, playCgById: CgPlayback['playCgById']): ScriptPlayback {
   const [dialogue, setDialogue] = useState<Dialogue | undefined>()
   const [cutsceneLine, setCutsceneLine] = useState<DialogueLine | undefined>()
   const cutsceneHandleRef = useRef<ReturnType<typeof playCutscene> | null>(null)
@@ -41,21 +68,18 @@ export function useScriptPlayback(engineRef: RefObject<EngineHandle | undefined>
     cutsceneHandleRef.current?.advance()
   }, [])
 
-  // A CgTrigger joins this dispatch once issues #29/#30 build it (adr/0018) — until then a Script produces Dialogue or a CutsceneTrigger.
   const dispatch = useCallback(async (result: ScriptResult): Promise<void> => {
-    if ('type' in result) {
-      const engine = engineRef.current
-      if (engine) {
-        setDialogue(undefined)
-        const handle = playCutscene(result.id, { setPaused: engine.setPaused, onLine: setCutsceneLine, moveTo: engine.moveTo })
-        cutsceneHandleRef.current = handle
-        await handle.done
-        setCutsceneLine(undefined)
-      }
+    if (!('type' in result)) {
+      setDialogue(result)
       return
     }
-    setDialogue(result)
-  }, [engineRef])
+    const engine = engineRef.current
+    if (!engine) {return}
+    setDialogue(undefined)
+    await (result.type === 'cg'
+      ? playCgTrigger({ engine, playCgById, id: result.id })
+      : playCutsceneTrigger({ engine, id: result.id, onLine: setCutsceneLine, handleRef: cutsceneHandleRef }))
+  }, [engineRef, playCgById])
 
   const selectChoice = useCallback(async (choice: Choice): Promise<void> => {
     if (!(await persistChoiceFlags(choice))) {return}

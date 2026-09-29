@@ -34,12 +34,17 @@ export interface Dialogue {
   choices?: Choice[]
 }
 
+export interface CgTrigger {
+  type: 'cg'
+  id: string
+}
+
 export interface CutsceneTrigger {
   type: 'cutscene'
   id: string
 }
 
-export type ScriptResult = Dialogue | CutsceneTrigger
+export type ScriptResult = Dialogue | CgTrigger | CutsceneTrigger
 
 export interface ScriptBuilder {
   say: (text: string, options?: SayOptions) => ScriptBuilder

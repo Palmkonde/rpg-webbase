@@ -21,7 +21,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
   const engineRef = useRef<Awaited<ReturnType<typeof createEngine>> | undefined>(undefined)
 
   const { cgFrames, cgStep, advanceCg, skipCg, playCgById } = useCgPlayback()
-  const { dialogue, cutsceneLine, dismissDialogue, advanceCutscene, selectChoice, runInteraction } = useScriptPlayback(engineRef)
+  const { dialogue, cutsceneLine, dismissDialogue, advanceCutscene, selectChoice, runInteraction } = useScriptPlayback(engineRef, playCgById)
 
   useEffect(() => {
     const container = containerRef.current

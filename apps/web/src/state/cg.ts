@@ -5,13 +5,19 @@ export interface CgFrame {
 
 export type CgRegistry = Record<string, CgFrame[]>
 
+const INTRO_FRAMES: CgFrame[] = [
+  { art: 'intro-1', captionKey: 'cg.intro.1' },
+  { art: 'intro-2', captionKey: 'cg.intro.2' },
+  { art: 'intro-3', captionKey: 'cg.intro.3' },
+]
+
 // Not in scripts/: per CONTEXT.md a Script runs for an Entity/Map Event — a CG has neither.
 const REGISTRY = {
-  intro: [
-    { art: 'intro-1', captionKey: 'cg.intro.1' },
-    { art: 'intro-2', captionKey: 'cg.intro.2' },
-    { art: 'intro-3', captionKey: 'cg.intro.3' },
-  ],
+  intro: INTRO_FRAMES,
+
+  // Script running INTRO_FRAMES test of issues #30
+  // Own id — boot already marks intro_seen, so this id can't reuse intro's
+  'campfire-vision': INTRO_FRAMES,
 } satisfies CgRegistry
 
 export function resolveCg(id: string, registry: CgRegistry = REGISTRY): CgFrame[] | undefined {
