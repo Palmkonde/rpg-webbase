@@ -6,15 +6,18 @@ Tickets for this repo live as GitHub issues on `origin` (`Palmkonde/rpg-webbase`
 
 - The spec is a single, continuously-updated file: `docs/spec/spec.md`. Each grilling session appends/amends it in place — it is never published to the issue tracker.
 - A ticket is one GitHub issue. There is no local `NN` numbering anymore — the issue number is the ticket's identifier.
-- Triage/completion state is the issue's own open/closed state: open = not done, closed = done. An open ticket additionally carries exactly one triage label: `ready-for-agent` once it's pickable now, `blocked` while a `Blocked by:` ticket is still open. The two are mutually exclusive.
-- `Blocked by:` stays a plain line near the top of the issue body, referencing blockers as `#N` (GitHub auto-links these) — not GitHub's native issue-dependencies API. Plain text is enough for what any skill here reads back, and it avoids resolving a database id per edge. The `blocked` label is the filterable signal; the plain-text line is still the source of truth for *which* tickets gate it.
+- A ticket's body follows `.github/ISSUE_TEMPLATE/ticket.md` — its sections, in its order. This overrides any skill's own built-in ticket template (e.g. `/to-tickets`'s `## Parent`-first shape).
+- A ticket's title is a present-tense behaviour sentence ("Walking into a Zone runs its Script, once"), with no prefix.
+- One-off addenda (a dated note, why a ticket isn't ready yet) go in a comment, not the body — the body stays the template's sections only.
+- Triage/completion state is the issue's own open/closed state: open = not done, closed = done. An open ticket additionally carries exactly one triage label: `ready-for-agent` once it's pickable now, `blocked` while a ticket under its `## Blocked by` is still open. The two are mutually exclusive.
+- `## Blocked by` lists one `- #N — reason` bullet per blocker (GitHub auto-links `#N`), or `- None (can start immediately)` — not GitHub's native issue-dependencies API. Plain text is enough for what any skill here reads back, and it avoids resolving a database id per edge. The `blocked` label is the filterable signal; that section is still the source of truth for *which* tickets gate it.
 - Hard-to-reverse architectural decisions live in `docs/adr/`, sequentially numbered, one decision per file.
 - Domain vocabulary lives in `GLOSSARY.md` (see `domain.md`), kept a pure glossary.
 
 ## Operations
 
-- **Create a ticket**: `gh issue create --title "..." --body-file <path>` (use a body file for anything multi-line — avoids heredoc/quoting issues). Apply `--label ready-for-agent` when it's pickable immediately, or `--label blocked` when its `Blocked by:` line names a still-open ticket.
-- **Unblock a ticket**: once every ticket named in its `Blocked by:` line is closed, `gh issue edit <number> --remove-label blocked --add-label ready-for-agent`.
+- **Create a ticket**: copy `.github/ISSUE_TEMPLATE/ticket.md` minus its front-matter, fill every section (dropping `## Manual verification` if unneeded, and the `<!-- -->` hints), then `gh issue create --title "..." --body-file <path>`. Apply `--label ready-for-agent` when it's pickable immediately, or `--label blocked` when its `## Blocked by` names a still-open ticket.
+- **Unblock a ticket**: once every ticket under its `## Blocked by` is closed, `gh issue edit <number> --remove-label blocked --add-label ready-for-agent`.
 - **Read a ticket**: `gh issue view <number> --comments`.
 - **List tickets**: `gh issue list --state open --label ready-for-agent --json number,title,body,labels,comments`, adjusting filters as needed. Swap the label to `blocked` to see what's waiting on something else.
 - **Comment on a ticket**: `gh issue comment <number> --body "..."`.
