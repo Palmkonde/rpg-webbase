@@ -23,9 +23,9 @@ After `/code-review`, let the user review the diff too — wait for their go-ahe
 
 Atomic: group by logical concern (a new package, a new app, a ticket-status update are separate commits), not one commit per session. 
 
-## Comments
+## Coding standards
 
-One clause, not a paragraph packed onto one line. A function's name carries the what; a comment earns its place only for a non-obvious why (an ADR reference, a lint-rule workaround, a consequence worth flagging), and stays to a single short sentence even then. Delete-test before writing one: if removing it loses no information the code doesn't already carry, it's restating — cut it, don't write it.
+`CODING_STANDARDS.md` covers the judgement-call rules (names, functions, boundaries, errors, comments, tests); `/code-review` enforces it.
 
 ## Where decisions live
 
