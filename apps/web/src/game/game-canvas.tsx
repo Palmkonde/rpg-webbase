@@ -4,10 +4,12 @@ import type { EngineEvent, WorldConfig } from '@game-engine/engine-core'
 import { characters, maps } from './catalogs.ts'
 import { useEffect, useRef } from 'react'
 import { CgOverlay } from '../temp-ui/cg-overlay.tsx'
+import { CompanionOverlay } from '../temp-ui/companion-overlay.tsx'
 import { CutsceneOverlay } from '../temp-ui/cutscene-overlay.tsx'
 import { DialogueOverlay } from '../temp-ui/dialogue-overlay.tsx'
 import { createEngine } from '@game-engine/engine-core'
 import { useCgPlayback } from './use-cg-playback.ts'
+import { useCompanions } from './use-companions.ts'
 import { useScriptPlayback } from './use-script-playback.ts'
 
 const CANVAS_STYLE = { width: '100vw', height: '100vh' }
@@ -21,9 +23,10 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
   const engineRef = useRef<Awaited<ReturnType<typeof createEngine>> | undefined>(undefined)
 
   const { cgFrames, cgStep, advanceCg, skipCg, playCgById } = useCgPlayback()
+  const { companionIds, syncCompanions, dismissCompanion } = useCompanions(engineRef)
   const {
-    dialogue, cutsceneLine, cutsceneChoices, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered,
-  } = useScriptPlayback(engineRef, playCgById)
+    dialogue, cutsceneLine, cutsceneChoices, enginePaused, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered,
+  } = useScriptPlayback(engineRef, playCgById, syncCompanions)
 
   useEffect(() => {
     const container = containerRef.current
@@ -55,6 +58,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
           created.destroy()
         } else {
           engineRef.current = created
+          await syncCompanions()
         }
       } catch (error: unknown) {
         if (!cancelled) {
@@ -77,7 +81,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
       engineRef.current?.destroy()
       engineRef.current = undefined
     }
-  }, [worldConfig, runInteraction, runZoneEntered, playCgById, skipCg])
+  }, [worldConfig, runInteraction, runZoneEntered, playCgById, skipCg, syncCompanions])
 
   return (
     <>
@@ -90,6 +94,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
           onSkip={skipCg}
         />
       )}
+      {!enginePaused && companionIds.length > 0 && <CompanionOverlay companionIds={companionIds} onDismiss={dismissCompanion} />}
       {dialogue && <DialogueOverlay dialogue={dialogue} onChoose={selectChoice} onDismiss={dismissDialogue} />}
       {(cutsceneLine !== undefined || cutsceneChoices !== undefined) && (
         <CutsceneOverlay choices={cutsceneChoices} line={cutsceneLine} onAdvance={advanceCutscene} onChoose={pickCutsceneChoice} />

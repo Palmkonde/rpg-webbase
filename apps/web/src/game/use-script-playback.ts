@@ -3,6 +3,7 @@
 import type { Choice, Dialogue, DialogueLine } from '../scripts/script.ts'
 import { useMemo, useState } from 'react'
 import type { CgPlayback } from './use-cg-playback.ts'
+import type { Companions } from './use-companions.ts'
 import type { EngineHandle } from '@game-engine/engine-core'
 import type { RefObject } from 'react'
 import { ScriptPlayer } from './script-player.ts'
@@ -11,6 +12,7 @@ export interface ScriptPlayback {
   dialogue: Dialogue | undefined
   cutsceneLine: DialogueLine | undefined
   cutsceneChoices: Choice[] | undefined
+  enginePaused: boolean
   dismissDialogue: () => void
   advanceCutscene: () => void
   pickCutsceneChoice: (choice: Choice) => void
@@ -19,19 +21,24 @@ export interface ScriptPlayback {
   runZoneEntered: (zoneId: string, isStale: () => boolean) => Promise<void>
 }
 
-export function useScriptPlayback(engineRef: RefObject<EngineHandle | undefined>, playCgById: CgPlayback['playCgById']): ScriptPlayback {
+export function useScriptPlayback(
+  engineRef: RefObject<EngineHandle | undefined>,
+  playCgById: CgPlayback['playCgById'],
+  syncCompanions: Companions['syncCompanions'],
+): ScriptPlayback {
   const [dialogue, setDialogue] = useState<Dialogue | undefined>()
   const [cutsceneLine, setCutsceneLine] = useState<DialogueLine | undefined>()
   const [cutsceneChoices, setCutsceneChoices] = useState<Choice[] | undefined>()
+  const [enginePaused, setEnginePaused] = useState(false)
 
   // The player's methods are stable per instance, which game-canvas's effect deps rely on.
   const player = useMemo(
-    () => new ScriptPlayer(engineRef, playCgById, { setDialogue, setCutsceneLine, setCutsceneChoices }),
-    [engineRef, playCgById],
+    () => new ScriptPlayer(engineRef, playCgById, { setDialogue, setCutsceneLine, setCutsceneChoices, setEnginePaused, syncCompanions }),
+    [engineRef, playCgById, syncCompanions],
   )
 
   const { dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered } = player
   return {
-    dialogue, cutsceneLine, cutsceneChoices, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered,
+    dialogue, cutsceneLine, cutsceneChoices, enginePaused, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered,
   }
 }

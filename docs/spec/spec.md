@@ -892,7 +892,7 @@ This spec covers a Companion on the Map where it was recruited. Carrying a Compa
 
 - **Terminology**: **Companion**, new in `GLOSSARY.md`. The Follow step's *follower* role stays Cutscene-only.
 - **State** (`adr/0028`): one Flag per Companion, `companion:<entityId>`. Its value is the Companion's `characterId` string while it's a Companion, and `false` once dismissed. There is no other Companion state. Flags are still in-memory, so a page refresh resets Companions. That limitation already exists and isn't this feature's to fix.
-- **Recruiting**: a Script writes the Flag. In the demo, a Choice's existing Flag writes set `companion:Guard = 'temmie'`. The Script author writes the Character a second time; it's already in Tiled.
+- **Recruiting**: a Script writes the Flag. In the demo, a Choice's existing Flag writes set `companion:Guard = 'fluffy'`. The Script author writes the Character a second time; it's already in Tiled.
 - **Sync Companions**: one Host function takes the current Flags and the Engine handle. For each `companion:*` Flag holding a Character, it makes that character stop blocking other characters and starts `follow(entityId, player, 0)`. For each one set to `false`, it restores blocking and calls `stopMovement`. It ignores every other Flag. A Companion whose character isn't on the current Map is skipped, using the Engine's existing warn-and-skip behaviour.
 - **When sync runs**: once the Engine has finished loading a Map, after every Script finishes (including Cutscenes, CGs and Dialogue Choices, since any of them can write Flags or move the Companion), and after a dismiss.
 - **Engine readiness**: `createEngine` resolves only once the Map Scene has been created, so the handle's movement calls are safe to use straight away.
@@ -900,7 +900,7 @@ This spec covers a Companion on the Map where it was recruited. Carrying a Compa
 - **Chase style**: grid-engine's shortest-path `follow` at gap 0 (`adr/0027`). No new movement code.
 - **Dismiss UI**: the Host overlay shows one "Dismiss <entityId>" button per active Companion, only while the Engine isn't paused. Clicking it sets the Flag to `false` and runs sync.
 - **Not interactable**: a Companion can't be talked to, even on its home Map.
-- **Demo**: `guard-walk` ends with a Choice: "Follow me forever" writes `companion:Guard = 'temmie'`, and "Nah, stay here" writes nothing. `guard-walk` plays once, so this is the one chance to recruit the Guard.
+- **Demo**: `guard-walk` ends with a Choice: "Follow me forever" writes `companion:Guard = 'fluffy'`, and "Nah, stay here" writes nothing. `guard-walk` plays once, so this is the one chance to recruit the Guard.
 - **Across Maps (later ticket, blocked by #3)**: World Config gains a `companions` list (entity id plus Character) that the Host builds from the Companion Flags. On load, the Engine places each one on the first free tile next to the Player's Spawn Point (down, left, right, up), or warns and skips if all four are blocked. The Companion's own placement in Tiled is skipped on its home Map; this rule is provisional.
 
 ### Testing Decisions

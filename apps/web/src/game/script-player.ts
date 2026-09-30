@@ -1,9 +1,11 @@
 import type { Choice, Dialogue, DialogueLine, Script, ScriptResult } from '../scripts/script.ts'
 import { currentStudentId, flagStore, runOnce } from '../state/flags.ts'
 import type { CgPlayback } from './use-cg-playback.ts'
+import type { Companions } from './use-companions.ts'
 import type { EngineHandle } from '@game-engine/engine-core'
 import type { RefObject } from 'react'
 import type { ScriptKind } from '../scripts/run-script.ts'
+import { isActiveCompanion } from '../state/companions.ts'
 import { playCutscene } from './play-cutscene.ts'
 import { runScript } from '../scripts/run-script.ts'
 
@@ -11,6 +13,10 @@ export interface ScriptPlayerUi {
   setDialogue: (dialogue: Dialogue | undefined) => void
   setCutsceneLine: (line: DialogueLine | undefined) => void
   setCutsceneChoices: (choices: Choice[] | undefined) => void
+  setEnginePaused: (paused: boolean) => void
+
+  // Re-applies Companion Flags to the Engine and refreshes the dismiss buttons.
+  syncCompanions: Companions['syncCompanions']
 }
 
 async function persistChoiceFlags(choice: Choice): Promise<boolean> {
@@ -47,6 +53,9 @@ export class ScriptPlayer {
     if (!(await persistChoiceFlags(choice))) {return}
     if (!choice.next) {
       this.dismissDialogue()
+
+      // The Choice's Flag writes may have recruited or dismissed a Companion.
+      await this.ui.syncCompanions()
       return
     }
     await this.handOff(choice.next)
@@ -54,6 +63,9 @@ export class ScriptPlayer {
 
   // Guards against a Script's async lookup outliving the Map/effect that fired it (e.g. a worldConfig transition mid-flight).
   public runInteraction = async (entityId: string, isStale: () => boolean): Promise<void> => {
+
+    // A Companion can't be talked to (spec's "Companion").
+    if (isActiveCompanion(await flagStore.getFlags(currentStudentId), entityId)) {return}
     const result = await ScriptPlayer.lookup('entities', entityId, isStale)
     if (result) {await this.play(result)}
   }
@@ -84,23 +96,33 @@ export class ScriptPlayer {
     }
   }
 
+  // Re-syncs Companions afterwards, even on a throw: a Cutscene stops its Follow-step followers when it ends, which can drop a Companion's chase.
   private async play(result: ScriptResult): Promise<void> {
-    if (!('type' in result)) {
-      this.ui.setDialogue(result)
-      return
+    try {
+      if (!('type' in result)) {
+        this.ui.setDialogue(result)
+        return
+      }
+      const engine = this.engineRef.current
+      if (!engine) {return}
+      this.ui.setDialogue(undefined)
+      await (result.type === 'cg' ? this.playCg(engine, result.id) : this.playCutscene(engine, result.id))
+    } finally {
+      await this.ui.syncCompanions()
     }
-    const engine = this.engineRef.current
-    if (!engine) {return}
-    this.ui.setDialogue(undefined)
-    await (result.type === 'cg' ? this.playCg(engine, result.id) : this.playCutscene(engine, result.id))
+  }
+
+  private setPaused(engine: EngineHandle, paused: boolean): void {
+    engine.setPaused(paused)
+    this.ui.setEnginePaused(paused)
   }
 
   private async playCg(engine: EngineHandle, id: string): Promise<void> {
-    engine.setPaused(true)
+    this.setPaused(engine, true)
     try {
       await this.playCgById(id, () => false)
     } finally {
-      engine.setPaused(false)
+      this.setPaused(engine, false)
     }
   }
 
@@ -112,7 +134,8 @@ export class ScriptPlayer {
     }
 
     const { setCutsceneLine: onLine, setCutsceneChoices: onChoices } = this.ui
-    const { setPaused, moveTo, follow, stopMovement } = engine
+    const { moveTo, follow, stopMovement } = engine
+    const setPaused = (paused: boolean): void => { this.setPaused(engine, paused) }
     this.cutscene = playCutscene(id, { setPaused, onLine, onChoices, moveTo, follow, stopMovement, onChoicePicked })
     await this.cutscene.done
 
