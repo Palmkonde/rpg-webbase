@@ -87,7 +87,7 @@ A Script that takes control away from the Player for its duration: a sequence of
 _Avoid_: Dialogue (never takes control from the Player; a Cutscene always does), Scene (Phaser's own rendering-container concept, distinct from this domain)
 
 **Follow step**:
-A Cutscene step in which one character (the Player or a Character Entity, the *follower*) keeps trailing another (the *leader*) at a Cutscene-chosen gap, lasting until the Cutscene ends or the follower is given its own Movement step. Unlike a Movement step, the Cutscene doesn't wait on it: the next step starts right away, typically a Movement step that walks the leader.
+A Cutscene step in which one character (the Player or a Character Entity, the *follower*) keeps trailing another (the *leader*) at a Cutscene-chosen gap, lasting until the Cutscene ends or the follower is given its own Movement step. A following Player walks the leader's exact route, footstep by footstep; a following Character Entity instead heads straight for the leader by the shortest way. Unlike a Movement step, the Cutscene doesn't wait on it: the next step starts right away, typically a Movement step that walks the leader.
 _Avoid_: Escort, chase, target (a Movement step's *target* is a destination tile, not a character)
 
 **CG**:
