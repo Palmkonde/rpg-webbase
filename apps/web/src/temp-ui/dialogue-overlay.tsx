@@ -45,7 +45,7 @@ const LINE_BUTTON_DONE_STYLE = {
 } as const
 
 // Display size only — how big art is drawn/exported is out of this ticket's scope, per spec's "Dialogue Portraits & Expressions" Out of Scope.
-const PORTRAIT_SIZE = 64
+const PORTRAIT_SIZE = 96
 
 // `float`, not a flex wrapper `<div>`, to stay phrasing content inside the `<button>` (see the `<span>`-not-`<p>` note below).
 const PORTRAIT_STYLE = {
@@ -151,7 +151,7 @@ export function DialogueOverlay({
           style={hasMoreLines ? LINE_BUTTON_STYLE : LINE_BUTTON_DONE_STYLE}
           type="button"
         >
-          {/* Plain `<img>`, not `next/image`: a 64px dialogue thumbnail has no LCP stake, and this repo's
+          {/* Plain `<img>`, not `next/image`: a 96px dialogue thumbnail has no LCP stake, and this repo's
               `react/forbid-component-props` rule forbids passing `style` to a Component like `next/image`'s `Image`. */}
           {/* oxlint-disable-next-line next/no-img-element */}
           {portrait !== undefined && <img alt="" height={PORTRAIT_SIZE} src={portrait} style={PORTRAIT_STYLE} width={PORTRAIT_SIZE} />}
