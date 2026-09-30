@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser'
 import type { AnimationFrame, EntityObject, TileCoord, TiledMapAssets, ZoneObject } from './tiled-assets.ts'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
-import { preloadPlayerSprite, resolvePlayerTexture } from './player-assets.ts'
+import { preloadCharacterSprite, resolveCharacterTexture } from './character-assets.ts'
 import { Direction } from 'grid-engine'
 import type { GridEngine } from 'grid-engine'
 import { computeCameraBounds } from './util.ts'
@@ -101,7 +101,7 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
       }
       const sheets = new Map([character, ...characterEntities.map((entry) => entry.character)].map((sheet) => [sheet.id, sheet]))
       for (const sheet of sheets.values()) {
-        preloadPlayerSprite(this, sheet)
+        preloadCharacterSprite(this, sheet)
       }
     }
 
@@ -168,11 +168,11 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
 
     private createCharacters(tilemap: Phaser.Tilemaps.Tilemap): Phaser.GameObjects.Sprite {
       const tileSize = { width: tilemap.tileWidth, height: tilemap.tileHeight }
-      const playerTexture = resolvePlayerTexture(this, character, tileSize)
+      const playerTexture = resolveCharacterTexture(this, character, tileSize)
       const playerSprite = this.add.sprite(0, 0, playerTexture.key)
 
       const entityCharacters = characterEntities.map(({ entity, character: sheet }) => {
-        const texture = resolvePlayerTexture(this, sheet, tileSize)
+        const texture = resolveCharacterTexture(this, sheet, tileSize)
         return {
           id: entity.entityId,
           sprite: this.add.sprite(0, 0, texture.key),

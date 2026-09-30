@@ -1,16 +1,16 @@
 import type { CharacterDefinition } from './types.ts'
 
-export const PLACEHOLDER_TEXTURE_KEY = 'player-placeholder'
+export const PLACEHOLDER_TEXTURE_KEY = 'character-placeholder'
 const PLACEHOLDER_HEIGHT_SCALE = 2
 const PLACEHOLDER_COLOR = 0xFF5252
 
-export interface PlayerTexture {
+export interface CharacterTexture {
   key: string
   walkingAnimationMapping?: number
 }
 
-interface PickedPlayerTexture {
-  texture: PlayerTexture
+interface PickedCharacterTexture {
+  texture: CharacterTexture
   warning?: string
 }
 
@@ -20,19 +20,19 @@ export interface TileSize {
 }
 
 // Character so a previously-loaded character's cached texture can't be mistaken for this one.
-export function pickPlayerTexture(character: CharacterDefinition, spriteLoaded: boolean): PickedPlayerTexture {
-  const key = `player-${character.id}`
+export function pickCharacterTexture(character: CharacterDefinition, spriteLoaded: boolean): PickedCharacterTexture {
+  const key = `character-${character.id}`
   if (spriteLoaded) {
     return { texture: { key, walkingAnimationMapping: 0 } }
   }
   return {
     texture: { key: PLACEHOLDER_TEXTURE_KEY },
-    warning: `[playerAssets] texture "${key}" failed to load; falling back to placeholder`,
+    warning: `[characterAssets] texture "${key}" failed to load; falling back to placeholder`,
   }
 }
 
-export function preloadPlayerSprite(scene: Phaser.Scene, character: CharacterDefinition): void {
-  scene.load.spritesheet(`player-${character.id}`, character.spriteUrl, {
+export function preloadCharacterSprite(scene: Phaser.Scene, character: CharacterDefinition): void {
+  scene.load.spritesheet(`character-${character.id}`, character.spriteUrl, {
     frameWidth: character.frameWidth,
     frameHeight: character.frameHeight,
   })
@@ -48,8 +48,8 @@ function createPlaceholderTexture(scene: Phaser.Scene, tileSize: TileSize): void
   graphics.destroy()
 }
 
-export function resolvePlayerTexture(scene: Phaser.Scene, character: CharacterDefinition, tileSize: TileSize): PlayerTexture {
-  const { texture, warning } = pickPlayerTexture(character, scene.textures.exists(`player-${character.id}`))
+export function resolveCharacterTexture(scene: Phaser.Scene, character: CharacterDefinition, tileSize: TileSize): CharacterTexture {
+  const { texture, warning } = pickCharacterTexture(character, scene.textures.exists(`character-${character.id}`))
   if (warning !== undefined) {
     createPlaceholderTexture(scene, tileSize)
     console.warn(warning)
