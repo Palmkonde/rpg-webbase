@@ -1,12 +1,12 @@
 import * as Phaser from 'phaser'
 import type { AnimationFrame, EntityObject, Facing, TileCoord, TiledMapAssets, ZoneObject } from './tiled-assets.ts'
+import { CHARACTER_COLLISION_GROUP, createCutsceneMovement } from './cutscene-movement.ts'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
 import { preloadCharacterSprite, resolveCharacterTexture } from './character-assets.ts'
 import type { CutsceneMovement } from './cutscene-movement.ts'
 import { Direction } from 'grid-engine'
 import type { GridEngine } from 'grid-engine'
 import { computeCameraBounds } from './util.ts'
-import { createCutsceneMovement } from './cutscene-movement.ts'
 import { stepAnimation } from './tile-animation.ts'
 
 export const PLAYER_ID = 'player'
@@ -91,6 +91,10 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
 
     public stopMovement(charId: string): void {
       this.cutsceneMovement.stopMovement(charId)
+    }
+
+    public setBlocksCharacters(charId: string, blocks: boolean): void {
+      this.cutsceneMovement.setBlocksCharacters(charId, blocks)
     }
 
     public preload(): void {
@@ -182,6 +186,7 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
           facingDirection: FACING_DIRECTIONS[entity.facing!],
           charLayer: PLAYER_LAYER,
           offsetY: sheet.offsetY,
+          collides: { collisionGroups: [CHARACTER_COLLISION_GROUP] },
         }
       })
 
@@ -194,6 +199,7 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
             startPosition: { x: worldConfig.player.spawn.x, y: worldConfig.player.spawn.y },
             charLayer: PLAYER_LAYER,
             offsetY: character.offsetY,
+            collides: { collisionGroups: [CHARACTER_COLLISION_GROUP] },
           },
           ...entityCharacters,
         ],

@@ -1,13 +1,17 @@
 import type { GridEngine } from 'grid-engine'
 import type { TileCoord } from './tiled-assets.ts'
 
+// Every character is created in this group, so they all block each other.
+export const CHARACTER_COLLISION_GROUP = 'character'
+
 export interface CutsceneMovement {
   moveTo: (charId: string, targetPos: TileCoord) => Promise<void>
   follow: (followerId: string, leaderId: string, gap: number) => void
   stopMovement: (charId: string) => void
+  setBlocksCharacters: (charId: string, blocks: boolean) => void
 }
 
-// Host-commanded movement for Cutscene Movement/Follow steps. A trail isn't a grid-engine movement, so a new moveTo or a stop has to cancel it here.
+// Host-commanded movement for Cutscene Movement/Follow steps and Companions. A trail isn't a grid-engine movement, so a new moveTo or a stop has to cancel it here.
 export function createCutsceneMovement(gridEngine: GridEngine, playerId: string): CutsceneMovement {
   const trails = new Map<string, () => void>()
 
@@ -80,6 +84,15 @@ export function createCutsceneMovement(gridEngine: GridEngine, playerId: string)
     stopMovement(charId) {
       cancelTrail(charId)
       if (gridEngine.hasCharacter(charId)) {gridEngine.stopMovement(charId)}
+    },
+
+    // A non-blocking character still collides with walls; only character-vs-character collision is dropped.
+    setBlocksCharacters(charId, blocks) {
+      if (!gridEngine.hasCharacter(charId)) {
+        console.warn(`[engine] setBlocksCharacters(${charId}) skipped: no character ${charId} on this Map`)
+        return
+      }
+      gridEngine.setCollisionGroups(charId, blocks ? [CHARACTER_COLLISION_GROUP] : [])
     },
   }
 }

@@ -14,6 +14,7 @@ export interface EngineHandle {
   moveTo: (charId: string, targetPos: TileCoord) => Promise<void>
   follow: (followerId: string, leaderId: string, gap: number) => void
   stopMovement: (charId: string) => void
+  setBlocksCharacters: (charId: string, blocks: boolean) => void
 }
 
 export interface ContentCatalogs {
@@ -109,5 +110,6 @@ export async function createEngine(container: HTMLElement, options: CreateEngine
     moveTo: (charId: string, targetPos: TileCoord) => getMapScene(game).moveTo(charId, targetPos),
     follow: (followerId: string, leaderId: string, gap: number) => {getMapScene(game).follow(followerId, leaderId, gap)},
     stopMovement: (charId: string) => {getMapScene(game).stopMovement(charId)},
+    setBlocksCharacters: (charId: string, blocks: boolean) => {getMapScene(game).setBlocksCharacters(charId, blocks)},
   }
 }
