@@ -200,11 +200,13 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
     private setupZones(): void {
       const player = this.gridEngine.getPosition(PLAYER_ID)
       for (const zone of assets.zones) {
+
         // Only outside→inside counts; steppedOn also fires on steps between tiles inside the Zone.
+        // A Cutscene-driven entry while paused is dropped, not queued (adr/0026).
         this.gridEngine
           .steppedOn([PLAYER_ID], zone.tiles, [PLAYER_LAYER])
           .subscribe(({ exitTile }) => {
-            if (!zoneContains(zone, exitTile)) {onEvent?.({ type: 'zoneEntered', zoneId: zone.zoneId })}
+            if (!this.paused && !zoneContains(zone, exitTile)) {onEvent?.({ type: 'zoneEntered', zoneId: zone.zoneId })}
           })
 
         if (zoneContains(zone, player)) {onEvent?.({ type: 'zoneEntered', zoneId: zone.zoneId })}
