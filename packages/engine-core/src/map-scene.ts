@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser'
-import type { AnimationFrame, EntityObject, TileCoord, TiledMapAssets, ZoneObject } from './tiled-assets.ts'
+import type { AnimationFrame, EntityObject, Facing, TileCoord, TiledMapAssets, ZoneObject } from './tiled-assets.ts'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
 import { preloadCharacterSprite, resolveCharacterTexture } from './character-assets.ts'
 import { Direction } from 'grid-engine'
@@ -7,7 +7,7 @@ import type { GridEngine } from 'grid-engine'
 import { computeCameraBounds } from './util.ts'
 import { stepAnimation } from './tile-animation.ts'
 
-const PLAYER_ID = 'player'
+export const PLAYER_ID = 'player'
 const CAMERA_ZOOM = 2
 const PLAYER_LAYER = 'ground'
 const INTERACT_KEY = 'E'
@@ -30,14 +30,11 @@ export interface CharacterEntity {
   character: CharacterDefinition
 }
 
-const FACINGS: Direction[] = [Direction.DOWN, Direction.LEFT, Direction.RIGHT, Direction.UP]
-
-function resolveFacing(entity: EntityObject): Direction {
-  const facing = FACINGS.find((candidate) => candidate === entity.facing)
-  if (!facing) {
-    console.warn(`[engine] Entity "${entity.entityId}" has invalid facing "${entity.facing}"; using down`)
-  }
-  return facing ?? Direction.DOWN
+const FACING_DIRECTIONS: Record<Facing, Direction> = {
+  down: Direction.DOWN,
+  left: Direction.LEFT,
+  right: Direction.RIGHT,
+  up: Direction.UP,
 }
 
 interface AnimatedTile {
@@ -57,7 +54,7 @@ export interface MapSceneConfig {
 }
 
 export function createMapScene({ map, character, characterEntities, worldConfig, assets, onEvent }: MapSceneConfig): typeof Phaser.Scene {
-  const walkers = new Set(characterEntities.map(({ entity }) => entity.entityId))
+  const characterEntityIds = new Set(characterEntities.map(({ entity }) => entity.entityId))
 
   return class MapScene extends Phaser.Scene implements HostScene {
     public declare gridEngine: GridEngine
@@ -110,8 +107,8 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
       const tilemap = this.createTilemap()
       this.createLayers(tilemap)
       this.createPropEntities(tilemap)
-      const playerSprite = this.createCharacters(tilemap)
-      this.setupCamera(tilemap, playerSprite)
+      this.createCharacters(tilemap)
+      this.setupCamera(tilemap)
       this.setupInput()
       this.setupZones()
     }
@@ -166,7 +163,7 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
       }
     }
 
-    private createCharacters(tilemap: Phaser.Tilemaps.Tilemap): Phaser.GameObjects.Sprite {
+    private createCharacters(tilemap: Phaser.Tilemaps.Tilemap): void {
       const tileSize = { width: tilemap.tileWidth, height: tilemap.tileHeight }
       const playerTexture = resolveCharacterTexture(this, character, tileSize)
       const playerSprite = this.add.sprite(0, 0, playerTexture.key)
@@ -178,7 +175,7 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
           sprite: this.add.sprite(0, 0, texture.key),
           walkingAnimationMapping: texture.walkingAnimationMapping,
           startPosition: { x: entity.x, y: entity.y },
-          facingDirection: resolveFacing(entity),
+          facingDirection: FACING_DIRECTIONS[entity.facing!],
           charLayer: PLAYER_LAYER,
           offsetY: sheet.offsetY,
         }
@@ -197,8 +194,6 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
           ...entityCharacters,
         ],
       })
-
-      return playerSprite
     }
 
     private setupZones(): void {
@@ -215,7 +210,8 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
       }
     }
 
-    private setupCamera(tilemap: Phaser.Tilemaps.Tilemap, playerSprite: Phaser.GameObjects.Sprite): void {
+    private setupCamera(tilemap: Phaser.Tilemaps.Tilemap): void {
+      const playerSprite = this.gridEngine.getSprite(PLAYER_ID)!
       const camera = this.cameras.main
       camera.setZoom(CAMERA_ZOOM)
       camera.startFollow(playerSprite, true)
@@ -265,9 +261,8 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
 
       const facing = this.gridEngine.getFacingPosition(PLAYER_ID)
       const entity = assets.entities.find((candidate) => {
-        
         // A walked Character Entity is no longer at its authored tile.
-        const pos = walkers.has(candidate.entityId) ? this.gridEngine.getPosition(candidate.entityId) : candidate
+        const pos = characterEntityIds.has(candidate.entityId) ? this.gridEngine.getPosition(candidate.entityId) : candidate
         return pos.x === facing.x && pos.y === facing.y
       })
       

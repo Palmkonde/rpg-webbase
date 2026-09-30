@@ -99,7 +99,7 @@ const REGISTRY = {
     .moveTo(PLAYER_CHAR_ID, {x:10, y:2})
     .build(),
 
-  // Character Entity Movement (ticket #34): Guard's charId is its entityId; target is clear of collision/obstacle tiles.
+  // Target tile is clear of collision/obstacle tiles.
   'guard-walk': createCutscene()
     .say('Watch this.', { speaker: 'Guard' })
     .moveTo('Guard', { x: 5, y: 9 })

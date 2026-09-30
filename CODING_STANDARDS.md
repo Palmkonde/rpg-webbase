@@ -31,7 +31,7 @@ Judgement-call rules for review, adapted from Robert C. Martin's *Clean Code* (c
 ## Error handling [ch. 7]
 
 - **Authoring mistakes warn; missing configuration throws.** A bad value in Tiled data or a Script (duplicate id, unknown `characterId`) is `console.warn`-ed and that one object is skipped, so the Map still loads. A World Config the app can't start without (unknown `mapId`) throws.
-- **A skip must stay a skip downstream.** Check that a warned-and-skipped object can't still crash a later step. *Hit:* a duplicate Character Entity `entityId` passed the warning and still reached `gridEngine.create`.
+- **A skip must stay a skip downstream.** Check that a warned-and-skipped object can't still crash a later step. *Hit:* a duplicate Character Entity `entityId` passed the warning and still reached `gridEngine.create`, which silently replaced the earlier character.
 
 ## Comments [ch. 4]
 

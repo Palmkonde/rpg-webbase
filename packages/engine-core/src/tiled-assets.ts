@@ -65,8 +65,10 @@ export interface EntityObject {
   x: number
   y: number
   characterId?: string
-  facing?: string
+  facing?: Facing
 }
+
+export type Facing = typeof FACINGS[number]
 
 export interface PropTile {
   gid: number
@@ -99,7 +101,8 @@ const ENTITY_CLASS = 'Entity'
 const ENTITY_ID_PROPERTY = 'entityId'
 const CHARACTER_ID_PROPERTY = 'characterId'
 const FACING_PROPERTY = 'facing'
-const DEFAULT_FACING = 'down'
+const FACINGS = ['down', 'left', 'right', 'up'] as const
+const DEFAULT_FACING: Facing = 'down'
 const ZONE_CLASS = 'Zone'
 const ZONE_ID_PROPERTY = 'zoneId'
 
@@ -126,6 +129,11 @@ function readNonBlankStringProperty(object: TiledObjectDef, name: string): strin
   return typeof value === 'string' && value !== '' ? value : undefined
 }
 
+function readFacing(object: TiledObjectDef): Facing {
+  const raw = readNonBlankStringProperty(object, FACING_PROPERTY)
+  return FACINGS.find((facing) => facing === raw) ?? DEFAULT_FACING
+}
+
 function readEntity(object: TiledObjectDef, tilewidth: number, tileheight: number): EntityObject | undefined {
   if (object.type !== ENTITY_CLASS) {return undefined}
 
@@ -134,7 +142,7 @@ function readEntity(object: TiledObjectDef, tilewidth: number, tileheight: numbe
 
   const topY = object.gid === undefined ? object.y : object.y - tileheight
   const characterId = readNonBlankStringProperty(object, CHARACTER_ID_PROPERTY)
-  const facing = characterId && (readNonBlankStringProperty(object, FACING_PROPERTY) ?? DEFAULT_FACING)
+  const facing = characterId && readFacing(object)
   return {
     entityId,
     x: Math.floor(object.x / tilewidth),

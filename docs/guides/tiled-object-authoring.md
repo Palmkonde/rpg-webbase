@@ -15,7 +15,7 @@ Each object's Tiled **Class** field (labeled "Type" in older Tiled versions) is 
 - `Portal`
 - `Zone`
 
-in `test_map.tiled-project`'s Custom Types. Placing an object and picking one of these from the Class dropdown tags it — no typing a string by hand, no risk of a typo silently producing an untagged object.
+in your Tiled Project's Custom Types (the project file lives outside this repo). Placing an object and picking one of these from the Class dropdown tags it — no typing a string by hand, no risk of a typo silently producing an untagged object.
 
 ## Identifying an object
 
@@ -50,4 +50,4 @@ Open `View → Custom Types Editor`:
 
 ## Adding a new kind
 
-If a future ticket needs a new object kind, define it once via `View → Custom Types Editor → + → Class` in Tiled (requires the map to belong to a Tiled Project, which `test_map.tiled-project` already provides), scope it to `useAs: ["object"]`, and add member properties: a dedicated identity property named for that kind (e.g. Entity's `entityId` — not a shared generic name, and never `name`) if the kind needs to be looked up by id, plus whatever other data it needs beyond position (e.g. Portal will need a target Map + target Spawn Point when ticket 04 designs it).
+If a future ticket needs a new object kind, define it once via `View → Custom Types Editor → + → Class` in Tiled (requires the map to belong to a Tiled Project), scope it to `useAs: ["object"]`, and add member properties: a dedicated identity property named for that kind (e.g. Entity's `entityId` — not a shared generic name, and never `name`) if the kind needs to be looked up by id, plus whatever other data it needs beyond position (e.g. Portal will need a target Map + target Spawn Point when ticket 04 designs it).

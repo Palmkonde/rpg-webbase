@@ -2,7 +2,7 @@ import * as Phaser from 'phaser'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
 import type { CharacterEntity, HostScene } from './map-scene.ts'
 import type { EntityObject, TileCoord, ZoneObject } from './tiled-assets.ts'
-import { MAP_SCENE_KEY, createMapScene } from './map-scene.ts'
+import { MAP_SCENE_KEY, PLAYER_ID, createMapScene } from './map-scene.ts'
 import { collectTiledMapAssets, findOverlappingZoneIds } from './tiled-assets.ts'
 import { resolveCharacter, resolveMap } from './world-config.ts'
 import { GridEngine } from 'grid-engine'
@@ -44,12 +44,17 @@ function warnOverlappingZones(mapId: string, zones: ZoneObject[]): void {
 // An unknown characterId is an authoring mistake: warn and skip that Entity rather than fail the whole Map load.
 function resolveCharacterEntities(mapId: string, entities: EntityObject[], catalog: CharacterDefinition[]): CharacterEntity[] {
   const resolved: CharacterEntity[] = []
+  const takenIds = new Set([PLAYER_ID])
   for (const entity of entities.filter(({ characterId }) => characterId)) {
     const character = catalog.find((candidate) => candidate.id === entity.characterId)
-    if (character) {
-      resolved.push({ entity, character })
-    } else {
+    if (!character) {
       console.warn(`[engine] Map "${mapId}" Entity "${entity.entityId}" has unknown characterId "${entity.characterId}"`)
+    } else if (takenIds.has(entity.entityId)) {
+      // A repeated id silently replaces the earlier grid-engine character, hijacking the Player or orphaning a sprite.
+      console.warn(`[engine] Map "${mapId}" Character Entity "${entity.entityId}" reuses a character id; skipped`)
+    } else {
+      takenIds.add(entity.entityId)
+      resolved.push({ entity, character })
     }
   }
   return resolved
