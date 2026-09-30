@@ -11,7 +11,7 @@ The framework-agnostic module in this repo that renders a Map and moves the Play
 _Avoid_: Game, frontend, client
 
 **Host**:
-The application that embeds the Engine, owns all state and game content (which Maps exist, dialogue, quests, progression), and reacts to the Engine's Events. In this repo the Host is a Next.js app; in production it is backed by the main platform's database.
+The application that embeds the Engine, owns all state and game content (which Maps exist, dialogue, quests, progression), and reacts to the Engine's Events. In production it is backed by the main platform's database.
 _Avoid_: App, backend, server
 
 ### World
