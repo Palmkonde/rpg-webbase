@@ -1,11 +1,11 @@
 import * as Phaser from 'phaser'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
+import type { CharacterEntity, HostScene } from './map-scene.ts'
+import type { EntityObject, TileCoord, ZoneObject } from './tiled-assets.ts'
 import { MAP_SCENE_KEY, createMapScene } from './map-scene.ts'
-import type { TileCoord, ZoneObject } from './tiled-assets.ts'
 import { collectTiledMapAssets, findOverlappingZoneIds } from './tiled-assets.ts'
 import { resolveCharacter, resolveMap } from './world-config.ts'
 import { GridEngine } from 'grid-engine'
-import type { HostScene } from './map-scene.ts'
 import { findDuplicates } from './util.ts'
 
 export interface EngineHandle {
@@ -41,6 +41,20 @@ function warnOverlappingZones(mapId: string, zones: ZoneObject[]): void {
   }
 }
 
+// An unknown characterId is an authoring mistake: warn and skip that Entity rather than fail the whole Map load.
+function resolveCharacterEntities(mapId: string, entities: EntityObject[], catalog: CharacterDefinition[]): CharacterEntity[] {
+  const resolved: CharacterEntity[] = []
+  for (const entity of entities.filter(({ characterId }) => characterId)) {
+    const character = catalog.find((candidate) => candidate.id === entity.characterId)
+    if (character) {
+      resolved.push({ entity, character })
+    } else {
+      console.warn(`[engine] Map "${mapId}" Entity "${entity.entityId}" has unknown characterId "${entity.characterId}"`)
+    }
+  }
+  return resolved
+}
+
 function getMapScene(game: Phaser.Game): Phaser.Scene & HostScene {
   return game.scene.getScene<Phaser.Scene & HostScene>(MAP_SCENE_KEY)
 }
@@ -50,6 +64,8 @@ export async function createEngine(container: HTMLElement, options: CreateEngine
   const map = resolveMap(worldConfig, catalogs.maps)
   const character = resolveCharacter(worldConfig, catalogs.characters)
   const assets = await collectTiledMapAssets(map.tiledMapUrl)
+
+  const characterEntities = resolveCharacterEntities(map.id, assets.entities, catalogs.characters)
 
   // Warning guards
   warnDuplicateIds(map.id, 'entityId', assets.entities.map((entity) => entity.entityId))
@@ -66,7 +82,7 @@ export async function createEngine(container: HTMLElement, options: CreateEngine
       height: 540,
     },
     pixelArt: true,
-    scene: createMapScene({ map, character, worldConfig, assets, onEvent }),
+    scene: createMapScene({ map, character, characterEntities, worldConfig, assets, onEvent }),
     plugins: {
       scene: [{ key: 'gridEngine', plugin: GridEngine, mapping: 'gridEngine' }],
     },

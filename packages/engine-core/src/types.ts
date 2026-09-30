@@ -13,6 +13,7 @@ export interface CharacterDefinition {
   spriteUrl: string
   frameWidth: number
   frameHeight: number
+  offsetY?: number
 }
 
 export interface WorldConfig {

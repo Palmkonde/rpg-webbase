@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser'
-import type { AnimationFrame, TileCoord, TiledMapAssets, ZoneObject } from './tiled-assets.ts'
+import type { AnimationFrame, EntityObject, TileCoord, TiledMapAssets, ZoneObject } from './tiled-assets.ts'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
 import { preloadPlayerSprite, resolvePlayerTexture } from './player-assets.ts'
 import { Direction } from 'grid-engine'
@@ -25,6 +25,21 @@ function zoneContains(zone: ZoneObject, pos: TileCoord): boolean {
   return zone.tiles.some((tile) => tile.x === pos.x && tile.y === pos.y)
 }
 
+export interface CharacterEntity {
+  entity: EntityObject
+  character: CharacterDefinition
+}
+
+const FACINGS: Direction[] = [Direction.DOWN, Direction.LEFT, Direction.RIGHT, Direction.UP]
+
+function resolveFacing(entity: EntityObject): Direction {
+  const facing = FACINGS.find((candidate) => candidate === entity.facing)
+  if (!facing) {
+    console.warn(`[engine] Entity "${entity.entityId}" has invalid facing "${entity.facing}"; using down`)
+  }
+  return facing ?? Direction.DOWN
+}
+
 interface AnimatedTile {
   tile: Phaser.Tilemaps.Tile
   frames: AnimationFrame[]
@@ -35,12 +50,15 @@ interface AnimatedTile {
 export interface MapSceneConfig {
   map: MapDefinition
   character: CharacterDefinition
+  characterEntities: CharacterEntity[]
   worldConfig: WorldConfig
   assets: TiledMapAssets
   onEvent?: (event: EngineEvent) => void
 }
 
-export function createMapScene({ map, character, worldConfig, assets, onEvent }: MapSceneConfig): typeof Phaser.Scene {
+export function createMapScene({ map, character, characterEntities, worldConfig, assets, onEvent }: MapSceneConfig): typeof Phaser.Scene {
+  const walkers = new Set(characterEntities.map(({ entity }) => entity.entityId))
+
   return class MapScene extends Phaser.Scene implements HostScene {
     public declare gridEngine: GridEngine
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
@@ -81,7 +99,10 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
       for (const { key, url } of assets.images) {
         this.load.image(key, url)
       }
-      preloadPlayerSprite(this, character)
+      const sheets = new Map([character, ...characterEntities.map((entry) => entry.character)].map((sheet) => [sheet.id, sheet]))
+      for (const sheet of sheets.values()) {
+        preloadPlayerSprite(this, sheet)
+      }
     }
 
     // Main entry
@@ -89,7 +110,7 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
       const tilemap = this.createTilemap()
       this.createLayers(tilemap)
       this.createPropEntities(tilemap)
-      const playerSprite = this.createPlayer(tilemap)
+      const playerSprite = this.createCharacters(tilemap)
       this.setupCamera(tilemap, playerSprite)
       this.setupInput()
       this.setupZones()
@@ -145,9 +166,23 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
       }
     }
 
-    private createPlayer(tilemap: Phaser.Tilemaps.Tilemap): Phaser.GameObjects.Sprite {
-      const playerTexture = resolvePlayerTexture(this, character, { width: tilemap.tileWidth, height: tilemap.tileHeight })
+    private createCharacters(tilemap: Phaser.Tilemaps.Tilemap): Phaser.GameObjects.Sprite {
+      const tileSize = { width: tilemap.tileWidth, height: tilemap.tileHeight }
+      const playerTexture = resolvePlayerTexture(this, character, tileSize)
       const playerSprite = this.add.sprite(0, 0, playerTexture.key)
+
+      const entityCharacters = characterEntities.map(({ entity, character: sheet }) => {
+        const texture = resolvePlayerTexture(this, sheet, tileSize)
+        return {
+          id: entity.entityId,
+          sprite: this.add.sprite(0, 0, texture.key),
+          walkingAnimationMapping: texture.walkingAnimationMapping,
+          startPosition: { x: entity.x, y: entity.y },
+          facingDirection: resolveFacing(entity),
+          charLayer: PLAYER_LAYER,
+          offsetY: sheet.offsetY,
+        }
+      })
 
       this.gridEngine.create(tilemap, {
         characters: [
@@ -157,8 +192,9 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
             walkingAnimationMapping: playerTexture.walkingAnimationMapping,
             startPosition: { x: worldConfig.player.spawn.x, y: worldConfig.player.spawn.y },
             charLayer: PLAYER_LAYER,
-            offsetY: -8
+            offsetY: character.offsetY,
           },
+          ...entityCharacters,
         ],
       })
 
@@ -228,7 +264,12 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
       if (!Phaser.Input.Keyboard.JustDown(this.interactKey)) {return}
 
       const facing = this.gridEngine.getFacingPosition(PLAYER_ID)
-      const entity = assets.entities.find((candidate) => candidate.x === facing.x && candidate.y === facing.y)
+      const entity = assets.entities.find((candidate) => {
+        
+        // A walked Character Entity is no longer at its authored tile.
+        const pos = walkers.has(candidate.entityId) ? this.gridEngine.getPosition(candidate.entityId) : candidate
+        return pos.x === facing.x && pos.y === facing.y
+      })
       
       if (entity) {
         onEvent?.({ type: 'interacted', entityId: entity.entityId })

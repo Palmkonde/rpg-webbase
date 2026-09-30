@@ -99,6 +99,7 @@ const ENTITY_CLASS = 'Entity'
 const ENTITY_ID_PROPERTY = 'entityId'
 const CHARACTER_ID_PROPERTY = 'characterId'
 const FACING_PROPERTY = 'facing'
+const DEFAULT_FACING = 'down'
 const ZONE_CLASS = 'Zone'
 const ZONE_ID_PROPERTY = 'zoneId'
 
@@ -133,7 +134,7 @@ function readEntity(object: TiledObjectDef, tilewidth: number, tileheight: numbe
 
   const topY = object.gid === undefined ? object.y : object.y - tileheight
   const characterId = readNonBlankStringProperty(object, CHARACTER_ID_PROPERTY)
-  const facing = readNonBlankStringProperty(object, FACING_PROPERTY)
+  const facing = characterId && (readNonBlankStringProperty(object, FACING_PROPERTY) ?? DEFAULT_FACING)
   return {
     entityId,
     x: Math.floor(object.x / tilewidth),

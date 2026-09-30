@@ -251,6 +251,14 @@ test('collectEntities carries characterId and facing through when present', () =
   assert.deepEqual(collectEntities(raw), [{ entityId: 'guard', x: 3, y: 3, characterId: 'fluffy', facing: 'left' }])
 })
 
+test('collectEntities defaults a Character Entity\'s facing to down', () => {
+  const raw = entityRaw([
+    { name: 'entityId', value: 'guard' },
+    { name: 'characterId', value: 'fluffy' },
+  ])
+  assert.deepEqual(collectEntities(raw), [{ entityId: 'guard', x: 3, y: 3, characterId: 'fluffy', facing: 'down' }])
+})
+
 test('collectEntities omits a blank characterId (a Prop Entity)', () => {
   const raw = entityRaw([
     { name: 'entityId', value: 'sign' },
