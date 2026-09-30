@@ -36,6 +36,10 @@ _Avoid_: NPC, object, actor
 An Entity that has a Character: registered and animated the same way the Player is, and eligible to be the target of a Cutscene's Movement or Follow step.
 _Avoid_: NPC, movable Entity, animated Entity
 
+**Companion**:
+A Character Entity that keeps chasing the Player outside any Cutscene, on every Map the Player visits, for as long as a Flag says so. It never blocks the Player. The Player can dismiss it whenever they have control, but can't talk to it. Any Character Entity can become one; a Script decides when.
+_Avoid_: Follower (the role inside a Follow step), party member, tagalong
+
 **Prop Entity**:
 An Entity with no Character: a fixed picture at a fixed Map position, drawn from the Tiled object's own tile — interactable, but never a Movement or Follow target.
 _Avoid_: Static Entity, decoration
