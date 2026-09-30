@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser'
-import type { AnimationFrame, TileCoord, TiledMapAssets } from './tiled-assets.ts'
+import type { AnimationFrame, TileCoord, TiledMapAssets, ZoneObject } from './tiled-assets.ts'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
 import { preloadPlayerSprite, resolvePlayerTexture } from './player-assets.ts'
 import { Direction } from 'grid-engine'
@@ -9,6 +9,7 @@ import { stepAnimation } from './tile-animation.ts'
 
 const PLAYER_ID = 'player'
 const CAMERA_ZOOM = 2
+const PLAYER_LAYER = 'ground'
 const INTERACT_KEY = 'E'
 export const MAP_SCENE_KEY = 'MapScene'
 
@@ -18,6 +19,10 @@ export type PlayerCharId = typeof PLAYER_ID
 export interface HostScene {
   setPaused: (paused: boolean) => void
   moveTo: (charId: string, targetPos: TileCoord) => Promise<void>
+}
+
+function zoneContains(zone: ZoneObject, pos: TileCoord): boolean {
+  return zone.tiles.some((tile) => tile.x === pos.x && tile.y === pos.y)
 }
 
 interface AnimatedTile {
@@ -86,6 +91,7 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
       const playerSprite = this.createPlayer(tilemap)
       this.setupCamera(tilemap, playerSprite)
       this.setupInput()
+      this.setupZones()
     }
 
     private createTilemap(): Phaser.Tilemaps.Tilemap {
@@ -138,13 +144,27 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
             sprite: playerSprite,
             walkingAnimationMapping: playerTexture.walkingAnimationMapping,
             startPosition: { x: worldConfig.player.spawn.x, y: worldConfig.player.spawn.y },
-            charLayer: "ground",
+            charLayer: PLAYER_LAYER,
             offsetY: -8
           },
         ],
       })
 
       return playerSprite
+    }
+
+    private setupZones(): void {
+      const player = this.gridEngine.getPosition(PLAYER_ID)
+      for (const zone of assets.zones) {
+        // Only outside→inside counts; steppedOn also fires on steps between tiles inside the Zone.
+        this.gridEngine
+          .steppedOn([PLAYER_ID], zone.tiles, [PLAYER_LAYER])
+          .subscribe(({ exitTile }) => {
+            if (!zoneContains(zone, exitTile)) {onEvent?.({ type: 'zoneEntered', zoneId: zone.zoneId })}
+          })
+
+        if (zoneContains(zone, player)) {onEvent?.({ type: 'zoneEntered', zoneId: zone.zoneId })}
+      }
     }
 
     private setupCamera(tilemap: Phaser.Tilemaps.Tilemap, playerSprite: Phaser.GameObjects.Sprite): void {

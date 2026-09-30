@@ -17,4 +17,5 @@ export type {
   SpawnPoint,
   TransitionedEvent,
   WorldConfig,
+  ZoneEnteredEvent,
 } from './types.ts'

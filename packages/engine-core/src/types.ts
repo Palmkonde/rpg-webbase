@@ -35,4 +35,9 @@ export interface TransitionedEvent {
   spawn: SpawnPoint
 }
 
-export type EngineEvent = InteractedEvent | TransitionedEvent
+export interface ZoneEnteredEvent {
+  type: 'zoneEntered'
+  zoneId: string
+}
+
+export type EngineEvent = InteractedEvent | TransitionedEvent | ZoneEnteredEvent
