@@ -99,6 +99,13 @@ const REGISTRY = {
     .moveTo(PLAYER_CHAR_ID, {x:10, y:2})
     .build(),
 
+  // Character Entity Movement (ticket #34): Guard's charId is its entityId; target is clear of collision/obstacle tiles.
+  'guard-walk': createCutscene()
+    .say('Watch this.', { speaker: 'Guard' })
+    .moveTo('Guard', { x: 5, y: 9 })
+    .say('Told you.', { speaker: 'Guard' })
+    .build(),
+
   // Zone enter script issues #32
   'campfire-story-step-into-zone': createCutscene()
     .say('You step on the zone of unreturn.', { speaker: 'Narrator' })

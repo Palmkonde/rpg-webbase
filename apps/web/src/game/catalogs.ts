@@ -7,12 +7,14 @@ export const characters: CharacterDefinition[] = [
     spriteUrl: '/assets/sprites/characters/fluffy/fluffy.png',
     frameWidth: 16,
     frameHeight: 20,
+    offsetY: -8,
   },
   {
     id: 'temmie',
     spriteUrl: '/assets/sprites/characters/temmie/temmie.png',
     frameWidth: 32,
     frameHeight: 32,
+    offsetY: -8,
   },
 ]
 
