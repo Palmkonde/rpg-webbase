@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
-import type { CharacterEntity, HostScene } from './map-scene.ts'
+import type { CharacterEntity, HostScene, MapSceneConfig } from './map-scene.ts'
 import type { EntityObject, TileCoord, ZoneObject } from './tiled-assets.ts'
 import { MAP_SCENE_KEY, PLAYER_ID, createMapScene } from './map-scene.ts'
 import { collectTiledMapAssets, findOverlappingZoneIds } from './tiled-assets.ts'
@@ -62,6 +62,28 @@ function resolveCharacterEntities(mapId: string, entities: EntityObject[], catal
   return resolved
 }
 
+// Resolves only once the Map Scene's create() has run, so no handle call can reach grid-engine before it exists.
+function startGame(container: HTMLElement, sceneConfig: Omit<MapSceneConfig, 'onCreated'>): Promise<Phaser.Game> {
+  // oxlint-disable-next-line promise/avoid-new
+  return new Promise((resolve) => {
+    const game: Phaser.Game = new Phaser.Game({
+      type: Phaser.AUTO,
+      parent: container,
+      scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 960,
+        height: 540,
+      },
+      pixelArt: true,
+      scene: createMapScene({ ...sceneConfig, onCreated: () => { resolve(game) } }),
+      plugins: {
+        scene: [{ key: 'gridEngine', plugin: GridEngine, mapping: 'gridEngine' }],
+      },
+    })
+  })
+}
+
 function getMapScene(game: Phaser.Game): Phaser.Scene & HostScene {
   return game.scene.getScene<Phaser.Scene & HostScene>(MAP_SCENE_KEY)
 }
@@ -79,21 +101,7 @@ export async function createEngine(container: HTMLElement, options: CreateEngine
   warnDuplicateIds(map.id, 'zoneId', assets.zones.map((zone) => zone.zoneId))
   warnOverlappingZones(map.id, assets.zones)
 
-  const game = new Phaser.Game({
-    type: Phaser.AUTO,
-    parent: container,
-    scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
-      width: 960,
-      height: 540,
-    },
-    pixelArt: true,
-    scene: createMapScene({ map, character, characterEntities, worldConfig, assets, onEvent }),
-    plugins: {
-      scene: [{ key: 'gridEngine', plugin: GridEngine, mapping: 'gridEngine' }],
-    },
-  })
+  const game = await startGame(container, { map, character, characterEntities, worldConfig, assets, onEvent })
 
   return {
     destroy: () => {game.destroy(true)},

@@ -52,9 +52,11 @@ export interface MapSceneConfig {
   worldConfig: WorldConfig
   assets: TiledMapAssets
   onEvent?: (event: EngineEvent) => void
+  // Called once create() has finished, so the Scene's HostScene calls are safe from then on.
+  onCreated: () => void
 }
 
-export function createMapScene({ map, character, characterEntities, worldConfig, assets, onEvent }: MapSceneConfig): typeof Phaser.Scene {
+export function createMapScene({ map, character, characterEntities, worldConfig, assets, onEvent, onCreated }: MapSceneConfig): typeof Phaser.Scene {
   const characterEntityIds = new Set(characterEntities.map(({ entity }) => entity.entityId))
 
   return class MapScene extends Phaser.Scene implements HostScene {
@@ -112,6 +114,7 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
       this.setupCamera(tilemap)
       this.setupInput()
       this.setupZones()
+      onCreated()
     }
 
     private createTilemap(): Phaser.Tilemaps.Tilemap {
@@ -209,7 +212,8 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
             if (!this.paused && !zoneContains(zone, exitTile)) {onEvent?.({ type: 'zoneEntered', zoneId: zone.zoneId })}
           })
 
-        if (zoneContains(zone, player)) {onEvent?.({ type: 'zoneEntered', zoneId: zone.zoneId })}
+        // Deferred a frame, so createEngine has resolved and the Host holds the handle before a Script can run.
+        if (zoneContains(zone, player)) {this.events.once(Phaser.Scenes.Events.UPDATE, () => { onEvent?.({ type: 'zoneEntered', zoneId: zone.zoneId }) })}
       }
     }
 
