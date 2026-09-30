@@ -74,7 +74,7 @@ function campfireStarsBranch(): CutsceneTrigger {
   return { type: 'cutscene', id: 'campfire-story-stars' }
 }
 
-// Not in scripts/: per CONTEXT.md a Script produces a Cutscene trigger; the Cutscene's own steps live here, mirroring cg.ts's split from the Script that triggers it.
+// Not in scripts/: per GLOSSARY.md a Script produces a Cutscene trigger; the Cutscene's own steps live here, mirroring cg.ts's split from the Script that triggers it.
 const REGISTRY = {
   // Target tile sits north of the Campfire Entity (main_test.tmj), clear of the nearby collision wall — proves a Movement step alongside Dialogue (ticket #26).
   'campfire-story': createCutscene()

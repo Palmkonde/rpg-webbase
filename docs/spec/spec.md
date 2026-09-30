@@ -1,6 +1,6 @@
 # Game Engine — Confirmed Spec
 
-Confirmed 2026-09-17 via grilling session. This is the record of what was decided (and explicitly left open) before any code was written — see `../CONTEXT.md` for the glossary and `adr/0001-engine-owns-rendering-only.md` for the rationale behind the biggest architectural call.
+Confirmed 2026-09-17 via grilling session. This is the record of what was decided (and explicitly left open) before any code was written — see `../GLOSSARY.md` for the glossary and `adr/0001-engine-owns-rendering-only.md` for the rationale behind the biggest architectural call.
 
 ## What this repo is
 
@@ -116,7 +116,7 @@ The canvas fills the browser window via Phaser's `Scale.FIT` (scaling a 960×540
 
 ## Dialogue Scripts
 
-Confirmed 2026-09-19 via grilling session, following investigation of overlap with `issues/05-entity-interaction-hook.md`. See `CONTEXT.md`'s "Content" vocabulary (Script, Dialogue, Flag) and `adr/0008` through `adr/0011` for the rationale behind each architectural call below. See "Dialogue Scripts: Choices, Speakers & Localization" below for how choices, Speaker, and localization extend this.
+Confirmed 2026-09-19 via grilling session, following investigation of overlap with `issues/05-entity-interaction-hook.md`. See `GLOSSARY.md`'s "Content" vocabulary (Script, Dialogue, Flag) and `adr/0008` through `adr/0011` for the rationale behind each architectural call below. See "Dialogue Scripts: Choices, Speakers & Localization" below for how choices, Speaker, and localization extend this.
 
 Beyond the literal Phase 1 done-bar (Phase 1 explicitly excludes dialogue/quests/XP UI) — this is the first slice of Phase 2-ish "what happens after an Interaction" work, grilled now because ticket 05 (which it depends on) was already being pulled forward.
 
@@ -181,7 +181,7 @@ A Host-side Script: ordinary TypeScript, authored per Entity (or per Map, for en
 
 ## Dialogue Scripts: Choices, Speakers & Localization
 
-Confirmed 2026-09-20 via grilling session, following `docs/research/dialogue-and-choice-script-functionality.md`'s primary-source survey of dialogue/choice systems (Ink, Yarn Spinner, Ren'Py, RPG Maker MZ). Extends "Dialogue Scripts" above: choices grow from a flat, single-Flag round (ticket 14's original scope) into a nested tree with multi-Flag writes, and Dialogue gains a per-line Speaker. See `CONTEXT.md`'s "Content" vocabulary (Script, Dialogue, **Speaker**, Flag) and `adr/0013-dialogue-localization-is-a-string-table-not-a-reopened-adr-0009.md` for the localization rationale. ADR-0009 and ADR-0011 are both reaffirmed, not reopened.
+Confirmed 2026-09-20 via grilling session, following `docs/research/dialogue-and-choice-script-functionality.md`'s primary-source survey of dialogue/choice systems (Ink, Yarn Spinner, Ren'Py, RPG Maker MZ). Extends "Dialogue Scripts" above: choices grow from a flat, single-Flag round (ticket 14's original scope) into a nested tree with multi-Flag writes, and Dialogue gains a per-line Speaker. See `GLOSSARY.md`'s "Content" vocabulary (Script, Dialogue, **Speaker**, Flag) and `adr/0013-dialogue-localization-is-a-string-table-not-a-reopened-adr-0009.md` for the localization rationale. ADR-0009 and ADR-0011 are both reaffirmed, not reopened.
 
 ### Problem Statement
 
@@ -205,7 +205,7 @@ Four independent extensions to the existing Script/Dialogue/Flag mechanism, none
 10. As a designer who doesn't write TypeScript, I want to edit and translate a line of dialogue text without touching a Script file, so that I'm not blocked on a programmer for routine content changes.
 11. As a Host developer, I want dialogue text to resolve through a locale-keyed lookup instead of being hardcoded inline in a Script, so that adding a language later doesn't mean editing every Script.
 12. As a Host developer, I want the locale a line resolves against to be fixture-stubbed today (mirroring how `WorldConfig` and Flags already are), so that a real backend/locale-selection mechanism can replace it later with no redesign of the Script-facing API.
-13. As a future maintainer, I want it recorded that Flags stay arithmetic-free and quest/item-free even though the student-state model will eventually need both, so that I don't "helpfully" widen Flag into something `CONTEXT.md`'s glossary already says to avoid.
+13. As a future maintainer, I want it recorded that Flags stay arithmetic-free and quest/item-free even though the student-state model will eventually need both, so that I don't "helpfully" widen Flag into something `GLOSSARY.md`'s glossary already says to avoid.
 14. As a future maintainer, I want the Flag store's async get/set shape to stay generic, so that a sibling Quest/Item store can be added later without changing the Script-facing `ctx` contract.
 15. As a future maintainer, I want it recorded that a Script→Host side-effect channel (playing a sound, swapping a portrait, granting an item) was considered and explicitly deferred, so that I build the concrete feature's own API when it's actually needed instead of guessing at a generic hook now.
 16. As a future maintainer, I want it recorded that timed/auto-advancing choices were considered and rejected, so that I don't reopen ADR-0011's declined pause channel chasing a feature nobody asked for.
@@ -244,12 +244,12 @@ Four independent extensions to the existing Script/Dialogue/Flag mechanism, none
 
 - See `docs/research/dialogue-and-choice-script-functionality.md` for the primary-source survey (Ink, Yarn Spinner, Ren'Py, RPG Maker MZ) this section's decisions were grilled against.
 - See `adr/0013-dialogue-localization-is-a-string-table-not-a-reopened-adr-0009.md` for why localization doesn't reopen ADR-0009, and what would actually trigger reopening it (a designer needing to build/rearrange branching structure, not just edit line text).
-- `CONTEXT.md`'s "Content" section gained a new **Speaker** term as part of this round.
+- `GLOSSARY.md`'s "Content" section gained a new **Speaker** term as part of this round.
 - This section's scope (tree-shaped choices, multi-Flag writes, Speaker, locale string table) supersedes ticket 14's original flat/single-Flag/no-Speaker assumptions for whatever ticket(s) `/to-tickets` produces from this section — ticket 14 itself, if already in flight or done, is not retroactively rewritten.
 
 ## Dialogue Portraits & Expressions
 
-Confirmed 2026-09-20 via grilling session, following up on "Dialogue Scripts: Choices, Speakers & Localization"'s deferred Portrait/Expression item. See `CONTEXT.md`'s "Content" vocabulary (Speaker, **Portrait**, **Expression**) and `adr/0014-dialogue-portraits-are-a-standalone-asset-type.md` for why Portrait storage is independent of the existing character-spritesheet pipeline (`adr/0006`).
+Confirmed 2026-09-20 via grilling session, following up on "Dialogue Scripts: Choices, Speakers & Localization"'s deferred Portrait/Expression item. See `GLOSSARY.md`'s "Content" vocabulary (Speaker, **Portrait**, **Expression**) and `adr/0014-dialogue-portraits-are-a-standalone-asset-type.md` for why Portrait storage is independent of the existing character-spritesheet pipeline (`adr/0006`).
 
 ### Problem Statement
 
@@ -295,12 +295,12 @@ A line's presentation options grow to include an optional Portrait, selected by 
 ### Further Notes
 
 - See `adr/0014-dialogue-portraits-are-a-standalone-asset-type.md` for the full rationale against reusing the character-spritesheet pipeline.
-- `CONTEXT.md`'s "Content" section gained **Portrait** and **Expression** as part of this round.
+- `GLOSSARY.md`'s "Content" section gained **Portrait** and **Expression** as part of this round.
 - This section supersedes "Dialogue Scripts: Choices, Speakers & Localization"'s Out of Scope note that backlogged Portrait/expression art — that item is now scoped here.
 
 ## Dialogue Line Pacing
 
-Confirmed 2026-09-23 via grilling session, following up on ticket 18's Speaker work (see "Dialogue Scripts: Choices, Speakers & Localization" above). This section is Host-side overlay rendering/interaction only: no `CONTEXT.md` vocabulary changes and no `docs/adr/` changes accompany it — evaluated explicitly during grilling and found unnecessary, since this isn't a new cross-cutting Script/Dialogue/Speaker/Flag domain concept, nor does it touch the Engine. `adr/0011-dialogue-v1-does-not-pause-the-player.md` is reaffirmed, not reopened: Dialogue still never blocks the Player, it simply paces its own reveal at the Player's click.
+Confirmed 2026-09-23 via grilling session, following up on ticket 18's Speaker work (see "Dialogue Scripts: Choices, Speakers & Localization" above). This section is Host-side overlay rendering/interaction only: no `GLOSSARY.md` vocabulary changes and no `docs/adr/` changes accompany it — evaluated explicitly during grilling and found unnecessary, since this isn't a new cross-cutting Script/Dialogue/Speaker/Flag domain concept, nor does it touch the Engine. `adr/0011-dialogue-v1-does-not-pause-the-player.md` is reaffirmed, not reopened: Dialogue still never blocks the Player, it simply paces its own reveal at the Player's click.
 
 ### Problem Statement
 
@@ -327,7 +327,7 @@ A Dialogue round's lines reveal one at a time instead of all at once: at any mom
 13. As a Host developer, I want the "click advances" behavior implemented as a real interactive element (not a bare `<div onClick>`), so that it satisfies this repo's `jsx-a11y` lint rules without a dedicated keyboard-handling feature having to be built.
 14. As a future maintainer, I want it recorded that typewriter-style animated text reveal was considered and declined for this round, so that "line pacing" isn't conflated with "character-by-character text animation" if it comes up later.
 15. As a future maintainer, I want it recorded that a dedicated keyboard-advance (Space/Enter) binding was considered and deferred, not forgotten, so that it's a known possible follow-up rather than a silently-dropped idea.
-16. As a future maintainer, I want it recorded that this feature needed no `CONTEXT.md` or ADR changes, so that a future reader doesn't go looking for a Speaker/Dialogue vocabulary shift or an Engine-contract decision that doesn't exist here.
+16. As a future maintainer, I want it recorded that this feature needed no `GLOSSARY.md` or ADR changes, so that a future reader doesn't go looking for a Speaker/Dialogue vocabulary shift or an Engine-contract decision that doesn't exist here.
 17. As a future maintainer, I want it recorded that manual verification (not a new automated seam) covers this feature end to end, consistent with tickets 16-18's treatment of overlay rendering/interaction, so that a reviewer doesn't go looking for unit tests that were deliberately not written.
 
 ### Implementation Decisions
@@ -359,11 +359,11 @@ A Dialogue round's lines reveal one at a time instead of all at once: at any mom
 
 - Builds directly on ticket 18's `Dialogue`/`DialogueLine`/Speaker work — no changes to that data shape.
 - See `docs/research/dialogue-and-choice-script-functionality.md`: this section's specific concern (line-by-line reveal pacing) isn't covered by that survey's table, since Ink/Yarn Spinner/Ren'Py/RPG Maker MZ all treat one-line-at-a-time text-box advancement as baseline engine behavior rather than a documented authoring decision worth surveying.
-- No `CONTEXT.md` or `docs/adr/` changes accompany this section — evaluated during grilling and found unnecessary (see this section's opening note).
+- No `GLOSSARY.md` or `docs/adr/` changes accompany this section — evaluated during grilling and found unnecessary (see this section's opening note).
 
 ## CG & Cutscene
 
-Confirmed 2026-09-23 via grilling session. Resolves the blocker "Dialogue Scripts" left open (`adr/0011`): a Host→Engine pause channel now exists, so a Script can finally take control away from the Player. See `CONTEXT.md`'s "Content" vocabulary (**Cutscene**, **CG**, and updated **Script**/**Dialogue** entries) and `adr/0016-host-engine-pause-channel-is-a-single-imperative-flag.md` / `adr/0017-cutscene-gets-its-own-step-runner.md` for the two architectural calls below.
+Confirmed 2026-09-23 via grilling session. Resolves the blocker "Dialogue Scripts" left open (`adr/0011`): a Host→Engine pause channel now exists, so a Script can finally take control away from the Player. See `GLOSSARY.md`'s "Content" vocabulary (**Cutscene**, **CG**, and updated **Script**/**Dialogue** entries) and `adr/0016-host-engine-pause-channel-is-a-single-imperative-flag.md` / `adr/0017-cutscene-gets-its-own-step-runner.md` for the two architectural calls below.
 
 ### Problem Statement
 
@@ -410,7 +410,7 @@ Both route through one shared helper that checks the Student's Flags, skips if a
 
 ### Implementation Decisions
 
-- **Terminology**: "CG" and "Cutscene" are the two content types, matching the split `CONTEXT.md`/this spec already reserved for them (see "Dialogue Scripts" Out of Scope, now resolved here).
+- **Terminology**: "CG" and "Cutscene" are the two content types, matching the split `GLOSSARY.md`/this spec already reserved for them (see "Dialogue Scripts" Out of Scope, now resolved here).
 - **CG pacing**: the Player advances frames by clicking, and can skip the whole CG via a separate control — a pure "slideshow stepper" function (given the current frame index and an advance/skip event, returns the next frame index or `done`).
 - **CG content**: captions/narration resolve through the existing locale string table (same `resolveLine` mechanism Dialogue uses); art resolves through a Portrait-style decoupled asset registry (same pattern as `adr/0014`, keyed by an arbitrary per-frame id, no relationship to the character-spritesheet pipeline).
 - **CG trigger**: `playCG(id)` is a general primitive callable from anywhere; the only caller this round is game boot (the intro).
@@ -445,11 +445,11 @@ Both route through one shared helper that checks the Student's Flags, skips if a
 
 - Supersedes "Dialogue Scripts"' Out of Scope bullet on CG/cutscene and "Explicitly out of scope / deferred"'s matching line below — both are updated to point here.
 - See `adr/0016-host-engine-pause-channel-is-a-single-imperative-flag.md` for the pause-channel decision and `adr/0017-cutscene-gets-its-own-step-runner.md` for why Cutscene doesn't reuse Dialogue's rendering.
-- `CONTEXT.md` gained **Cutscene** and **CG** as part of this round; `Script`'s and `Dialogue`'s entries were updated to reflect that Cutscene is now a real, designed concept rather than "not-yet-designed."
+- `GLOSSARY.md` gained **Cutscene** and **CG** as part of this round; `Script`'s and `Dialogue`'s entries were updated to reflect that Cutscene is now a real, designed concept rather than "not-yet-designed."
 
 ## CG & Cutscene as Script Output
 
-Confirmed 2026-09-27 via grilling session. Extends "CG & Cutscene" above: that section gave CG exactly one caller (game boot) and left Cutscene's own trigger to issues #25-28. This section makes both reachable from the one place all other Entity-driven content already lives — a Script — closing the gap the user found missing from the issue tracker. See `CONTEXT.md`'s updated **Script**, **Cutscene**, and **CG** entries and `adr/0018-script-output-generalizes-to-a-discriminated-union.md` for the return-type decision below.
+Confirmed 2026-09-27 via grilling session. Extends "CG & Cutscene" above: that section gave CG exactly one caller (game boot) and left Cutscene's own trigger to issues #25-28. This section makes both reachable from the one place all other Entity-driven content already lives — a Script — closing the gap the user found missing from the issue tracker. See `GLOSSARY.md`'s updated **Script**, **Cutscene**, and **CG** entries and `adr/0018-script-output-generalizes-to-a-discriminated-union.md` for the return-type decision below.
 
 ### Problem Statement
 
@@ -477,14 +477,14 @@ A Script's return type generalizes from `Dialogue` alone to a discriminated unio
 14. As a future maintainer, I want it recorded why Script's return type is a discriminated union rather than an imperative `playCG`/`playCutscene` call from inside a Script, so that I don't try to "simplify" it into a side-effecting call later (`adr/0018`).
 15. As a future maintainer, I want it recorded why `ScriptBuilder` didn't grow `.playCG()`/`.playCutscene()` methods, so that a future contributor doesn't add them expecting builder parity (`adr/0018`).
 16. As a future maintainer, I want it recorded that a Cutscene trigger is a forward-reference — `playCutscene` itself doesn't exist yet — so that I don't expect a Script returning one to actually play anything until issues #25-28 land.
-17. As a future maintainer, I want it recorded that CG and Cutscene are now distinguished purely by structure (Cutscene has Dialogue/Choice/Movement steps; CG has none), not by trigger source, so `CONTEXT.md`'s entries read consistently with what the code now allows.
+17. As a future maintainer, I want it recorded that CG and Cutscene are now distinguished purely by structure (Cutscene has Dialogue/Choice/Movement steps; CG has none), not by trigger source, so `GLOSSARY.md`'s entries read consistently with what the code now allows.
 18. As a future maintainer, I want it recorded that a Script-triggered CG/Cutscene still plays at most once per Student, like boot's CG already does, so the "don't replay" behavior (`runOnce`, issue #24) is understood to apply uniformly once it's built, regardless of trigger source.
 19. As a QA reviewer, I want the existing Dialogue-only test suite (`scripts.test.ts`) to keep passing unmodified after this change, so that generalizing Script's return type is proven backward compatible, not just forward compatible.
 20. As a content author, I want at least one real Entity Script to demonstrably return a CG trigger under some condition, so the mechanism is proven end-to-end the same way ticket 19's `resolveLine` call in `CampFire.ts` proved locale resolution end-to-end.
 
 ### Implementation Decisions
 
-- **Terminology**: Script, CG, and Cutscene as defined in `CONTEXT.md` (updated this round) — CG and Cutscene now differ by structure only (Dialogue/Choice/Movement steps or their absence), not by what triggers them.
+- **Terminology**: Script, CG, and Cutscene as defined in `GLOSSARY.md` (updated this round) — CG and Cutscene now differ by structure only (Dialogue/Choice/Movement steps or their absence), not by what triggers them.
 - **Return-type generalization**: a Script's output becomes a discriminated union instead of `Dialogue` alone:
 
   ```ts
@@ -523,8 +523,8 @@ A Script's return type generalizes from `Dialogue` alone to a discriminated unio
 
 ### Further Notes
 
-- Supersedes "CG & Cutscene" above's framing of CG as "shown independent of any Entity" / "isn't triggered by an Interaction" — `CONTEXT.md`'s CG entry was already updated this round to describe the CG/Cutscene split as structural only.
-- `CONTEXT.md`'s **Script** entry was updated this round to read "producing Dialogue, a Cutscene, or a CG."
+- Supersedes "CG & Cutscene" above's framing of CG as "shown independent of any Entity" / "isn't triggered by an Interaction" — `GLOSSARY.md`'s CG entry was already updated this round to describe the CG/Cutscene split as structural only.
+- `GLOSSARY.md`'s **Script** entry was updated this round to read "producing Dialogue, a Cutscene, or a CG."
 - See `adr/0018-script-output-generalizes-to-a-discriminated-union.md` for the return-type decision and its rejected alternatives.
 
 ## Map Object Authoring: Layer Flexibility & Dedicated Identity
@@ -588,7 +588,7 @@ Class-tagged Spawn/Entity/Portal objects can now live on any number of object la
 
 ## Zone: Walking Into a Region Triggers a Script
 
-Confirmed 2026-09-27 via grilling session. Resolves the "tile/zone-entered Script trigger" item "Dialogue Scripts" Out of Scope left deferred (superseding that bullet and "CG & Cutscene"'s own matching deferral — both are updated to point here) and extends the Engine's set of Script-driving triggers with a third kind, alongside Interact (ticket 05/12) and the still-unbuilt Map-entry `transitioned` trigger (ticket #13). See `CONTEXT.md`'s new **Zone** entry and `adr/0019` through `adr/0022` for the four architectural calls below.
+Confirmed 2026-09-27 via grilling session. Resolves the "tile/zone-entered Script trigger" item "Dialogue Scripts" Out of Scope left deferred (superseding that bullet and "CG & Cutscene"'s own matching deferral — both are updated to point here) and extends the Engine's set of Script-driving triggers with a third kind, alongside Interact (ticket 05/12) and the still-unbuilt Map-entry `transitioned` trigger (ticket #13). See `GLOSSARY.md`'s new **Zone** entry and `adr/0019` through `adr/0022` for the four architectural calls below.
 
 ### Problem Statement
 
@@ -628,7 +628,7 @@ A new Map-object kind, **Zone** — a Tiled-authored rectangular region, tagged 
 
 ### Implementation Decisions
 
-- **Terminology**: **Zone** — a Tiled-authored, Class-tagged rectangular region on a Map, identified by a dedicated `zoneId` property. `CONTEXT.md` gains this term.
+- **Terminology**: **Zone** — a Tiled-authored, Class-tagged rectangular region on a Map, identified by a dedicated `zoneId` property. `GLOSSARY.md` gains this term.
 - **Authoring**: A new Tiled Custom Class `Zone`, defined in the Map's Tiled Project alongside `Spawn`/`Entity`/`Portal`. Placed as a real rectangle object (not a point), required by authoring convention (documented in a guide, not enforced by the Engine) to be drawn snapped to the tile grid so its pixel bounds convert unambiguously to a whole-tile range.
 - **Identity & duplicate detection**: A Zone's identity is its `zoneId` property, exactly mirroring Entity's `entityId` (never `name`). The existing per-Map duplicate-id warning (`findDuplicates`) extends to cover `zoneId`s the same way it already covers `entityId`s.
 - **Overlap handling**: Two Zones whose rectangles overlap are not specially resolved — deterministic "first match wins" — but the Engine's per-Map load pass warns (`console.warn`) if it finds overlapping Zone rectangles, the same diagnostic-not-error treatment duplicate ids already get. Full overlap-resolution semantics stay explicitly undesigned pending a concrete need.
@@ -674,7 +674,7 @@ A new Map-object kind, **Zone** — a Tiled-authored rectangular region, tagged 
 
 ## Entity Rendering: Character Entities and Prop Entities
 
-Confirmed 2026-09-29 via grilling session. Resolves this spec's own "NPC/Entity sprite rendering" deferral (below) and is the prerequisite issue #28 (Cutscene Movement continuous Follow) turned out to depend on without being filed as such — #26/#28 already generalize Movement/Follow steps to target "the Player or any map Entity," but no Entity has ever been a real, moveable character for either to target. See `CONTEXT.md`'s new **Character**, **Character Entity**, and **Prop Entity** entries, and `adr/0023-entity-rendering-splits-into-character-entities-and-prop-entities.md` / `adr/0024-character-entity-picks-its-character-in-tiled-not-world-config.md` for the two architectural calls below.
+Confirmed 2026-09-29 via grilling session. Resolves this spec's own "NPC/Entity sprite rendering" deferral (below) and is the prerequisite issue #28 (Cutscene Movement continuous Follow) turned out to depend on without being filed as such — #26/#28 already generalize Movement/Follow steps to target "the Player or any map Entity," but no Entity has ever been a real, moveable character for either to target. See `GLOSSARY.md`'s new **Character**, **Character Entity**, and **Prop Entity** entries, and `adr/0023-entity-rendering-splits-into-character-entities-and-prop-entities.md` / `adr/0024-character-entity-picks-its-character-in-tiled-not-world-config.md` for the two architectural calls below.
 
 ### Problem Statement
 
@@ -717,7 +717,7 @@ Every Entity is now either a Character Entity or a Prop Entity, decided by wheth
 
 ### Implementation Decisions
 
-- **Terminology**: **Character**, **Character Entity**, **Prop Entity** — three new terms (`CONTEXT.md` gains all three; see the domain glossary for exact definitions).
+- **Terminology**: **Character**, **Character Entity**, **Prop Entity** — three new terms (`GLOSSARY.md` gains all three; see the domain glossary for exact definitions).
 - **Tier derivation**: not a separately authored field. An Entity is a Character Entity if its Tiled object's `characterId` property is present and non-blank; otherwise it's a Prop Entity — mirroring how `entityId`/`zoneId` already work as the sole identity signal (ADR-0012).
 - **New Tiled `Entity` Custom Class properties**, defined in a new `test_map.tiled-project` file (none exists in the repo today, despite ADR-0010 calling for one — creating it is part of this work):
   - `characterId` (optional, **enum** type, values = `catalogs.ts`'s character ids) — the designer picks a Character Entity's sprite from a dropdown rather than typing a string.
@@ -750,7 +750,7 @@ Every Entity is now either a Character Entity or a Prop Entity, decided by wheth
 ### Further Notes
 
 - Supersedes this spec's own "Explicitly out of scope / deferred" bullet on "NPC/Entity sprite rendering" below — updated to point here.
-- `CONTEXT.md` gained **Character**, **Character Entity**, and **Prop Entity** as part of this round; **Player**'s and **World Config**'s entries were also corrected — World Config's entry no longer claims Entity/Portal activation-gating that ADR-0021 already found was never real.
+- `GLOSSARY.md` gained **Character**, **Character Entity**, and **Prop Entity** as part of this round; **Player**'s and **World Config**'s entries were also corrected — World Config's entry no longer claims Entity/Portal activation-gating that ADR-0021 already found was never real.
 - See `adr/0023-entity-rendering-splits-into-character-entities-and-prop-entities.md` and `adr/0024-character-entity-picks-its-character-in-tiled-not-world-config.md`.
 - This is the prerequisite issue #28 was blocked on without being filed as such; #28 itself still needs its own follow-up grilling pass on the stop-condition question before it's ready-for-agent.
 

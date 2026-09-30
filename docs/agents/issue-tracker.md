@@ -9,7 +9,7 @@ Tickets for this repo live as GitHub issues on `origin` (`Palmkonde/rpg-webbase`
 - Triage/completion state is the issue's own open/closed state: open = not done, closed = done. An open ticket additionally carries exactly one triage label: `ready-for-agent` once it's pickable now, `blocked` while a `Blocked by:` ticket is still open. The two are mutually exclusive.
 - `Blocked by:` stays a plain line near the top of the issue body, referencing blockers as `#N` (GitHub auto-links these) — not GitHub's native issue-dependencies API. Plain text is enough for what any skill here reads back, and it avoids resolving a database id per edge. The `blocked` label is the filterable signal; the plain-text line is still the source of truth for *which* tickets gate it.
 - Hard-to-reverse architectural decisions live in `docs/adr/`, sequentially numbered, one decision per file.
-- Domain vocabulary lives in `CONTEXT.md` (see `domain.md`), kept a pure glossary.
+- Domain vocabulary lives in `GLOSSARY.md` (see `domain.md`), kept a pure glossary.
 
 ## Operations
 

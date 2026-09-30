@@ -11,7 +11,7 @@ const INTRO_FRAMES: CgFrame[] = [
   { art: 'intro-3', captionKey: 'cg.intro.3' },
 ]
 
-// Not in scripts/: per CONTEXT.md a Script runs for an Entity/Map Event — a CG has neither.
+// Not in scripts/: per GLOSSARY.md a Script runs for an Entity/Map Event — a CG has neither.
 const REGISTRY = {
   intro: INTRO_FRAMES,
 

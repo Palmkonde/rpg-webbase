@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-RPG-gamification game-engine playground (Phaser + Tiled). See `docs/spec/spec.md` for the full spec, `CONTEXT.md` for domain vocabulary.
+RPG-gamification game-engine playground (Phaser + Tiled). See `docs/spec/spec.md` for the full spec, `GLOSSARY.md` for domain vocabulary.
 
 ## Workflow
 
 New feature work follows this flow, in order:
 
-1. `/grill-with-docs` — sharpen the idea, writing decisions into `CONTEXT.md` and `docs/adr/`
+1. `/grill-with-docs` — sharpen the idea, writing decisions into `GLOSSARY.md` and `docs/adr/`
 2. `/to-spec` — collapse the grilled thread into `docs/spec/spec.md`
 3. `/to-tickets` — split the spec into tracer-bullet tickets, published as GitHub issues (see `docs/agents/issue-tracker.md` for the convention)
 4. `/implement` per ticket
@@ -30,7 +30,7 @@ One clause, not a paragraph packed onto one line. A function's name carries the 
 ## Where decisions live
 
 - Hard-to-reverse architectural decisions → `docs/adr/`, sequentially numbered
-- Domain vocabulary → `CONTEXT.md`, kept a pure glossary — no implementation detail
+- Domain vocabulary → `GLOSSARY.md`, kept a pure glossary — no implementation detail
 - Ticket completion → close the GitHub issue (`Closes #NN` in the implementing commit); no separate ticket-status commit, and acceptance-criteria checkboxes aren't ticked live — the issue's open/closed state is the "is this finished" signal
 - Human-facing how-to reference (e.g. "what shape should this asset be") → `docs/guides/`, one topic per file — this is *how*, not *why* (that's an ADR) or *what's confirmed* (that's the spec)
 
@@ -46,4 +46,4 @@ GitHub Issues on this repo's `origin` (`Palmkonde/rpg-webbase`), via the `gh` CL
 
 ### Domain docs
 
-Multi-context: shared Engine↔Host vocabulary/decisions stay at the repo root (`CONTEXT.md`, `docs/adr/`); per-package `CONTEXT.md`/`docs/adr/` under `packages/engine-core/` and `apps/web/` are created lazily if package-internal vocabulary/decisions ever emerge. See `docs/agents/domain.md`.
+Single context: Engine↔Host vocabulary/decisions live at the repo root (`GLOSSARY.md`, `docs/adr/`); add per-package ones plus a `GLOSSARY-MAP.md` only if package-internal vocabulary ever emerges. See `docs/agents/domain.md`.

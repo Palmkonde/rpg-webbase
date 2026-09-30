@@ -112,7 +112,7 @@ Prioritized by how directly they bear on "what's the next ticket after 14," not 
 - `docs/adr/0009-scripts-are-typescript-not-a-parsed-dsl.md`
 - `docs/adr/0011-dialogue-v1-does-not-pause-the-player.md`
 - `docs/spec/spec.md` ("Dialogue Scripts" section and "Explicitly out of scope / deferred")
-- `CONTEXT.md` ("Content" section: Script, Dialogue, Flag)
+- `GLOSSARY.md` ("Content" section: Script, Dialogue, Flag)
 - `apps/web/src/scripts/script.ts`, `apps/web/src/scripts/run-entity-script.ts`, `apps/web/src/scripts/entities/CampFire.ts`
 - `apps/web/src/state/flags.ts`
 - Tickets #14, #13 (github.com/Palmkonde/rpg-webbase/issues/14, /13)
