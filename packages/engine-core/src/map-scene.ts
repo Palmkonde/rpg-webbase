@@ -2,9 +2,11 @@ import * as Phaser from 'phaser'
 import type { AnimationFrame, EntityObject, Facing, TileCoord, TiledMapAssets, ZoneObject } from './tiled-assets.ts'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
 import { preloadCharacterSprite, resolveCharacterTexture } from './character-assets.ts'
+import type { CutsceneMovement } from './cutscene-movement.ts'
 import { Direction } from 'grid-engine'
 import type { GridEngine } from 'grid-engine'
 import { computeCameraBounds } from './util.ts'
+import { createCutsceneMovement } from './cutscene-movement.ts'
 import { stepAnimation } from './tile-animation.ts'
 
 export const PLAYER_ID = 'player'
@@ -16,9 +18,8 @@ export const MAP_SCENE_KEY = 'MapScene'
 // Type-only export, deliberately — see the Host-side use in apps/web/src/state/cutscene.ts for why.
 export type PlayerCharId = typeof PLAYER_ID
 
-export interface HostScene {
+export interface HostScene extends CutsceneMovement {
   setPaused: (paused: boolean) => void
-  moveTo: (charId: string, targetPos: TileCoord) => Promise<void>
 }
 
 function zoneContains(zone: ZoneObject, pos: TileCoord): boolean {
@@ -63,6 +64,7 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
     private interactKey!: Phaser.Input.Keyboard.Key
     private animatedTiles: AnimatedTile[] = []
     private paused = false
+    private cutsceneMovement!: CutsceneMovement
 
     public constructor() {
       super(MAP_SCENE_KEY)
@@ -77,18 +79,16 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
       }
     }
 
-    // Wraps grid-engine's own moveTo/pathfinding — resolves once on its one-shot completion signal, success or not.
     public moveTo(charId: string, targetPos: TileCoord): Promise<void> {
+      return this.cutsceneMovement.moveTo(charId, targetPos)
+    }
 
-      // oxlint-disable-next-line promise/avoid-new
-      return new Promise((resolve) => {
-        this.gridEngine.moveTo(charId, targetPos).subscribe(({ result }) => {
-          if (result) {
-            console.warn(`[engine] moveTo(${charId} -> ${targetPos.x},${targetPos.y}) did not complete: ${result}`)
-          }
-          resolve()
-        })
-      })
+    public follow(followerId: string, leaderId: string, gap: number): void {
+      this.cutsceneMovement.follow(followerId, leaderId, gap)
+    }
+
+    public stopMovement(charId: string): void {
+      this.cutsceneMovement.stopMovement(charId)
     }
 
     public preload(): void {
@@ -108,6 +108,7 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
       this.createLayers(tilemap)
       this.createPropEntities(tilemap)
       this.createCharacters(tilemap)
+      this.cutsceneMovement = createCutsceneMovement(this.gridEngine, PLAYER_ID)
       this.setupCamera(tilemap)
       this.setupInput()
       this.setupZones()

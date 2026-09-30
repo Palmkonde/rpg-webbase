@@ -12,6 +12,8 @@ export interface EngineHandle {
   destroy: () => void
   setPaused: (paused: boolean) => void
   moveTo: (charId: string, targetPos: TileCoord) => Promise<void>
+  follow: (followerId: string, leaderId: string, gap: number) => void
+  stopMovement: (charId: string) => void
 }
 
 export interface ContentCatalogs {
@@ -97,5 +99,7 @@ export async function createEngine(container: HTMLElement, options: CreateEngine
     destroy: () => {game.destroy(true)},
     setPaused: (paused: boolean) => {getMapScene(game).setPaused(paused)},
     moveTo: (charId: string, targetPos: TileCoord) => getMapScene(game).moveTo(charId, targetPos),
+    follow: (followerId: string, leaderId: string, gap: number) => {getMapScene(game).follow(followerId, leaderId, gap)},
+    stopMovement: (charId: string) => {getMapScene(game).stopMovement(charId)},
   }
 }

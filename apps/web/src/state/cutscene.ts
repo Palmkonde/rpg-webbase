@@ -3,6 +3,7 @@ import type { PlayerCharId, TileCoord } from '@game-engine/engine-core'
 
 // Pinned to engine-core's own Player charId via its type only — importing the value would pull Phaser into pure-state tests.
 const PLAYER_CHAR_ID: PlayerCharId = 'player'
+const DEFAULT_FOLLOW_GAP = 0
 
 export interface DialogueStep {
   type: 'dialogue'
@@ -16,17 +17,30 @@ export interface MovementStep {
   targetPos: TileCoord
 }
 
+export interface FollowStep {
+  type: 'follow'
+  followerId: string
+  leaderId: string
+  gap: number
+}
+
+export interface FollowOptions {
+  // Empty tiles kept between follower and leader.
+  gap?: number
+}
+
 // No Cutscene-specific branching shape: reuses Choice/Choice.next? as-is (spec's "Cutscene composition").
 export interface ChoiceStep {
   type: 'choice'
   choices: Choice[]
 }
 
-export type CutsceneStep = DialogueStep | MovementStep | ChoiceStep
+export type CutsceneStep = DialogueStep | MovementStep | FollowStep | ChoiceStep
 
 export interface CutsceneBuilder {
   say: (text: string, options?: SayOptions) => CutsceneBuilder
   moveTo: (charId: string, targetPos: TileCoord) => CutsceneBuilder
+  follow: (followerId: string, leaderId: string, options?: FollowOptions) => CutsceneBuilder
   choice: (text: string, options?: ChoiceOptions) => CutsceneBuilder
   build: () => CutsceneStep[]
 }
@@ -41,6 +55,10 @@ export function createCutscene(): CutsceneBuilder {
     },
     moveTo(charId, targetPos) {
       steps.push({ type: 'movement', charId, targetPos })
+      return builder
+    },
+    follow(followerId, leaderId, { gap = DEFAULT_FOLLOW_GAP } = {}) {
+      steps.push({ type: 'follow', followerId, leaderId, gap })
       return builder
     },
     choice(text, options) {
@@ -99,11 +117,20 @@ const REGISTRY = {
     .moveTo(PLAYER_CHAR_ID, {x:10, y:2})
     .build(),
 
-  // Target tile is clear of collision/obstacle tiles.
+  // Loop and destination tiles are clear of collision/obstacle tiles and of every Zone on main_test.tmj.
   'guard-walk': createCutscene()
-    .say('Watch this.', { speaker: 'Guard' })
-    .moveTo('Guard', { x: 5, y: 9 })
-    .say('Told you.', { speaker: 'Guard' })
+    .say('Hah! Bet you can\'t keep up with me, slowpoke~', { speaker: 'Guard', expression: 'Happy' })
+    .follow(PLAYER_CHAR_ID, 'Guard')
+    .moveTo('Guard', { x: 9, y: 10 })
+    .moveTo('Guard', { x: 9, y: 8 })
+    .moveTo('Guard', { x: 6, y: 8 })
+    .moveTo('Guard', { x: 5, y: 10 })
+    .say('Wheeze... you actually kept up?! ...Whatever. Beginner\'s luck.', { speaker: 'Guard', expression: 'Surprised' })
+    .say('Fine, YOU lead. I\'ll be right behind you, so don\'t get lost, dummy.', { speaker: 'Guard' })
+    .follow('Guard', PLAYER_CHAR_ID)
+    .moveTo(PLAYER_CHAR_ID, { x: 8, y: 5 })
+    .say('See? You\'d be totally helpless without me. You\'re welcome~', { speaker: 'Guard', expression: 'Happy' })
+    .moveTo('Guard', {x: 5, y: 11})
     .build(),
 
   // Zone enter script issues #32

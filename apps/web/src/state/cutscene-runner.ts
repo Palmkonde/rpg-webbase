@@ -4,7 +4,7 @@ export interface CutsceneRunnerState {
   stepIndex: number
 }
 
-export type CutsceneEvent = { type: 'advance-click' } | { type: 'move-finished' } | { type: 'choice-picked' }
+export type CutsceneEvent = { type: 'advance-click' } | { type: 'move-finished' } | { type: 'follow-started' } | { type: 'choice-picked' }
 
 export interface CutsceneStepResult {
   stepIndex: number
@@ -13,6 +13,7 @@ export interface CutsceneStepResult {
 
 function expectedEvent(step: CutsceneStep): CutsceneEvent['type'] {
   if (step.type === 'movement') {return 'move-finished'}
+  if (step.type === 'follow') {return 'follow-started'}
   if (step.type === 'choice') {return 'choice-picked'}
   return 'advance-click'
 }

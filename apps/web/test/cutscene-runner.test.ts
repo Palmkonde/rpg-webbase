@@ -73,6 +73,31 @@ test('stepCutscene steps through a Dialogue/Movement/Dialogue sequence to a term
   assert.equal(stepCutscene(state, ADVANCE, MOVEMENT_STEPS).done, true)
 })
 
+const FOLLOW_STARTED: CutsceneEvent = { type: 'follow-started' }
+
+const FOLLOW_STEPS: CutsceneStep[] = [
+  { type: 'follow', followerId: 'player', leaderId: 'Guard', gap: 1 },
+  { type: 'movement', charId: 'Guard', targetPos: { x: 9, y: 10 } },
+]
+
+test('stepCutscene follow-started moves past a Follow step to the next one', () => {
+  const state: CutsceneRunnerState = { stepIndex: 0 }
+  assert.deepEqual(stepCutscene(state, FOLLOW_STARTED, FOLLOW_STEPS), { stepIndex: 1, done: false })
+})
+
+test('stepCutscene ignores advance-click, move-finished, and choice-picked while a Follow step is current', () => {
+  const state: CutsceneRunnerState = { stepIndex: 0 }
+  const events: CutsceneEvent[] = [ADVANCE, MOVE_FINISHED, { type: 'choice-picked' }]
+  for (const event of events) {
+    assert.deepEqual(stepCutscene(state, event, FOLLOW_STEPS), { stepIndex: 0, done: false })
+  }
+})
+
+test('stepCutscene ignores follow-started while a Movement step is current', () => {
+  const state: CutsceneRunnerState = { stepIndex: 1 }
+  assert.deepEqual(stepCutscene(state, FOLLOW_STARTED, FOLLOW_STEPS), { stepIndex: 1, done: false })
+})
+
 const CHOICE_PICKED: CutsceneEvent = { type: 'choice-picked' }
 
 const CHOICE_STEPS: CutsceneStep[] = [

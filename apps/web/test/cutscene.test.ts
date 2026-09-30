@@ -40,6 +40,32 @@ test('createCutscene moveTo() accepts any charId string, not just the Player\'s'
   assert.deepEqual(steps, [{ type: 'movement', charId: 'CampFire', targetPos: { x: 8, y: 13 } }])
 })
 
+test('createCutscene follow() builds a Follow step with the default gap of 0, right behind the leader', () => {
+  const steps = createCutscene().follow('player', 'Guard').build()
+  assert.deepEqual(steps, [{ type: 'follow', followerId: 'player', leaderId: 'Guard', gap: 0 }])
+})
+
+test('createCutscene follow() carries an explicit gap onto the Follow step', () => {
+  const steps = createCutscene().follow('Guard', 'player', { gap: 2 }).build()
+  assert.deepEqual(steps, [{ type: 'follow', followerId: 'Guard', leaderId: 'player', gap: 2 }])
+})
+
+test('createCutscene chains follow() with say(), moveTo(), and choice() into one ordered step list', () => {
+  const steps = createCutscene()
+    .say('Follow me.', { speaker: 'Guard' })
+    .follow('player', 'Guard')
+    .moveTo('Guard', { x: 9, y: 10 })
+    .choice('Keep going')
+    .build()
+
+  assert.deepEqual(steps, [
+    { type: 'dialogue', line: { text: 'Follow me.', speaker: 'Guard' } },
+    { type: 'follow', followerId: 'player', leaderId: 'Guard', gap: 0 },
+    { type: 'movement', charId: 'Guard', targetPos: { x: 9, y: 10 } },
+    { type: 'choice', choices: [{ text: 'Keep going' }] },
+  ])
+})
+
 test('createCutscene choice() builds a Choice step with one Choice', () => {
   const steps = createCutscene().choice('Ask about the embers').build()
   assert.deepEqual(steps, [{ type: 'choice', choices: [{ text: 'Ask about the embers' }] }])

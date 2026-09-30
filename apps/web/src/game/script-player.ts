@@ -112,7 +112,8 @@ export class ScriptPlayer {
     }
 
     const { setCutsceneLine: onLine, setCutsceneChoices: onChoices } = this.ui
-    this.cutscene = playCutscene(id, { setPaused: engine.setPaused, onLine, onChoices, moveTo: engine.moveTo, onChoicePicked })
+    const { setPaused, moveTo, follow, stopMovement } = engine
+    this.cutscene = playCutscene(id, { setPaused, onLine, onChoices, moveTo, follow, stopMovement, onChoicePicked })
     await this.cutscene.done
 
     // oxlint-disable-next-line unicorn/no-useless-undefined -- onLine's/onChoices' param is required; this is the "no line"/"no choices" case, not an omission.

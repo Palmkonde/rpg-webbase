@@ -1,7 +1,7 @@
 import type { Choice, DialogueLine } from '../scripts/script.ts'
-import type { CutsceneStep, MovementStep } from '../state/cutscene.ts'
+import type { ChoiceStep, CutsceneRegistry, CutsceneStep, FollowStep, MovementStep } from '../state/cutscene.ts'
+import type { CutsceneEvent, CutsceneRunnerState } from '../state/cutscene-runner.ts'
 import { currentStudentId, flagStore, runOnce } from '../state/flags.ts'
-import type { CutsceneRunnerState } from '../state/cutscene-runner.ts'
 import type { TileCoord } from '@game-engine/engine-core'
 import { resolveCutscene } from '../state/cutscene.ts'
 import { stepCutscene } from '../state/cutscene-runner.ts'
@@ -17,6 +17,8 @@ export interface CutsceneCallbacks {
   onLine: (line: DialogueLine | undefined) => void
   onChoices: (choices: Choice[] | undefined) => void
   moveTo: (charId: string, targetPos: TileCoord) => Promise<void>
+  follow: (followerId: string, leaderId: string, gap: number) => void
+  stopMovement: (charId: string) => void
   // True means Choice.next (adr/0017) sent control elsewhere; this run should stop.
   onChoicePicked: (choice: Choice) => Promise<{ handedOff: boolean }>
 }
@@ -36,6 +38,7 @@ interface RunContext {
   callbacks: CutsceneCallbacks
   advanceGate: AdvanceGate
   choiceGate: ChoiceGate
+  followerIds: Set<string>
 }
 
 function noop(): void {
@@ -88,6 +91,12 @@ async function runMovementStep(step: MovementStep, ctx: RunContext): Promise<voi
   await ctx.callbacks.moveTo(step.charId, step.targetPos)
 }
 
+// Doesn't wait: grid-engine's follow never completes, so the follower is stopped when the Cutscene ends (adr/0025).
+function runFollowStep(step: FollowStep, ctx: RunContext): void {
+  ctx.callbacks.follow(step.followerId, step.leaderId, step.gap)
+  ctx.followerIds.add(step.followerId)
+}
+
 async function runChoiceStep(choices: Choice[], ctx: RunContext): Promise<{ handedOff: boolean }> {
   // oxlint-disable-next-line unicorn/no-useless-undefined -- onLine's param is required; this is the "no line" case, not an omission.
   ctx.callbacks.onLine(undefined)
@@ -99,18 +108,27 @@ async function runChoiceStep(choices: Choice[], ctx: RunContext): Promise<{ hand
   return ctx.callbacks.onChoicePicked(picked)
 }
 
-// Undefined means a Choice handed off elsewhere; runSteps should stop.
-async function advanceStep(step: CutsceneStep, state: CutsceneRunnerState, ctx: RunContext): Promise<CutsceneRunnerState | undefined> {
+// Every step but a Choice, which alone can hand off; resolves to the completion event the step finished with.
+async function runStep(step: Exclude<CutsceneStep, ChoiceStep>, ctx: RunContext): Promise<CutsceneEvent> {
   if (step.type === 'dialogue') {
     await runDialogueStep(step.line, ctx)
-    return stepCutscene(state, { type: 'advance-click' }, ctx.steps)
+    return { type: 'advance-click' }
   }
+  if (step.type === 'follow') {
+    runFollowStep(step, ctx)
+    return { type: 'follow-started' }
+  }
+  await runMovementStep(step, ctx)
+  return { type: 'move-finished' }
+}
+
+// Undefined means a Choice handed off elsewhere; runSteps should stop.
+async function advanceStep(step: CutsceneStep, state: CutsceneRunnerState, ctx: RunContext): Promise<CutsceneRunnerState | undefined> {
   if (step.type === 'choice') {
     const { handedOff } = await runChoiceStep(step.choices, ctx)
     return handedOff ? undefined : stepCutscene(state, { type: 'choice-picked' }, ctx.steps)
   }
-  await runMovementStep(step, ctx)
-  return stepCutscene(state, { type: 'move-finished' }, ctx.steps)
+  return stepCutscene(state, await runStep(step, ctx), ctx.steps)
 }
 
 async function runSteps(ctx: RunContext): Promise<void> {
@@ -125,8 +143,8 @@ async function runSteps(ctx: RunContext): Promise<void> {
   }
 }
 
-export function playCutscene(id: string, callbacks: CutsceneCallbacks): CutsceneHandle {
-  const steps = resolveCutscene(id)
+export function playCutscene(id: string, callbacks: CutsceneCallbacks, registry?: CutsceneRegistry): CutsceneHandle {
+  const steps = resolveCutscene(id, registry)
 
   if (!steps || steps.length === 0) {
     return { done: Promise.resolve(), advance: noop, pickChoice: noop }
@@ -134,11 +152,16 @@ export function playCutscene(id: string, callbacks: CutsceneCallbacks): Cutscene
 
   const advanceGate = createAdvanceGate()
   const choiceGate = createChoiceGate()
+  const followerIds = new Set<string>()
   const done = runOnce({ store: flagStore, studentId: currentStudentId }, id, async () => {
     callbacks.setPaused(true)
     try {
-      await runSteps({ steps, callbacks, advanceGate, choiceGate })
+      await runSteps({ steps, callbacks, advanceGate, choiceGate, followerIds })
     } finally {
+      // Before unpausing, so control never returns to a Player still trailing someone.
+      for (const followerId of followerIds) {
+        callbacks.stopMovement(followerId)
+      }
       callbacks.setPaused(false)
     }
   })
