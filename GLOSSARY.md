@@ -45,7 +45,7 @@ The Map coordinate the Player appears at on entering a Map, whether as a Map's d
 _Avoid_: Start position, entry tile
 
 **Zone**:
-A Tiled-authored rectangular region on a Map whose Script runs the moment the Player's position transitions into it — not an explicit action, unlike an Entity Interaction. Plays at most once per Student, gated the same way a CG/Cutscene already is.
+A Tiled-authored rectangular region on a Map whose Script runs the moment the Player's position transitions into it — not an explicit action, unlike an Entity Interaction. Only the Player's own movement counts: a Player walked into a Zone by a Cutscene (a Movement or Follow step) doesn't trigger it, and that entry is dropped, not saved for later. Plays at most once per Student, gated the same way a CG/Cutscene already is.
 _Avoid_: Trigger area, collision box (this project has no pixel-level collision concept — the Player's position is always a single grid tile)
 
 ### Movement
@@ -85,6 +85,10 @@ _Avoid_: Cutscene (a separate concept, below, that always takes control from the
 **Cutscene**:
 A Script that takes control away from the Player for its duration: a sequence of Dialogue, Choice, and Movement steps, during which the Player can't move or interact with anything else. Plays at most once per Student, gated by a Flag.
 _Avoid_: Dialogue (never takes control from the Player; a Cutscene always does), Scene (Phaser's own rendering-container concept, distinct from this domain)
+
+**Follow step**:
+A Cutscene step in which one character (the Player or a Character Entity, the *follower*) keeps trailing another (the *leader*) at a Cutscene-chosen gap, lasting until the Cutscene ends or the follower is given its own Movement step. Unlike a Movement step, the Cutscene doesn't wait on it: the next step starts right away, typically a Movement step that walks the leader.
+_Avoid_: Escort, chase, target (a Movement step's *target* is a destination tile, not a character)
 
 **CG**:
 A full-screen illustrated slideshow — static art and captions the Player advances by clicking, and can skip entirely. Has no Dialogue/Choice/Movement steps and never takes control through them the way a Cutscene does; that structural difference, not what triggers it, is what separates the two. Freezes the Player for its duration the same way a Cutscene does whenever a Script plays one mid-game, and plays at most once per Student.
