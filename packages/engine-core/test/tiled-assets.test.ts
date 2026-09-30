@@ -1,4 +1,4 @@
-import { collectEntities, collectTileAnimations, collectTileProperties } from '../src/tiled-assets.ts'
+import { collectEntities, collectPropTiles, collectTileAnimations, collectTileImages, collectTileProperties } from '../src/tiled-assets.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
@@ -232,4 +232,58 @@ test('collectEntities corrects a tile object (gid set) from its bottom-left anch
     ],
   }
   assert.deepEqual(collectEntities(raw), [{ entityId: 'campfire', x: 3, y: 2 }])
+})
+
+function entityRaw(properties: { name: string; value: string }[]): Parameters<typeof collectEntities>[0] {
+  return {
+    tilewidth: 32,
+    tileheight: 32,
+    layers: [{ type: 'objectgroup', objects: [{ name: 'e', type: 'Entity', x: 96, y: 96, properties }] }],
+  }
+}
+
+test('collectEntities carries characterId and facing through when present', () => {
+  const raw = entityRaw([
+    { name: 'entityId', value: 'guard' },
+    { name: 'characterId', value: 'fluffy' },
+    { name: 'facing', value: 'left' },
+  ])
+  assert.deepEqual(collectEntities(raw), [{ entityId: 'guard', x: 3, y: 3, characterId: 'fluffy', facing: 'left' }])
+})
+
+test('collectEntities omits a blank characterId (a Prop Entity)', () => {
+  const raw = entityRaw([
+    { name: 'entityId', value: 'sign' },
+    { name: 'characterId', value: '' },
+  ])
+  assert.deepEqual(collectEntities(raw), [{ entityId: 'sign', x: 3, y: 3 }])
+})
+
+test('collectPropTiles keeps only tile-bearing Entities without a characterId', () => {
+  const raw = {
+    tilewidth: 32,
+    tileheight: 32,
+    layers: [
+      {
+        type: 'objectgroup',
+        objects: [
+          { name: 'campfire', type: 'Entity', x: 96, y: 96, gid: 110, properties: [{ name: 'entityId', value: 'campfire' }] },
+          { name: 'npc', type: 'Entity', x: 0, y: 32, gid: 5, properties: [{ name: 'entityId', value: 'npc' }, { name: 'characterId', value: 'fluffy' }] },
+          { name: 'no tile', type: 'Entity', x: 0, y: 0, properties: [{ name: 'entityId', value: 'plain' }] },
+          { name: 'zone', type: 'Zone', x: 0, y: 0, gid: 9, properties: [{ name: 'zoneId', value: 'z' }] },
+        ],
+      },
+    ],
+  }
+  assert.deepEqual(collectPropTiles(raw), [{ gid: 110, x: 3, y: 2 }])
+})
+
+test('collectTileImages maps image-collection tile gids to their image key', () => {
+  const raw = {
+    tilesets: [
+      { name: 'a', firstgid: 109, tiles: [{ id: 1, image: 'frame_000.png' }, { id: 2 }] },
+      { name: 'b', firstgid: 1, image: 'sheet.png' },
+    ],
+  }
+  assert.deepEqual(collectTileImages(raw), new Map([[110, 'frame_000.png']]))
 })

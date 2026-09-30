@@ -88,6 +88,7 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
     public create(): void {
       const tilemap = this.createTilemap()
       this.createLayers(tilemap)
+      this.createPropEntities(tilemap)
       const playerSprite = this.createPlayer(tilemap)
       this.setupCamera(tilemap, playerSprite)
       this.setupInput()
@@ -112,6 +113,17 @@ export function createMapScene({ map, character, worldConfig, assets, onEvent }:
           MapScene.applyTileProperties(tile)
           this.registerAnimatedTile(tile)
         })
+      }
+    }
+
+    private createPropEntities(tilemap: Phaser.Tilemaps.Tilemap): void {
+      for (const { gid, x, y } of assets.propTiles) {
+        const key = assets.tileImages.get(gid)
+        if (key) {
+          this.add.image(x * tilemap.tileWidth, (y + 1) * tilemap.tileHeight, key).setOrigin(0, 1)
+        } else {
+          console.warn(`[engine] Prop Entity at ${x},${y} has no drawable image for tile gid ${gid}`)
+        }
       }
     }
 

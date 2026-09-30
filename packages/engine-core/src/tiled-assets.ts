@@ -64,6 +64,14 @@ export interface EntityObject {
   entityId: string
   x: number
   y: number
+  characterId?: string
+  facing?: string
+}
+
+export interface PropTile {
+  gid: number
+  x: number
+  y: number
 }
 
 export interface TileCoord {
@@ -80,13 +88,17 @@ export interface TiledMapAssets {
   images: ImageToLoad[]
   tileProperties: Map<number, Record<string, unknown>>
   tileAnimations: Map<number, AnimationFrame[]>
+  tileImages: Map<number, string>
   entities: EntityObject[]
+  propTiles: PropTile[]
   zones: ZoneObject[]
 }
 
 const OBJECT_LAYER_TYPE = 'objectgroup'
 const ENTITY_CLASS = 'Entity'
 const ENTITY_ID_PROPERTY = 'entityId'
+const CHARACTER_ID_PROPERTY = 'characterId'
+const FACING_PROPERTY = 'facing'
 const ZONE_CLASS = 'Zone'
 const ZONE_ID_PROPERTY = 'zoneId'
 
@@ -107,7 +119,7 @@ function collectFromObjects<T>(raw: TiledObjectsJson, read: (object: TiledObject
   return results
 }
 
-// The one non-blank-string-property lookup both an Entity's entityId and a Zone's zoneId need.
+// The one non-blank-string-property lookup every Entity and Zone string property shares.
 function readNonBlankStringProperty(object: TiledObjectDef, name: string): string | undefined {
   const value = object.properties?.find((prop) => prop.name === name)?.value
   return typeof value === 'string' && value !== '' ? value : undefined
@@ -120,15 +132,28 @@ function readEntity(object: TiledObjectDef, tilewidth: number, tileheight: numbe
   if (!entityId) {return undefined}
 
   const topY = object.gid === undefined ? object.y : object.y - tileheight
+  const characterId = readNonBlankStringProperty(object, CHARACTER_ID_PROPERTY)
+  const facing = readNonBlankStringProperty(object, FACING_PROPERTY)
   return {
     entityId,
     x: Math.floor(object.x / tilewidth),
     y: Math.floor(topY / tileheight),
+    ...(characterId && { characterId }),
+    ...(facing && { facing }),
   }
 }
 
 export function collectEntities(raw: TiledObjectsJson): EntityObject[] {
   return collectFromObjects(raw, (object) => readEntity(object, raw.tilewidth, raw.tileheight))
+}
+
+// A Prop Entity is an Entity with no characterId; only one that carries a tile can be drawn.
+export function collectPropTiles(raw: TiledObjectsJson): PropTile[] {
+  return collectFromObjects(raw, (object) => {
+    const entity = readEntity(object, raw.tilewidth, raw.tileheight)
+    if (!entity || entity.characterId || object.gid === undefined) {return}
+    return { gid: object.gid, x: entity.x, y: entity.y }
+  })
 }
 
 function tilesInRect(start: TileCoord, count: TileCoord): TileCoord[] {
@@ -224,6 +249,11 @@ export function collectTileAnimations(raw: TiledMapJson): Map<number, AnimationF
   })
 }
 
+// Texture key (matching collectImages) of each image-collection tile, keyed by gid
+export function collectTileImages(raw: TiledMapJson): Map<number, string> {
+  return collectByTile(raw, (tile) => tile.image)
+}
+
 // Walk every tileset/tile image reference and resolve it to a loadable URL
 function collectImages(raw: TiledMapJson, tiledMapUrl: string, origin: string): ImageToLoad[] {
   const images: ImageToLoad[] = []
@@ -252,7 +282,9 @@ export async function collectTiledMapAssets(tiledMapUrl: string): Promise<TiledM
     images: collectImages(raw, tiledMapUrl, origin),
     tileProperties: collectTileProperties(raw),
     tileAnimations: collectTileAnimations(raw),
+    tileImages: collectTileImages(raw),
     entities: collectEntities(raw),
+    propTiles: collectPropTiles(raw),
     zones: collectZones(raw),
   }
 }
