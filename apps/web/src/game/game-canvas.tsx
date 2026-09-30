@@ -22,7 +22,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
 
   const { cgFrames, cgStep, advanceCg, skipCg, playCgById } = useCgPlayback()
   const {
-    dialogue, cutsceneLine, cutsceneChoices, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction,
+    dialogue, cutsceneLine, cutsceneChoices, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered,
   } = useScriptPlayback(engineRef, playCgById)
 
   useEffect(() => {
@@ -35,6 +35,8 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
       console.warn('[Engine Event]', event)
       if (event.type === 'interacted') {
         await runInteraction(event.entityId, () => cancelled)
+      } else if (event.type === 'zoneEntered') {
+        await runZoneEntered(event.zoneId, () => cancelled)
       }
     }
 
@@ -75,7 +77,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
       engineRef.current?.destroy()
       engineRef.current = undefined
     }
-  }, [worldConfig, runInteraction, playCgById, skipCg])
+  }, [worldConfig, runInteraction, runZoneEntered, playCgById, skipCg])
 
   return (
     <>

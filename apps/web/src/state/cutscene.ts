@@ -98,6 +98,11 @@ const REGISTRY = {
     .say('Look up — the same stars watched the very first fire, too.', { speaker: 'Campfire' })
     .moveTo(PLAYER_CHAR_ID, {x:10, y:2})
     .build(),
+
+  // Zone enter script issues #32
+  'campfire-story-step-into-zone': createCutscene()
+    .say('You step on the zone of unreturn.', { speaker: 'Narrator' })
+    .build(),
 } satisfies CutsceneRegistry
 
 export function resolveCutscene(id: string, registry: CutsceneRegistry = REGISTRY): CutsceneStep[] | undefined {

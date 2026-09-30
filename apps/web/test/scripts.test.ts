@@ -2,6 +2,7 @@ import type { Dialogue, ScriptResult } from '../src/scripts/script.ts'
 import assert from 'node:assert/strict'
 import { createScript } from '../src/scripts/script.ts'
 import { runEntityScript } from '../src/scripts/run-entity-script.ts'
+import { runScript } from '../src/scripts/run-script.ts'
 import { test } from 'node:test'
 
 function expectDialogue(result: ScriptResult | undefined): Dialogue {
@@ -250,3 +251,8 @@ test('runEntityScript: that same choice falls back to Dialogue when the Flag con
   assert.ok(result.lines.length > 0)
 })
 
+test('runScript resolves by kind: the same id is looked up per-folder, not in a shared namespace', async () => {
+  assert.ok(await runScript('entities', 'CampFire', { flags: {} }))
+  assert.equal(await runScript('zones', 'CampFire', { flags: {} }), undefined)
+  assert.equal(await runScript('zones', 'no-such-zone', { flags: {} }), undefined)
+})

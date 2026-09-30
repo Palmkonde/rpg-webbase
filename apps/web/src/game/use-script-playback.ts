@@ -1,13 +1,14 @@
 'use client'
 
 import type { Choice, Dialogue, DialogueLine, ScriptResult } from '../scripts/script.ts'
-import { currentStudentId, flagStore } from '../state/flags.ts'
+import { currentStudentId, flagStore, runOnce } from '../state/flags.ts'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CgPlayback } from './use-cg-playback.ts'
 import type { EngineHandle } from '@game-engine/engine-core'
 import type { RefObject } from 'react'
+import type { ScriptKind } from '../scripts/run-script.ts'
 import { playCutscene } from './play-cutscene.ts'
-import { runEntityScript } from '../scripts/run-entity-script.ts'
+import { runScript } from '../scripts/run-script.ts'
 
 async function playCgTrigger(options: { engine: EngineHandle; playCgById: CgPlayback['playCgById']; id: string }): Promise<void> {
   const { engine, playCgById, id } = options
@@ -75,8 +76,11 @@ export interface ScriptPlayback {
   pickCutsceneChoice: (choice: Choice) => void
   selectChoice: (choice: Choice) => Promise<void>
   runInteraction: (entityId: string, isStale: () => boolean) => Promise<void>
+  runZoneEntered: (zoneId: string, isStale: () => boolean) => Promise<void>
 }
 
+// TODO: refactor this function
+// oxlint-disable-next-line max-statements -- one hook owns all Script playback state.
 export function useScriptPlayback(engineRef: RefObject<EngineHandle | undefined>, playCgById: CgPlayback['playCgById']): ScriptPlayback {
   const [dialogue, setDialogue] = useState<Dialogue | undefined>()
   const [cutsceneLine, setCutsceneLine] = useState<DialogueLine | undefined>()
@@ -127,13 +131,24 @@ export function useScriptPlayback(engineRef: RefObject<EngineHandle | undefined>
   }, [dispatch])
 
   // Guards against a Script's async lookup outliving the Map/effect that fired it (e.g. a worldConfig transition mid-flight).
-  const runInteraction = useCallback(async (entityId: string, isStale: () => boolean): Promise<void> => {
+  const runKindScript = useCallback(async (kind: ScriptKind, id: string, isStale: () => boolean): Promise<ScriptResult | undefined> => {
     const flags = await flagStore.getFlags(currentStudentId)
-    const result = await runEntityScript(entityId, { flags })
-    if (result && !isStale()) {
-      await dispatch(result)
+    const result = await runScript(kind, id, { flags })
+    return isStale() ? undefined : result
+  }, [])
+
+  const runInteraction = useCallback(async (entityId: string, isStale: () => boolean): Promise<void> => {
+    const result = await runKindScript('entities', entityId, isStale)
+    if (result) {await dispatch(result)}
+  }, [dispatch, runKindScript])
+
+  // Looks the Script up before runOnce so a missing or stale lookup never burns the `<zoneId>_seen` Flag.
+  const runZoneEntered = useCallback(async (zoneId: string, isStale: () => boolean): Promise<void> => {
+    const result = await runKindScript('zones', zoneId, isStale)
+    if (result) {
+      await runOnce({ store: flagStore, studentId: currentStudentId }, zoneId, () => dispatch(result))
     }
-  }, [dispatch])
+  }, [dispatch, runKindScript])
 
   return {
     dialogue,
@@ -144,5 +159,6 @@ export function useScriptPlayback(engineRef: RefObject<EngineHandle | undefined>
     pickCutsceneChoice: (choice: Choice) => cutsceneHandleRef.current?.pickChoice(choice),
     selectChoice,
     runInteraction,
+    runZoneEntered,
   }
 }
