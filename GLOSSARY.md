@@ -53,7 +53,7 @@ The Map coordinate the Player appears at on entering a Map, whether as a Map's d
 _Avoid_: Start position, entry tile
 
 **Zone**:
-A Tiled-authored rectangular region on a Map whose Script runs the moment the Player's position transitions into it — not an explicit action, unlike an Entity Interaction. Only the Player's own movement counts: a Player walked into a Zone by a Cutscene (a Movement or Follow step) doesn't trigger it, and that entry is dropped, not saved for later. Plays at most once per Student, gated by a Flag the Host keeps.
+A Tiled-authored rectangular region on a Map whose Script runs the moment the Player's position transitions into it — not an explicit action, unlike an Entity Interaction. Only the Player's own movement counts: a Player walked into a Zone by a Cutscene (a Movement or Follow step) doesn't trigger it, and that entry is dropped, not saved for later. Plays at most once per Student, gated by a Flag the Host keeps; it counts as played the moment its Script starts, even if the Player walks away partway through.
 _Avoid_: Trigger area, collision box (this project has no pixel-level collision concept — the Player's position is always a single grid tile)
 
 ### Movement
@@ -91,15 +91,15 @@ The home-grown language Scripts are written in, stored as `.clsc` files. It is s
 _Avoid_: DSL, `.cls`
 
 **Dialogue**:
-Text and Player-facing choices that a Script shows as its output, rendered entirely by the Host. Each line carries a Speaker and may show a Portrait. Never takes control away from the Player.
+Text and Player-facing choices that a Script shows as its output, rendered entirely by the Host. Each line carries a Speaker and may show a Portrait. Never takes control away from the Player. Only one plays at a time: another Interaction, entering a Zone, leaving the Map, or dismissing it ends it where it stands.
 _Avoid_: Cutscene (a separate concept, below, that always takes control from the Player — Dialogue never does), text box
 
 **Cutscene**:
-A Script that takes control away from the Player for its duration: a sequence of Dialogue, Choice, and Movement steps, during which the Player can't move or interact with anything else. Plays every time it's started, unless it's marked once-only; then a named Flag stops it after its first full play.
+A Script that takes control away from the Player for its duration: a sequence of Dialogue, Choice, and Movement steps, during which the Player can't move or interact with anything else. A Cutscene can play another; control returns to the Player only when the outermost one ends. Plays every time it's started, unless it's marked once-only; then a named Flag stops it after its first full play.
 _Avoid_: Dialogue (never takes control from the Player; a Cutscene always does), Scene (Phaser's own rendering-container concept, distinct from this domain)
 
 **Follow step**:
-A Cutscene step in which one character (the Player or a Character Entity, the *follower*) keeps trailing another (the *leader*) at a Cutscene-chosen gap, lasting until the Cutscene ends or the follower is given its own Movement step. A following Player walks the leader's exact route, footstep by footstep; a following Character Entity instead heads straight for the leader by the shortest way. Unlike a Movement step, the Cutscene doesn't wait on it: the next step starts right away, typically a Movement step that walks the leader.
+A Cutscene step in which one character (the Player or a Character Entity, the *follower*) keeps trailing another (the *leader*) at a Cutscene-chosen gap, lasting until control returns to the Player (a Cutscene played from inside another ending doesn't end it) or the follower is given its own Movement step. A following Player walks the leader's exact route, footstep by footstep; a following Character Entity instead heads straight for the leader by the shortest way. Unlike a Movement step, the Cutscene doesn't wait on it: the next step starts right away, typically a Movement step that walks the leader.
 _Avoid_: Escort, chase, target (a Movement step's *target* is a destination tile, not a character)
 
 **CG**:

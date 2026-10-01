@@ -1,3 +1,7 @@
+---
+status: accepted (amended by adr/0030: re-applied at unfreeze and after a Companion Flag write outside a freeze)
+---
+
 # Companions are Host-owned Flags that the Host re-applies to the Engine
 
 A Companion is a Character Entity that keeps chasing the Player outside any Cutscene, for as long as a Flag says so. Its state is a single Host Flag, `companion:<entityId>`, whose value is the Companion's `characterId` (for example `companion:Guard = 'fluffy'`), and `false` once dismissed. A Script sets it (for example through a Choice's Flag writes), and the Host's dismiss button clears it. The Engine never tracks Companions itself.
