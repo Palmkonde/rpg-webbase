@@ -181,3 +181,5 @@ next-env.d.ts
 
 #
 assets/
+
+.vscode/

@@ -1,5 +1,5 @@
 {
-  description = "Dev shell for hand-normalizing downloaded character sprite sheets (see docs/adr/0006)";
+  description = "Dev shell: Node, git/gh, the clsc Rust toolchain (docs/adr/0031) and imagemagick for sprite sheets (docs/adr/0006)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -13,7 +13,18 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          packages = [ pkgs.imagemagick ];
+          packages = [
+            pkgs.imagemagick
+            pkgs.cargo
+            pkgs.rustc
+            pkgs.clippy
+            pkgs.rustfmt
+            pkgs.rust-analyzer
+            pkgs.git
+            pkgs.gh
+            pkgs.nodejs_22
+          ];
+          RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
         };
       });
 }
