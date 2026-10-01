@@ -6,7 +6,8 @@ use std::time::Duration;
 
 const USAGE: &str = "clsc: the CodeLeagues Script compiler
 
-Usage: clsc build <scripts-root> <out-file> [--watch]";
+Usage: clsc build <scripts-root> <out-file> [--watch]
+       clsc disasm <bytecode-file>";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -19,6 +20,7 @@ fn main() -> ExitCode {
         }
         ["build", root, out] => exit_code(build(Path::new(root), Path::new(out))),
         ["build", root, out, "--watch"] => exit_code(watch(Path::new(root), Path::new(out))),
+        ["disasm", file] => exit_code(disasm(Path::new(file))),
         _ => {
             eprintln!("clsc: unexpected arguments `{}`\n\n{USAGE}", args.join(" "));
             ExitCode::from(2)
@@ -59,6 +61,13 @@ fn build(root: &Path, out: &Path) -> Result<(), String> {
     std::fs::rename(&temp, out).map_err(|error| format!("{}: {error}", out.display()))?;
 
     println!("clsc: wrote {}", out.display());
+    Ok(())
+}
+
+fn disasm(file: &Path) -> Result<(), String> {
+    let bytes = std::fs::read(file).map_err(|error| format!("{}: {error}", file.display()))?;
+
+    print!("{}", clsc::bytecode::disasm(&bytes)?);
     Ok(())
 }
 

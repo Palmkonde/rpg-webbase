@@ -18,6 +18,7 @@ use crate::opcodes::OPCODES;
 use crate::parse::{Block, BlockKind, Item, Statement, Trigger};
 use crate::SourceFile;
 use std::collections::HashMap;
+use std::fmt::Write as _;
 
 const MAGIC: &[u8; 4] = b"CLSC";
 const FORMAT_VERSION: u16 = 2;
@@ -109,6 +110,64 @@ fn encode_block(block: &Block<'_>, cutscenes: &HashMap<&str, u32>, strings: &mut
     bytes
 }
 
+/// Prints a bytecode file as text: the header, string pool, blocks and handler index. Operands
+/// print as raw numbers, so a string operand is an index into the pool printed above.
+pub fn disasm(bytes: &[u8]) -> Result<String, String> {
+    let mut reader = Reader { bytes, offset: 0 };
+    let mut out = String::new();
+
+    if reader.take(MAGIC.len())? != MAGIC {
+        return Err("not a clsc bytecode file: it doesn't start with `CLSC`".to_owned());
+    }
+
+    let version = u16::from_le_bytes([reader.u8()?, reader.u8()?]);
+    writeln!(out, "format version {version}").unwrap();
+    if version != FORMAT_VERSION {
+        return Err(format!("the bytecode is format version {version}, but this disassembler reads version {FORMAT_VERSION}"));
+    }
+
+    writeln!(out, "\nstrings").unwrap();
+    let mut strings = Vec::new();
+    for index in 0..reader.u32()? {
+        let length = reader.u32()? as usize;
+        let string = std::str::from_utf8(reader.take(length)?).map_err(|error| error.to_string())?;
+        writeln!(out, "  {index:>4}  {}", quote(string)).unwrap();
+        strings.push(string);
+    }
+    let string = |index: u32| strings.get(index as usize).map(|string| quote(string)).ok_or("a string index past the pool");
+
+    writeln!(out, "\nblocks").unwrap();
+    for index in 0..reader.u32()? {
+        let kind = BLOCK_KINDS.get(usize::from(reader.u8()?)).ok_or("unknown block kind")?;
+        writeln!(out, "  {index:>4}  {kind} {}", string(reader.u32()?)?).unwrap();
+
+        for pc in 0..reader.u32()? {
+            let (name, operand_count) = OPCODES.get(usize::from(reader.u8()?)).ok_or("unknown opcode")?;
+            let mut instruction = (*name).to_owned();
+            for _ in 0..*operand_count {
+                write!(instruction, " {}", reader.u32()?).unwrap();
+            }
+            writeln!(out, "        {pc:>4}  {instruction}").unwrap();
+        }
+    }
+
+    writeln!(out, "\nhandlers").unwrap();
+    for _ in 0..reader.u32()? {
+        let trigger = TRIGGERS.get(usize::from(reader.u8()?)).ok_or("unknown trigger")?;
+        writeln!(out, "  on {}({}) -> block {}", trigger.keyword(), strings.get(reader.u32()? as usize).ok_or("a string index past the pool")?, reader.u32()?).unwrap();
+    }
+
+    if reader.offset != bytes.len() {
+        return Err(format!("{} unexpected bytes after the handler index", bytes.len() - reader.offset));
+    }
+    Ok(out)
+}
+
+/// Quotes with the language's own two escapes, so Thai and other text prints as written.
+fn quote(string: &str) -> String {
+    format!("\"{}\"", string.replace('\\', "\\\\").replace('"', "\\\""))
+}
+
 #[derive(Default)]
 struct StringPool {
     strings: Vec<String>,
@@ -127,6 +186,27 @@ impl StringPool {
     }
 }
 
+struct Reader<'b> {
+    bytes: &'b [u8],
+    offset: usize,
+}
+
+impl<'b> Reader<'b> {
+    fn take(&mut self, length: usize) -> Result<&'b [u8], String> {
+        let slice = self.bytes.get(self.offset..self.offset + length).ok_or("the bytecode is truncated")?;
+        self.offset += length;
+        Ok(slice)
+    }
+
+    fn u8(&mut self) -> Result<u8, String> {
+        Ok(self.take(1)?[0])
+    }
+
+    fn u32(&mut self) -> Result<u32, String> {
+        Ok(u32::from_le_bytes(self.take(4)?.try_into().expect("take returned 4 bytes")))
+    }
+}
+
 fn write_u32(bytes: &mut Vec<u8>, value: u32) {
     bytes.extend_from_slice(&value.to_le_bytes());
 }
@@ -137,4 +217,41 @@ fn to_u32(value: usize) -> u32 {
 
 fn position<T: PartialEq>(table: &[T], value: &T) -> u8 {
     table.iter().position(|entry| entry == value).and_then(|index| u8::try_from(index).ok()).expect("a value in its table")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::disasm;
+    use crate::compile_sources;
+
+    #[test]
+    fn disasm_prints_the_header_string_pool_blocks_and_handler_index() {
+        let source = "enum Expression { Neutral }\nspeaker Narrator;\n\non enter(Camp) with Narrator {\n    play(cutscene::story);\n}\n\ncutscene story with Narrator {\n    Narrator: \"Hi\";\n}\n";
+        let bytecode = compile_sources(&[("main.clsc".to_owned(), source.to_owned())]).bytecode.unwrap();
+
+        assert_eq!(
+            disasm(&bytecode).unwrap(),
+            "format version 2
+
+strings
+     0  \"on enter(Camp)\"
+     1  \"Camp\"
+     2  \"Narrator\"
+     3  \"Neutral\"
+     4  \"Hi\"
+     5  \"story\"
+
+blocks
+     0  handler \"on enter(Camp)\"
+           0  Play 1
+           1  Return
+     1  cutscene \"story\"
+           0  Line 2 3 4
+           1  Return
+
+handlers
+  on enter(Camp) -> block 0
+"
+        );
+    }
 }
