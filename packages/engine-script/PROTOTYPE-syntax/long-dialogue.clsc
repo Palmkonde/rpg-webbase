@@ -1,0 +1,106 @@
+// PROTOTYPE (ticket #41), throwaway. What a long, many-rounds dialogue looks like in .clsc.
+// The same conversation written three ways. All three are in: nesting, `section` + `goto`, and `loop` + `break`.
+
+use flags;
+
+
+// ── 1. Nested (what we have today): every round is one level deeper, so a long conversation drifts right ──
+dialogue Interview_Nested {
+    Guard: "Halt! State your business.";
+    choose {
+        "I'm a Student" => {
+            Guard: "A Student? Which year?";
+            choose {
+                "First year" => {
+                    Guard: "Lost already, then.";
+                    choose {
+                        "Where's the library?" => {
+                            Guard: "North, past the fountain.";
+                            choose {
+                                "Thanks!";
+                                "And the cafeteria?" => {
+                                    Guard: "Follow your nose.";
+                                }
+                            }
+                        }
+                        "I'm not lost" => {
+                            Guard(Surprised): "Could've fooled me.";
+                        }
+                    }
+                }
+                "Final year" => {
+                    Guard: "Then you know the way. Move along.";
+                }
+            }
+        }
+        "Just passing through" => {
+            Guard(Angry): "Then pass faster.";
+        }
+    }
+}
+
+
+// ── 2. Flat, with named sections + goto (Ink's knots, Yarn's nodes) ──
+// Rule sketch: the body stops at the first `section`; a section runs only when jumped to and ends the dialogue when it finishes.
+dialogue Interview_Sections {
+    Guard: "Halt! State your business.";
+    choose {
+        "I'm a Student" => goto which_year,
+        "Just passing through" => {
+            Guard(Angry): "Then pass faster.";
+        }
+    }
+
+    section which_year {
+        Guard: "A Student? Which year?";
+        choose {
+            "First year" => goto lost,
+            "Final year" => {
+                Guard: "Then you know the way. Move along.";
+            }
+        }
+    }
+
+    section lost {
+        Guard: "Lost already, then.";
+        choose {
+            "Where's the library?" => goto library,
+            "I'm not lost" => {
+                Guard(Surprised): "Could've fooled me.";
+            }
+        }
+    }
+
+    section library {
+        Guard: "North, past the fountain.";
+        choose {
+            "Thanks!";
+            "And the cafeteria?" => {
+                Guard: "Follow your nose.";
+            }
+        }
+    }
+}
+
+
+// ── 3. A question hub: ask as many as you like until "Bye" (needs a loop; nesting can't express this at all) ──
+dialogue AskTheGuard {
+    Guard: "Need something?";
+    loop {
+        choose {
+            "Where's the library?" => {
+                Guard: "North, past the fountain.";
+            }
+            "Where's the cafeteria?" => {
+                Guard: "Follow your nose.";
+            }
+            "Who are you?" if !asked_guard_name => {
+                Guard(Happy): "Name's Bram.";
+                set asked_guard_name = true;
+            }
+            "Bye" => break,
+        }
+        Guard: "Anything else?";
+    }
+    Guard: "Stay out of trouble.";
+}

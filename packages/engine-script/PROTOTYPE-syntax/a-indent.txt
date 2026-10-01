@@ -1,0 +1,88 @@
+# PROTOTYPE (ticket #41), throwaway. Candidate A: indentation, Python-ish, typed.
+# Same content as b-sections.txt and c-braces.txt; only the syntax differs.
+
+# ── Declarations (would live in one shared file; Characters/Expressions could be generated from Tiled + portraits.ts) ──
+flag talked_to_campfire: bool = false
+flag was_polite_to_campfire: bool = false
+flag talked_to_campfire_trash: bool = false
+flag has_firewood: bool = false
+flag companion.Guard: Character? = none        # holds the Character it appears as, none once dismissed (adr/0028)
+
+
+# ── CampFire Entity ──
+dialogue CampFire:
+    let met: bool = talked_to_campfire
+
+    if talked_to_campfire_trash:
+        Campfire (Angry): "Go away!"
+        end
+
+    if met:
+        Campfire (Neutral): @campfire.greeting_returning     # @key = string-table line, checked at compile time
+    else:
+        Campfire (Happy): @campfire.greeting
+
+    choose:
+        - "Nice to meet you!" if not met:
+            set talked_to_campfire = true
+            set was_polite_to_campfire = true
+
+        - "Sup man?" if not met:
+            set talked_to_campfire = true
+
+        - "Ask what the campfire has seen" if was_polite_to_campfire:
+            Narrator (Sad): "The fire dims for a moment, as if remembering something older than words."
+            Campfire (Neutral): "I remember the first Student who ever spoke to me."
+            choose:
+                - "Ask what happened to them"
+                - "Never mind"
+            # both options fall through to here: reconvergence is just "the next line"
+            Campfire (Sad): "...they moved on, same as you will."
+
+        - "Ask for a story":
+            play campfire_story
+
+        - "Ask Campfire to show CG again":
+            if was_polite_to_campfire:
+                show cg campfire_vision
+            else:
+                Campfire: "The flames don't stir for someone who was rude to them."
+
+        - "Warm your hands" locked unless has_firewood: "You need firewood first."
+
+        - "What's this stupid campfire":
+            set talked_to_campfire_trash = true
+
+
+# ── Cutscenes: `move` / `follows` only compile inside a cutscene (it freezes the Player; a dialogue never does) ──
+cutscene campfire_story:
+    Narrator (Neutral): "The fire dims, as if settling in to tell a longer story than usual."
+    Campfire: "Before any Student ever found this clearing, I was just a pile of cold wood."
+    Campfire (Happy): "...and then someone struck the first spark, and I have been telling stories ever since."
+    move Player to (9, 11)
+    Narrator: "You find yourself drawn a little closer, as if the fire pulled you in."
+
+    choose:
+        - "Ask about the embers":
+            Campfire: "The embers pulse like a slow heartbeat, holding the last of the warmth."
+            move Player to (2, 2)
+
+        - "Ask about the stars overhead":
+            Campfire: "Look up — the same stars watched the very first fire, too."
+            move Player to (10, 2)
+
+
+cutscene guard_walk:
+    Guard (Happy): "Come, come! Walk with me. Stay close... closer~"
+    Player follows Guard
+    move Guard to (9, 10)
+    move Guard to (5, 10)
+    Guard (Neutral): "Now YOU lead. I'll be right behind you. Always. Every single step."
+    Guard follows Player
+    move Player to (8, 5)
+    Guard (Sad): "I'm supposed to stay at my post... but you wouldn't leave me here all alone. Would you?"
+
+    choose:
+        - "Follow me forever":
+            set companion.Guard = fluffy
+        - "Nah, stay here"

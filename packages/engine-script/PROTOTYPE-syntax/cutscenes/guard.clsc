@@ -1,0 +1,27 @@
+// PROTOTYPE (ticket #41), throwaway. Cutscene from cutscene.ts, ported for follow() and the Companion Flag.
+// Python-style module: every top-level name is exported, no `export` keyword. A `_name` is private to this file:
+// `use cutscenes.guard;` elsewhere gets `cutscene::walk` but not `cutscene::_patrol` (compile error if referenced).
+
+use flags;
+
+cutscene walk {
+    Guard(Happy): "Come, come! Walk with me. Stay close... closer~";
+    follow(Player, Guard);
+    play(cutscene::_patrol);   // runs _patrol to the end, then continues here
+    Guard(Neutral): "Now YOU lead. I'll be right behind you. Always. Every single step.";
+    follow(Guard, Player);
+    move(Player, (8, 5));
+    Guard(Sad): "I'm supposed to stay at my post... but you wouldn't leave me here all alone. Would you?";
+
+    choose {
+        "Follow me forever" => {
+            set companion.Guard = fluffy;
+        }
+        "Nah, stay here";
+    }
+}
+
+cutscene _patrol {
+    move(Guard, (9, 10));
+    move(Guard, (5, 10));
+}

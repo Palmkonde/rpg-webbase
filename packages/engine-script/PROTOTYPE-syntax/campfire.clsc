@@ -1,0 +1,54 @@
+// PROTOTYPE (ticket #41), throwaway. CHOSEN DIRECTION: CodeLeagues Script (.clsc).
+// `use a.b;` loads a/b.clsc from the scripts root (dots are folders) and brings in everything it defines, referenced by kind: `cutscene::story`.
+// Two used files defining the same `cutscene::x` is a compile error at the use site. `cg::x` ids come from the Host's CG registry.
+// C's braces + quoted lines + Expression as an enum value, with A's flag management (declared `flag`s, bare reads, `set` writes).
+// No `let`: a bare name is always a Flag (or a Character / enum value), read live. A line with no Expression is Neutral.
+// Calls put the subject first: move(who, to), follow(follower, leader).
+
+use flags;
+use cutscenes.campfire;
+
+// ── CampFire Entity ──
+dialogue CampFire {
+    if talked_to_campfire_trash {
+        Campfire(Angry): "Go away!";
+        return;
+    }
+
+    if talked_to_campfire {
+        Campfire: @campfire.greeting_returning;   // @key = a line from the string table (strings.json), in the current locale
+    } else {
+        Campfire(Happy): @campfire.greeting;
+    }
+
+    choose {
+        "Nice to meet you!" if !talked_to_campfire => {
+            set talked_to_campfire = true;
+            set was_polite_to_campfire = true;
+        }
+        "Sup man?" if !talked_to_campfire => {
+            set talked_to_campfire = true;
+        }
+        "Ask what the campfire has seen" if was_polite_to_campfire => {
+            Narrator(Sad): "The fire dims for a moment, as if remembering something older than words.";
+            Campfire(Neutral): "I remember the first Student who ever spoke to me.";
+            choose {
+                "Ask what happened to them";
+                "Never mind";
+            }
+            Campfire(Sad): "...they moved on, same as you will.";
+        }
+        "Ask for a story" => play(cutscene::story),
+        "Ask Campfire to show CG again" => {
+            if was_polite_to_campfire {
+                play(cg::campfire_vision);
+            } else {
+                Campfire: "The flames don't stir for someone who was rude to them.";
+            }
+        }
+        "Warm your hands" if has_firewood else locked("You need firewood first.");   // plain `if` hides; `else locked` shows it greyed out
+        "What's this stupid campfire" => {
+            set talked_to_campfire_trash = true;
+        }
+    }
+}

@@ -1,0 +1,8 @@
+// PROTOTYPE (ticket #41), throwaway. Flag declarations, shared by every .clsc file.
+
+flag talked_to_campfire: bool = false;
+flag was_polite_to_campfire: bool = false;
+flag talked_to_campfire_trash: bool = false;
+flag has_firewood: bool = false;
+flag asked_guard_name: bool = false;
+flag companion.Guard: Character? = none;

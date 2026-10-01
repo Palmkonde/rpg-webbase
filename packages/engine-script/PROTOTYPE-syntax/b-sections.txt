@@ -1,0 +1,131 @@
+# PROTOTYPE (ticket #41), throwaway. Candidate B: sections + `end` closers, typed (lineage: the colleague's Chat:/Choice:/Recall sketch).
+# Indentation is cosmetic here; blocks close with `end`. Line text is unquoted: everything after the `:` is the line.
+
+# ── Declarations (one shared file) ──
+Recall talked_to_campfire: bool = false
+Recall was_polite_to_campfire: bool = false
+Recall talked_to_campfire_trash: bool = false
+Recall has_firewood: bool = false
+Recall companion.Guard: Character? = none
+
+
+# ── CampFire Entity ──
+Dialogue CampFire
+  Let met: bool = Recall.talked_to_campfire
+
+  If Recall.talked_to_campfire_trash
+    Chat
+      Campfire (Angry): Go away!
+    end
+    Stop
+  end
+
+  Chat
+    If met
+      Campfire (Neutral): @campfire.greeting_returning
+    Else
+      Campfire (Happy): @campfire.greeting
+    end
+  end
+
+  Choice
+    Option "Nice to meet you!" when not met
+      Recall.talked_to_campfire = true
+      Recall.was_polite_to_campfire = true
+    end
+
+    Option "Sup man?" when not met
+      Recall.talked_to_campfire = true
+    end
+
+    Option "Ask what the campfire has seen" when Recall.was_polite_to_campfire
+      Chat
+        Narrator (Sad): The fire dims for a moment, as if remembering something older than words.
+        Campfire (Neutral): I remember the first Student who ever spoke to me.
+      end
+      Choice
+        Option "Ask what happened to them" end
+        Option "Never mind" end
+      end
+      Chat
+        Campfire (Sad): ...they moved on, same as you will.
+      end
+    end
+
+    Option "Ask for a story"
+      Play Cutscene.campfire_story
+    end
+
+    Option "Ask Campfire to show CG again"
+      If Recall.was_polite_to_campfire
+        Show CG.campfire_vision
+      Else
+        Chat
+          Campfire: The flames don't stir for someone who was rude to them.
+        end
+      end
+    end
+
+    Option "Warm your hands" locked unless Recall.has_firewood because "You need firewood first."
+    end
+
+    Option "What's this stupid campfire"
+      Recall.talked_to_campfire_trash = true
+    end
+  end
+end
+
+
+# ── Cutscenes ──
+Cutscene campfire_story
+  Chat
+    Narrator (Neutral): The fire dims, as if settling in to tell a longer story than usual.
+    Campfire: Before any Student ever found this clearing, I was just a pile of cold wood.
+    Campfire (Happy): ...and then someone struck the first spark, and I have been telling stories ever since.
+  end
+  Move Player to (9, 11)
+  Chat
+    Narrator: You find yourself drawn a little closer, as if the fire pulled you in.
+  end
+
+  Choice
+    Option "Ask about the embers"
+      Chat
+        Campfire: The embers pulse like a slow heartbeat, holding the last of the warmth.
+      end
+      Move Player to (2, 2)
+    end
+
+    Option "Ask about the stars overhead"
+      Chat
+        Campfire: Look up — the same stars watched the very first fire, too.
+      end
+      Move Player to (10, 2)
+    end
+  end
+end
+
+
+Cutscene guard_walk
+  Chat
+    Guard (Happy): Come, come! Walk with me. Stay close... closer~
+  end
+  Follow Player behind Guard
+  Move Guard to (9, 10)
+  Move Guard to (5, 10)
+  Chat
+    Guard (Neutral): Now YOU lead. I'll be right behind you. Always. Every single step.
+  end
+  Follow Guard behind Player
+  Move Player to (8, 5)
+  Chat
+    Guard (Sad): I'm supposed to stay at my post... but you wouldn't leave me here all alone. Would you?
+  end
+
+  Choice
+    Option "Follow me forever"
+      Recall.companion.Guard = fluffy
+    end
+    Option "Nah, stay here" end
+  end
+end

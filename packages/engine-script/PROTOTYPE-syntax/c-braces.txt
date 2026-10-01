@@ -1,0 +1,95 @@
+// PROTOTYPE (ticket #41), throwaway. Candidate C: braces, Rust-ish, typed. Most explicit, least designer-friendly.
+// Speakers, Expressions, cutscene/CG ids and flags are all typed values, so they can be stored in `let`s and passed around.
+
+// ── Declarations (one shared file) ──
+flag talked_to_campfire: bool = false;
+flag was_polite_to_campfire: bool = false;
+flag talked_to_campfire_trash: bool = false;
+flag has_firewood: bool = false;
+flag companion.Guard: Option<Character> = None;
+
+
+// ── CampFire Entity ──
+dialogue CampFire {
+    let met: bool = flags.talked_to_campfire;
+
+    if flags.talked_to_campfire_trash {
+        Campfire(Angry): "Go away!";
+        return;
+    }
+
+    // Expression is a value; the line's key is picked by the same condition.
+    let mood: Expression = if met { Neutral } else { Happy };
+    Campfire(mood): if met { @campfire.greeting_returning } else { @campfire.greeting };
+
+    choose {
+        "Nice to meet you!" if !met => {
+            flags.talked_to_campfire = true;
+            flags.was_polite_to_campfire = true;
+        }
+        "Sup man?" if !met => {
+            flags.talked_to_campfire = true;
+        }
+        "Ask what the campfire has seen" if flags.was_polite_to_campfire => {
+            Narrator(Sad): "The fire dims for a moment, as if remembering something older than words.";
+            Campfire(Neutral): "I remember the first Student who ever spoke to me.";
+            choose {
+                "Ask what happened to them" => {}
+                "Never mind" => {}
+            }
+            Campfire(Sad): "...they moved on, same as you will.";
+        }
+        "Ask for a story" => play(cutscene::campfire_story),
+        "Ask Campfire to show CG again" => {
+            if flags.was_polite_to_campfire {
+                show(cg::campfire_vision);
+            } else {
+                Campfire: "The flames don't stir for someone who was rude to them.";
+            }
+        }
+        "Warm your hands" locked_unless(flags.has_firewood, "You need firewood first.") => {}
+        "What's this stupid campfire" => {
+            flags.talked_to_campfire_trash = true;
+        }
+    }
+}
+
+
+// ── Cutscenes ──
+cutscene campfire_story {
+    Narrator(Neutral): "The fire dims, as if settling in to tell a longer story than usual.";
+    Campfire: "Before any Student ever found this clearing, I was just a pile of cold wood.";
+    Campfire(Happy): "...and then someone struck the first spark, and I have been telling stories ever since.";
+    move(Player, (9, 11));
+    Narrator: "You find yourself drawn a little closer, as if the fire pulled you in.";
+
+    choose {
+        "Ask about the embers" => {
+            Campfire: "The embers pulse like a slow heartbeat, holding the last of the warmth.";
+            move(Player, (2, 2));
+        }
+        "Ask about the stars overhead" => {
+            Campfire: "Look up — the same stars watched the very first fire, too.";
+            move(Player, (10, 2));
+        }
+    }
+}
+
+
+cutscene guard_walk {
+    Guard(Happy): "Come, come! Walk with me. Stay close... closer~";
+    follow(Player, Guard);
+    move(Guard, (9, 10));
+    move(Guard, (5, 10));
+    Guard(Neutral): "Now YOU lead. I'll be right behind you. Always. Every single step.";
+    follow(Guard, Player);
+    move(Player, (8, 5));
+    Guard(Sad): "I'm supposed to stay at my post... but you wouldn't leave me here all alone. Would you?";
+
+    choose {
+        "Follow me forever" => {
+            flags.companion.Guard = Some(fluffy);
+        }
+        "Nah, stay here" => {}
+    }
+}

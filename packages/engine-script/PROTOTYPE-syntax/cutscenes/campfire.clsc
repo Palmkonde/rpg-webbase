@@ -1,0 +1,22 @@
+// PROTOTYPE (ticket #41), throwaway. campfire.clsc does `use cutscenes.campfire;`, then play(cutscene::story).
+
+use flags;
+
+cutscene story {
+    Narrator(Neutral): "The fire dims, as if settling in to tell a longer story than usual.";
+    Campfire: "Before any Student ever found this clearing, I was just a pile of cold wood.";
+    Campfire(Happy): "...and then someone struck the first spark, and I have been telling stories ever since.";
+    move(Player, (9, 11));
+    Narrator: "You find yourself drawn a little closer, as if the fire pulled you in.";
+
+    choose {
+        "Ask about the embers" => {
+            Campfire: "The embers pulse like a slow heartbeat, holding the last of the warmth.";
+            move(Player, (2, 2));
+        }
+        "Ask about the stars overhead" => {
+            Campfire: "Look up — the same stars watched the very first fire, too.";
+            move(Player, (10, 2));
+        }
+    }
+}
