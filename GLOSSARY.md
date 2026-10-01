@@ -110,6 +110,14 @@ _Avoid_: Cutscene (differ only in structure — no Dialogue/Choice/Movement step
 The character (or narrator) a line of Dialogue is attributed to. Not necessarily the Entity whose Script produced it — a Script can voice a different character, or an unplaced narrator, within its own Dialogue.
 _Avoid_: Entity (a Speaker need not be a placed, interactable Entity on the Map)
 
+**String Table**:
+The translatable home of Player-facing text: each entry is a key with one text per Locale. A line, choice, or locked reason in a Script either writes its English text in place or names a key from the String Table; only the keyed ones can be translated.
+_Avoid_: Strings file, translation file, dictionary
+
+**Locale**:
+The language the Player reads text in, such as English or Thai. English is the language Scripts are written in; other Locales exist only through the String Table.
+_Avoid_: Language (ambiguous with CodeLeagues Script), region
+
 **Portrait**:
 A static illustration representing a Speaker's appearance in the Dialogue overlay, chosen per line by Expression. Lives independently of a Player/Entity's character spritesheet — a Speaker need not have one, or any in-world visual representation at all.
 _Avoid_: Sprite (a Player/Entity's animated on-map spritesheet is a different concept with a different pipeline — see `adr/0006` vs `adr/0014`), avatar
