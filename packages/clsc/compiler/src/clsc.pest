@@ -1,5 +1,32 @@
-// The language so far: whitespace and `//` comments, nothing else.
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 COMMENT    = _{ "//" ~ (!"\n" ~ ANY)* }
 
-file = { SOI ~ EOI }
+file = { SOI ~ (speaker | enum_decl | cutscene | handler)* ~ EOI }
+
+speaker   = { speaker_keyword ~ name ~ ";" }
+enum_decl = { enum_keyword ~ name ~ "{" ~ name ~ ("," ~ name)* ~ ","? ~ "}" }
+cutscene  = { cutscene_keyword ~ name ~ cast? ~ body }
+handler   = { on_keyword ~ trigger ~ "(" ~ name ~ ")" ~ cast? ~ body }
+trigger   = { "interact" | "enter" }
+cast      = { with_keyword ~ name ~ ("," ~ name)* }
+body      = { "{" ~ statement* ~ "}" }
+
+statement = _{ play | line }
+play      = { "play" ~ "(" ~ "cutscene" ~ "::" ~ name ~ ")" ~ ";" }
+line      = { name ~ ("(" ~ name ~ ")")? ~ ":" ~ text ~ ";" }
+
+// Atomic, so whitespace and `//` inside the quotes are part of the text. Any escape parses, so
+// `parse.rs` can reject one with a message naming it.
+text      = ${ "\"" ~ text_char* ~ "\"" }
+text_char = _{ "\\" ~ ANY | !("\"" | "\\" | "\n") ~ ANY }
+
+// Atomic, so a keyword ends at a word boundary: `speakerNarrator` is a name, not `speaker Narrator`.
+speaker_keyword  = @{ "speaker" ~ !name_char }
+enum_keyword     = @{ "enum" ~ !name_char }
+cutscene_keyword = @{ "cutscene" ~ !name_char }
+on_keyword       = @{ "on" ~ !name_char }
+with_keyword     = @{ "with" ~ !name_char }
+keyword          = @{ ("speaker" | "enum" | "cutscene" | "on" | "with" | "play") ~ !name_char }
+
+name      = @{ !keyword ~ (ASCII_ALPHA | "_") ~ name_char* }
+name_char = _{ ASCII_ALPHANUMERIC | "_" }

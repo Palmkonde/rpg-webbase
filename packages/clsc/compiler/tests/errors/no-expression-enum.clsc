@@ -1,0 +1,5 @@
+speaker Narrator;
+
+on enter(Camp) with Narrator {
+    Narrator(Happy): "Hello."; // error: no `enum Expression` is declared (it belongs in prelude.clsc)
+}

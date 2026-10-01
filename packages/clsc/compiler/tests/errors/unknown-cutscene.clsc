@@ -1,0 +1,5 @@
+cutscene story {}
+
+on enter(Camp) {
+    play(cutscene::stroy); // error: no cutscene named `stroy`
+}

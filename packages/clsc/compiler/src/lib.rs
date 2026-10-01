@@ -1,28 +1,103 @@
 pub mod bytecode;
+mod check;
 pub mod opcodes;
+mod parse;
 
-use pest::Parser as _;
+use parse::{Item, ParseError};
+use pest::error::{ErrorVariant, LineColLocation};
+use pest::Span;
 use std::path::{Path, PathBuf};
 
-#[derive(pest_derive::Parser)]
-#[grammar = "clsc.pest"]
-struct ClscParser;
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Severity {
+    Error,
+    Warning,
+}
 
-/// Compiles every `.clsc` file under `root` as one program (`adr/0032`). Returns the bytecode
-/// file's bytes, or every error rendered for the terminal.
-pub fn compile(root: &Path) -> Result<Vec<u8>, String> {
-    let mut errors = Vec::new();
+#[derive(Debug)]
+pub struct Diagnostic {
+    pub severity: Severity,
+    pub path: String,
+    pub line: usize,
+    pub message: String,
+
+    // `path:line:col`, the source line, a caret and the message, in pest's own format.
+    pub rendered: String,
+}
+
+impl Diagnostic {
+    fn error(path: &str, span: Span<'_>, message: String) -> Self {
+        Self::at(Severity::Error, path, span, message)
+    }
+
+    fn warning(path: &str, span: Span<'_>, message: String) -> Self {
+        Self::at(Severity::Warning, path, span, message)
+    }
+
+    fn at(severity: Severity, path: &str, span: Span<'_>, message: String) -> Self {
+        let label = match severity {
+            Severity::Error => message.clone(),
+            Severity::Warning => format!("warning: {message}"),
+        };
+        let rendered = ParseError::new_from_span(ErrorVariant::CustomError { message: label }, span).with_path(path).to_string();
+
+        Self { severity, path: path.to_owned(), line: span.start_pos().line_col().0, message, rendered }
+    }
+
+    fn from_parse_error(path: &str, error: ParseError) -> Self {
+        let (LineColLocation::Pos((line, _)) | LineColLocation::Span((line, _), _)) = error.line_col;
+        let message = error.variant.message().into_owned();
+
+        Self { severity: Severity::Error, path: path.to_owned(), line, message, rendered: error.with_path(path).to_string() }
+    }
+}
+
+pub struct Compiled {
+    /// `None` when any diagnostic is an error.
+    pub bytecode: Option<Vec<u8>>,
+
+    // Sorted by path, then line.
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+struct SourceFile<'s> {
+    path: String,
+    items: Vec<Item<'s>>,
+}
+
+/// Compiles every `.clsc` file under `root` as one program (`adr/0032`).
+pub fn compile(root: &Path) -> Result<Compiled, String> {
+    let mut sources = Vec::new();
+
     for path in source_files(root)? {
-        let source = std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
-        if let Err(error) = ClscParser::parse(Rule::file, &source) {
-            errors.push(error.with_path(&path.display().to_string()).to_string());
+        let text = std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+        sources.push((path.display().to_string(), text));
+    }
+
+    Ok(compile_sources(&sources))
+}
+
+/// Compiles `(path, text)` pairs as one program; `path` only labels diagnostics.
+pub fn compile_sources(sources: &[(String, String)]) -> Compiled {
+    let mut files = Vec::new();
+    let mut diagnostics = Vec::new();
+
+    for (path, text) in sources {
+        match parse::parse(text) {
+            Ok(items) => files.push(SourceFile { path: path.clone(), items }),
+            Err(error) => diagnostics.push(Diagnostic::from_parse_error(path, error)),
         }
     }
-    if errors.is_empty() {
-        Ok(bytecode::encode())
-    } else {
-        Err(errors.join("\n\n"))
+
+    // Names can't be resolved against a file that didn't parse.
+    if diagnostics.is_empty() {
+        diagnostics = check::check(&files);
     }
+
+    diagnostics.sort_by(|a, b| (&a.path, a.line).cmp(&(&b.path, b.line)));
+    let failed = diagnostics.iter().any(|diagnostic| diagnostic.severity == Severity::Error);
+
+    Compiled { bytecode: (!failed).then(|| bytecode::encode(&files)), diagnostics }
 }
 
 /// Sorted, so a compile never depends on directory order.
@@ -49,13 +124,14 @@ mod tests {
     use super::compile;
 
     #[test]
-    fn a_parse_error_in_a_nested_file_fails_the_compile_at_its_path_line_and_column() {
+    fn compile_reads_clsc_files_in_nested_folders() {
         let root = std::env::temp_dir().join(format!("clsc-test-{}", std::process::id()));
         std::fs::create_dir_all(root.join("story")).unwrap();
         std::fs::write(root.join("story/guard.clsc"), "// fine\nnot a script\n").unwrap();
 
-        let error = compile(&root).unwrap_err();
+        let compiled = compile(&root).unwrap();
         std::fs::remove_dir_all(&root).unwrap();
-        assert!(error.contains("story/guard.clsc:2:1"), "{error}");
+
+        assert!(compiled.diagnostics[0].rendered.contains("story/guard.clsc:2:1"), "{}", compiled.diagnostics[0].rendered);
     }
 }

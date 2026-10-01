@@ -1,0 +1,2 @@
+// A whole-program error: the two definitions are in different files.
+on enter(Camp) {} // error: two handlers for `on enter(Camp)`

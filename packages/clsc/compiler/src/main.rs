@@ -39,7 +39,15 @@ fn exit_code(result: Result<(), String>) -> ExitCode {
 /// Writes `out` only when the compile succeeds, via a rename so a page reload never fetches a
 /// half-written file.
 fn build(root: &Path, out: &Path) -> Result<(), String> {
-    let bytes = clsc::compile(root)?;
+    let compiled = clsc::compile(root)?;
+
+    for diagnostic in &compiled.diagnostics {
+        eprintln!("{}", diagnostic.rendered);
+    }
+
+    let Some(bytes) = compiled.bytecode else {
+        return Err("clsc: compile failed".to_owned());
+    };
 
     if let Some(dir) = out.parent() {
         std::fs::create_dir_all(dir).map_err(|error| format!("{}: {error}", dir.display()))?;

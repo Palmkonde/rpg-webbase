@@ -1,0 +1,8 @@
+enum Expression { Neutral }
+speaker Narrator;
+speaker Campfire;
+
+cutscene story with Narrator {
+    Narrator: "The fire dims.";
+    Campfire: "Hello."; // error: `Campfire` is not in this block's `with` list
+}

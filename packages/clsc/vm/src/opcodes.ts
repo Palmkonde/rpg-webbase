@@ -2,6 +2,11 @@
 
 export const Opcode = {
   Return: 0,
+  Line: 1,
+  Play: 2,
 } as const
 
 export type Opcode = (typeof Opcode)[keyof typeof Opcode]
+
+// How many u32 operands follow each opcode, indexed by opcode byte.
+export const OPERAND_COUNTS: readonly number[] = [0, 3, 1]

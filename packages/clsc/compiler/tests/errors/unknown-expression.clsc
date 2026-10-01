@@ -1,0 +1,6 @@
+enum Expression { Neutral, Happy, Sad }
+speaker Narrator;
+
+on enter(Camp) with Narrator {
+    Narrator(Angy): "Grr."; // error: unknown Expression `Angy` (expected Neutral | Happy | Sad)
+}

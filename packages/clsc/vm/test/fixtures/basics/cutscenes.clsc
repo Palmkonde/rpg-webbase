@@ -1,0 +1,25 @@
+on interact(Campfire) with Campfire {
+    Campfire: "Want a story?";
+    play(cutscene::story);
+    Campfire: "The end.";
+}
+
+cutscene story with Narrator {
+    Narrator: "Once upon a time...";
+    play(cutscene::embers);
+    Narrator: "...and the fire still burns.";
+}
+
+cutscene embers with Campfire {
+    Campfire(Sad): "The embers fade.";
+}
+
+on enter(Embers) {
+    play(cutscene::embers);
+}
+
+on enter(Quiet) {
+    play(cutscene::silence);
+}
+
+cutscene silence {}

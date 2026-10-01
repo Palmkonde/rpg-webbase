@@ -1,0 +1,4 @@
+on enter(Camp) {} // error: two handlers for `on enter(Camp)`
+
+// `interact` keeps its own namespace, so this one doesn't clash.
+on interact(Camp) {}

@@ -1,0 +1,7 @@
+enum Expression { Happy, Sad }
+speaker Narrator;
+
+on enter(Camp) with Narrator {
+    Narrator(Happy): "Hello.";
+    Narrator: "Goodbye."; // error: a line without an Expression shows `Neutral`, but `enum Expression` has no `Neutral`
+}
