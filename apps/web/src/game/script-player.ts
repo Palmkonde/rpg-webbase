@@ -3,9 +3,11 @@ import { currentStudentId, flagStore, runOnce } from '../state/flags.ts'
 import type { CgPlayback } from './use-cg-playback.ts'
 import type { Companions } from './use-companions.ts'
 import type { EngineHandle } from '@game-engine/engine-core'
+import type { Program } from '@game-engine/clsc'
 import type { RefObject } from 'react'
 import type { ScriptKind } from '../scripts/run-script.ts'
 import { isActiveCompanion } from '../state/companions.ts'
+import { loadProgram } from '@game-engine/clsc'
 import { playCutscene } from './play-cutscene.ts'
 import { runScript } from '../scripts/run-script.ts'
 
@@ -30,9 +32,12 @@ async function persistChoiceFlags(choice: Choice): Promise<boolean> {
   }
 }
 
-// Turns a ScriptResult (Dialogue, CG, or Cutscene) into what the Player sees; owns the in-flight Cutscene handle.
+const SCRIPTS_URL = '/generated/scripts.clscb'
+
+// Turns a ScriptResult (Dialogue, CG, or Cutscene) into what the Player sees; owns the in-flight Cutscene handle and the compiled Scripts.
 export class ScriptPlayer {
   private cutscene: ReturnType<typeof playCutscene> | undefined
+  private program: Program | undefined
   private readonly engineRef: RefObject<EngineHandle | undefined>
   private readonly playCgById: CgPlayback['playCgById']
   private readonly ui: ScriptPlayerUi
@@ -41,6 +46,15 @@ export class ScriptPlayer {
     this.engineRef = engineRef
     this.playCgById = playCgById
     this.ui = ui
+  }
+
+  // Called once at startup, the same way Maps are fetched (adr/0032); a missing or stale file throws, failing startup.
+  public fetchProgram = async (): Promise<void> => {
+    const response = await fetch(SCRIPTS_URL)
+    if (!response.ok) {
+      throw new Error(`Script bytecode ${SCRIPTS_URL} is missing (HTTP ${response.status}): run \`npm run dev\`, or \`npm run clsc\` in apps/web`)
+    }
+    this.program = loadProgram(new Uint8Array(await response.arrayBuffer()))
   }
 
   public advanceCutscene = (): void => { this.cutscene?.advance() }

@@ -3,8 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "main": "vm/src/program.ts",
+  "types": "vm/src/program.ts",
   "scripts": {
-    "test": "cargo test --manifest-path compiler/Cargo.toml && node --test 'vm/test/*.test.ts'",
+    "clsc": "cargo run --quiet --manifest-path compiler/Cargo.toml --",
+    "test": "cargo test --manifest-path compiler/Cargo.toml && for root in vm/test/fixtures/*/; do npm run --silent clsc -- build \"$root\" \"vm/test/generated/$(basename \"$root\").clscb\" || exit 1; done && node --test 'vm/test/*.test.ts'",
     "typecheck": "tsc --noEmit",
     "lint": "cargo clippy --manifest-path compiler/Cargo.toml --all-targets -- -D warnings"
   },

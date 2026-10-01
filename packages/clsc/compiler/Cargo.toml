@@ -7,3 +7,4 @@ publish = false
 [dependencies]
 notify = "8"
 pest = "2"
+pest_derive = "2"

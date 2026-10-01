@@ -19,6 +19,7 @@ export interface ScriptPlayback {
   selectChoice: (choice: Choice) => Promise<void>
   runInteraction: (entityId: string, isStale: () => boolean) => Promise<void>
   runZoneEntered: (zoneId: string, isStale: () => boolean) => Promise<void>
+  fetchProgram: () => Promise<void>
 }
 
 export function useScriptPlayback(
@@ -37,8 +38,8 @@ export function useScriptPlayback(
     [engineRef, playCgById, syncCompanions],
   )
 
-  const { dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered } = player
+  const { dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered, fetchProgram } = player
   return {
-    dialogue, cutsceneLine, cutsceneChoices, enginePaused, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered,
+    dialogue, cutsceneLine, cutsceneChoices, enginePaused, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered, fetchProgram,
   }
 }

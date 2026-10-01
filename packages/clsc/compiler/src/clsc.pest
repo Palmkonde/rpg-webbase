@@ -1,0 +1,5 @@
+// The language so far: whitespace and `//` comments, nothing else.
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT    = _{ "//" ~ (!"\n" ~ ANY)* }
+
+file = { SOI ~ EOI }
