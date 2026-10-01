@@ -23,6 +23,17 @@ Tickets for this repo live as GitHub issues on `origin` (`Palmkonde/rpg-webbase`
 - **Comment on a ticket**: `gh issue comment <number> --body "..."`.
 - **Complete a ticket**: include `Closes #<number>` in the implementing commit's message — this repo commits straight to `main`, so GitHub auto-closes the issue when that commit lands. No separate "update ticket status" commit, and no live-ticking of acceptance-criteria checkboxes as work progresses — the checklist in the issue body is the definition of done, verified before the closing commit; the issue's open/closed state is the only "is this finished" signal.
 
+## Wayfinding operations
+
+For `/wayfinder` efforts. The rules above still hold, with these differences:
+
+- **Map**: one issue labelled `wayfinder:map`, with the body in the wayfinder skill's map shape.
+- **Child ticket**: a decision ticket, labelled one of `wayfinder:research` / `prototype` / `grilling` / `task`. Its body is `## Question` followed by `## Blocked by` (same bullet convention and `blocked`/`ready-for-agent` labels as above), not `ticket.md`. Link it to the map as a GitHub sub-issue: `gh api -X POST repos/Palmkonde/rpg-webbase/issues/<map>/sub_issues -F sub_issue_id=$(gh api repos/Palmkonde/rpg-webbase/issues/<child> --jq .id)`.
+- **Frontier**: `gh api repos/Palmkonde/rpg-webbase/issues/<map>/sub_issues --jq '.[] | select(.state=="open" and .assignees==[]) | "#\(.number) \(.title) \([.labels[].name])"'`, keeping the ones labelled `ready-for-agent`.
+- **Claim**: `gh issue edit <n> --add-assignee @me` before any work.
+- **Resolve**: post the answer with `gh issue comment`, then `gh issue close <n>`, then add a line to the map's `## Decisions so far`. Unblock dependents as in "Unblock a ticket" above.
+- Build tickets that come out of a map (via `/to-tickets`) use `ticket.md` as usual, and are also linked as sub-issues of the map.
+
 ## When a skill says "publish to the issue tracker"
 
 Create a GitHub issue (ticket-only — see spec note above).

@@ -36,6 +36,10 @@ _Avoid_: NPC, object, actor
 An Entity that has a Character: registered and animated the same way the Player is, and eligible to be the target of a Cutscene's Movement or Follow step.
 _Avoid_: NPC, movable Entity, animated Entity
 
+**Mover**:
+Anything a Cutscene can walk: the Player or a Character Entity. A Prop Entity or an unplaced narrator can be a Speaker but never a Mover.
+_Avoid_: Actor, walker, Character (the appearance a Mover walks with, not the Mover itself)
+
 **Companion**:
 A Character Entity that keeps chasing the Player outside any Cutscene, on every Map the Player visits, for as long as a Flag says so. It never blocks the Player. The Player can dismiss it whenever they have control, but can't talk to it. Any Character Entity can become one; a Script decides when.
 _Avoid_: Follower (the role inside a Follow step), party member, tagalong
@@ -49,7 +53,7 @@ The Map coordinate the Player appears at on entering a Map, whether as a Map's d
 _Avoid_: Start position, entry tile
 
 **Zone**:
-A Tiled-authored rectangular region on a Map whose Script runs the moment the Player's position transitions into it — not an explicit action, unlike an Entity Interaction. Only the Player's own movement counts: a Player walked into a Zone by a Cutscene (a Movement or Follow step) doesn't trigger it, and that entry is dropped, not saved for later. Plays at most once per Student, gated the same way a CG/Cutscene already is.
+A Tiled-authored rectangular region on a Map whose Script runs the moment the Player's position transitions into it — not an explicit action, unlike an Entity Interaction. Only the Player's own movement counts: a Player walked into a Zone by a Cutscene (a Movement or Follow step) doesn't trigger it, and that entry is dropped, not saved for later. Plays at most once per Student, gated by a Flag the Host keeps.
 _Avoid_: Trigger area, collision box (this project has no pixel-level collision concept — the Player's position is always a single grid tile)
 
 ### Movement
@@ -82,12 +86,16 @@ _Avoid_: Callback, action, message
 Host-authored code that runs when a specific Engine Event fires for a specific Entity, Zone, or Map, producing Dialogue, a Cutscene, or a CG. The Engine has no knowledge that Scripts exist.
 _Avoid_: Event handler, callback, quest (a Quest is a larger, not-yet-designed concept a Script may someday drive, not what a Script is itself)
 
+**CodeLeagues Script**:
+The home-grown language Scripts are written in, stored as `.clsc` files. It is statically typed: every Flag, Speaker, Mover, Character, Expression, and Cutscene or CG it names is declared and checked before the game runs.
+_Avoid_: DSL, `.cls`
+
 **Dialogue**:
 Text and Player-facing choices that a Script shows as its output, rendered entirely by the Host. Each line carries a Speaker and may show a Portrait. Never takes control away from the Player.
 _Avoid_: Cutscene (a separate concept, below, that always takes control from the Player — Dialogue never does), text box
 
 **Cutscene**:
-A Script that takes control away from the Player for its duration: a sequence of Dialogue, Choice, and Movement steps, during which the Player can't move or interact with anything else. Plays at most once per Student, gated by a Flag.
+A Script that takes control away from the Player for its duration: a sequence of Dialogue, Choice, and Movement steps, during which the Player can't move or interact with anything else. Plays every time it's started, unless it's marked once-only; then a named Flag stops it after its first full play.
 _Avoid_: Dialogue (never takes control from the Player; a Cutscene always does), Scene (Phaser's own rendering-container concept, distinct from this domain)
 
 **Follow step**:
@@ -95,7 +103,7 @@ A Cutscene step in which one character (the Player or a Character Entity, the *f
 _Avoid_: Escort, chase, target (a Movement step's *target* is a destination tile, not a character)
 
 **CG**:
-A full-screen illustrated slideshow — static art and captions the Player advances by clicking, and can skip entirely. Has no Dialogue/Choice/Movement steps and never takes control through them the way a Cutscene does; that structural difference, not what triggers it, is what separates the two. Freezes the Player for its duration the same way a Cutscene does whenever a Script plays one mid-game, and plays at most once per Student.
+A full-screen illustrated slideshow — static art and captions the Player advances by clicking, and can skip entirely. Has no Dialogue/Choice/Movement steps and never takes control through them the way a Cutscene does; that structural difference, not what triggers it, is what separates the two. Freezes the Player for its duration the same way a Cutscene does whenever a Script plays one mid-game. Like a Cutscene, it plays every time unless it's marked once-only.
 _Avoid_: Cutscene (differ only in structure — no Dialogue/Choice/Movement steps — not in trigger; a CG can be a Script's output the same way a Cutscene can), splash screen
 
 **Speaker**:
