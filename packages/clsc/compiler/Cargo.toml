@@ -1,0 +1,9 @@
+[package]
+name = "clsc"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+notify = "8"
+pest = "2"

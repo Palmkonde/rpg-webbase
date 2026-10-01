@@ -182,4 +182,7 @@ next-env.d.ts
 #
 assets/
 
+# clsc compiler build output
+packages/clsc/compiler/target/
+
 .vscode/

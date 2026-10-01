@@ -1,0 +1,14 @@
+{
+  "name": "@game-engine/clsc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "cargo test --manifest-path compiler/Cargo.toml && node --test 'vm/test/*.test.ts'",
+    "typecheck": "tsc --noEmit",
+    "lint": "cargo clippy --manifest-path compiler/Cargo.toml --all-targets -- -D warnings"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
