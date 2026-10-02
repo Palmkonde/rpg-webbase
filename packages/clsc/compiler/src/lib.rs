@@ -73,12 +73,16 @@ struct SourceFile<'s> {
 
 /// Compiles every `.clsc` file under `root` as one program (`adr/0032`), checking the Flags in
 /// the seed at `store`, when given, against their declarations.
+///
+/// # Errors
+///
+/// When `root`, a file under it or the seed at `store` can't be read, or the seed isn't a Flag seed.
 pub fn compile(root: &Path, store: Option<&Path>) -> Result<Compiled, String> {
     let mut sources = Vec::new();
 
     for path in source_files(root)? {
         let text = std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
-        let relative = path.strip_prefix(root).expect("source_files lists files under the root");
+        let relative = path.strip_prefix(root).map_err(|error| format!("{}: {error}", path.display()))?;
         sources.push((relative.display().to_string(), text));
     }
 
@@ -87,6 +91,7 @@ pub fn compile(root: &Path, store: Option<&Path>) -> Result<Compiled, String> {
 }
 
 /// Compiles `(path, text)` pairs as one program, each `path` relative to the scripts `root`.
+#[must_use]
 pub fn compile_sources(root: &Path, sources: &[(String, String)], seed: Option<&FlagSeed>) -> Compiled {
     let mut files = Vec::new();
     let mut diagnostics = Vec::new();

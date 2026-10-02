@@ -9,3 +9,10 @@ notify = "8"
 pest = "2"
 pest_derive = "2"
 serde_json = "1"
+
+[lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+cargo = { level = "deny", priority = -1 }
+
+multiple_crate_versions = "allow"

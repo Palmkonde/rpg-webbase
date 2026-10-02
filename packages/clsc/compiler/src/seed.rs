@@ -7,7 +7,7 @@ pub struct FlagSeed {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) enum Stored {
+pub enum Stored {
     Bool(bool),
     String,
 
@@ -16,7 +16,7 @@ pub(crate) enum Stored {
 }
 
 impl Stored {
-    pub(crate) fn describe(self) -> &'static str {
+    pub const fn describe(self) -> &'static str {
         match self {
             Self::Bool(true) => "true",
             Self::Bool(false) => "false",
@@ -27,6 +27,9 @@ impl Stored {
 }
 
 impl FlagSeed {
+    /// # Errors
+    ///
+    /// When `json` isn't JSON, or isn't an object holding a `flags` object.
     pub fn parse(json: &str) -> Result<Self, String> {
         let Value::Object(mut seed) = serde_json::from_str(json).map_err(|error| error.to_string())? else {
             return Err("a Flag seed is a JSON object".to_owned());
@@ -42,7 +45,7 @@ impl FlagSeed {
     }
 }
 
-fn stored(value: &Value) -> Stored {
+const fn stored(value: &Value) -> Stored {
     match value {
         Value::Bool(value) => Stored::Bool(*value),
         Value::Null => Stored::Other("null"),

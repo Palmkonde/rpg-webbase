@@ -1,7 +1,8 @@
-/// Indexed by opcode byte: each opcode's name and how many u32 operands follow it. `build.rs`
-/// includes this file to generate the VM's `vm/src/opcodes.ts`, so the compiler and the VM can't
-/// disagree (`adr/0031`). A Flag operand is a Flag table index, and a target is an instruction
-/// index in the same block.
+/// Indexed by opcode byte: each opcode's name and how many u32 operands follow it.
+///
+/// `build.rs` includes this file to generate the VM's `vm/src/opcodes.ts`, so the compiler and
+/// the VM can't disagree (`adr/0031`). A Flag operand is a Flag table index, and a target is an
+/// instruction index in the same block.
 pub const OPCODES: &[(&str, usize)] = &[
     // Pops the current frame.
     ("Return", 0),

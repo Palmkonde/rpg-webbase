@@ -27,7 +27,7 @@ pub enum CastKind {
 }
 
 impl CastKind {
-    pub fn name(self) -> &'static str {
+    pub const fn name(self) -> &'static str {
         match self {
             Self::Speaker => "Speaker",
             Self::Mover => "Mover",
@@ -68,7 +68,7 @@ pub enum BlockKind {
 
 impl BlockKind {
     /// How a command's `in` list, the bytecode and `clsc disasm` name the kind.
-    pub fn word(self) -> &'static str {
+    pub const fn word(self) -> &'static str {
         match self {
             Self::Handler(_) => "handler",
             Self::Cutscene => "cutscene",
@@ -83,7 +83,7 @@ pub enum Trigger {
 }
 
 impl Trigger {
-    pub fn keyword(self) -> &'static str {
+    pub const fn keyword(self) -> &'static str {
         match self {
             Self::Interact => "interact",
             Self::Enter => "enter",
@@ -100,7 +100,7 @@ pub enum Statement<'s> {
     Command { name: Span<'s>, args: Vec<Argument<'s>> },
 
     // An `else if` is an `otherwise` holding one `If`.
-    If { condition: Expr<'s>, then: Vec<Statement<'s>>, otherwise: Vec<Statement<'s>> },
+    If { condition: Expr<'s>, then: Vec<Self>, otherwise: Vec<Self> },
     Choose(Vec<Choice<'s>>),
 }
 
@@ -119,7 +119,7 @@ pub enum Argument<'s> {
 }
 
 impl<'s> Argument<'s> {
-    pub fn span(&self) -> Span<'s> {
+    pub const fn span(&self) -> Span<'s> {
         match self {
             Self::Tile { span, .. } | Self::Expr(Expr { span, .. }) => *span,
         }
@@ -313,7 +313,7 @@ fn expr(pair: Pair<'_, Rule>) -> Expr<'_> {
     Expr { span, kind }
 }
 
-fn is_keyword(rule: Rule) -> bool {
+const fn is_keyword(rule: Rule) -> bool {
     matches!(rule, Rule::set_keyword | Rule::if_keyword | Rule::else_keyword | Rule::choose_keyword)
 }
 

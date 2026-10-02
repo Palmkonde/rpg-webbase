@@ -1,6 +1,8 @@
-//! The bytecode file's byte layout. Every number is little-endian, and every `u32` that names a
-//! string is an index into the string pool. Bump `FORMAT_VERSION` whenever this layout changes
-//! (`docs/spec/clsc.md` → Bytecode contract).
+//! The bytecode file's byte layout.
+//!
+//! Every number is little-endian, and every `u32` that names a string is an index into the string
+//! pool. Bump `FORMAT_VERSION` whenever this layout changes (`docs/spec/clsc.md` → Bytecode
+//! contract).
 //!
 //! | field          | layout                                                                  |
 //! |----------------|-------------------------------------------------------------------------|
@@ -324,8 +326,14 @@ impl BlockCode<'_, '_> {
     }
 }
 
-/// Prints a bytecode file as text: the header, string pool, Flag table, command table, blocks and handler index. Operands
+/// Prints a bytecode file as text.
+///
+/// That's the header, string pool, Flag table, command table, blocks and handler index. Operands
 /// print as raw numbers, so a string operand is an index into the pool printed above.
+///
+/// # Errors
+///
+/// When the bytes aren't a bytecode file of this `FORMAT_VERSION`, or are truncated or malformed.
 pub fn disasm(bytes: &[u8]) -> Result<String, String> {
     let mut reader = Reader { bytes, offset: 0 };
     let mut out = String::new();

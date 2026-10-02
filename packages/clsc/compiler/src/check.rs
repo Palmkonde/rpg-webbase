@@ -22,7 +22,7 @@ enum Type {
 }
 
 impl Type {
-    fn name(self) -> &'static str {
+    const fn name(self) -> &'static str {
         match self {
             Self::Bool => "bool",
             Self::Character => "Character?",
@@ -38,7 +38,7 @@ enum Role {
 }
 
 impl Role {
-    fn name(self) -> &'static str {
+    const fn name(self) -> &'static str {
         match self {
             Self::Speaker => "Speaker",
             Self::Mover => "Mover",
@@ -394,7 +394,7 @@ impl<'s> BlockChecker<'_, 's> {
 
     /// `name`'s declaration, if it's in `declared` and in this file's scope: declared in this file,
     /// a reserved module or a module it `use`s, and not `_private` to another. Otherwise reports
-    /// why not, as `<unknown> \`name\`` when it's declared nowhere.
+    /// why not, prefixing the name with `unknown` when it's declared nowhere.
     fn resolve_or_report<T: Copy>(&mut self, name: Span<'_>, declared: &HashMap<&str, Declared<'_, T>>, unknown: &str) -> Option<T> {
         let message = match declared.get(name.as_str()).copied() {
             None => format!("{unknown} `{}`", name.as_str()),

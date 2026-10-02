@@ -104,7 +104,7 @@ fn watch(root: &Path, out: &Path, store: Option<&Path>) -> Result<(), String> {
     if let Some(store) = store {
         // Its folder, not the file: an editor that saves by replacing the file would end a watch on it. A
         // save to a sibling only costs a rebuild.
-        let folder = store.parent().filter(|folder| !folder.as_os_str().is_empty()).unwrap_or(Path::new("."));
+        let folder = store.parent().filter(|folder| !folder.as_os_str().is_empty()).unwrap_or_else(|| Path::new("."));
         watcher.watch(folder, RecursiveMode::NonRecursive).map_err(|error| format!("clsc: {}: {error}", folder.display()))?;
     }
 
