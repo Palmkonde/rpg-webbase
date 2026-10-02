@@ -11,6 +11,10 @@ export function companionFlag(entityId: string): string {
   return `${COMPANION_FLAG_PREFIX}${entityId}`
 }
 
+export function isCompanionFlag(name: string): boolean {
+  return name.startsWith(COMPANION_FLAG_PREFIX)
+}
+
 // A Companion Flag holds its characterId while active, `false` once dismissed (adr/0028).
 export function isActiveCompanion(flags: Readonly<Flags>, entityId: string): boolean {
   const value = flags[companionFlag(entityId)]
@@ -30,7 +34,7 @@ function endChase(engine: CompanionEngine, entityId: string): void {
 
 function companionEntityIds(flags: Readonly<Flags>): string[] {
   return Object.keys(flags)
-    .filter((key) => key.startsWith(COMPANION_FLAG_PREFIX))
+    .filter((key) => isCompanionFlag(key))
     .map((key) => key.slice(COMPANION_FLAG_PREFIX.length))
 }
 

@@ -1,7 +1,8 @@
 'use client'
 
 import { currentLocale, resolveText } from '../state/strings.ts'
-import type { ScriptLine } from '../game/script-player.ts'
+import { ScriptChoices } from './script-choices.tsx'
+import type { ScriptPrompt } from '../game/script-player.ts'
 import { resolvePortrait } from '../state/portraits.ts'
 
 // The one overlay for every VM run (adr/0030); the TS-era Dialogue and Cutscene overlays stay only until the last TS Script is deleted.
@@ -58,27 +59,33 @@ const CLOSE_LABEL = 'Close'
 
 // Dismiss shows only while not frozen: a Cutscene or CG has control of the Player until it unfreezes (adr/0030).
 export function ScriptOverlay({
-  line,
+  prompt,
   frozen,
   onAdvance,
+  onChoose,
   onDismiss,
 }: {
-  line: ScriptLine
+  prompt: ScriptPrompt
   frozen: boolean
   onAdvance: () => void
+  onChoose: (index: number) => void
   onDismiss: () => void
 }): React.ReactElement {
-  const portrait = resolvePortrait(line.speaker, line.expression)
+  const portrait = prompt.type === 'line' ? resolvePortrait(prompt.speaker, prompt.expression) : undefined
 
   return (
     <div style={OVERLAY_STYLE}>
-      <button onClick={onAdvance} style={LINE_BUTTON_STYLE} type="button">
-        {/* Plain `<img>`, not `next/image`: `react/forbid-component-props` forbids passing `style` to `Image`. */}
-        {/* oxlint-disable-next-line next/no-img-element */}
-        {portrait !== undefined && <img alt="" height={PORTRAIT_SIZE} src={portrait} style={PORTRAIT_STYLE} width={PORTRAIT_SIZE} />}
-        <span style={SPEAKER_LABEL_STYLE}>{line.speaker}</span>
-        <span style={LINE_TEXT_STYLE}>{resolveText(line, currentLocale)}</span>
-      </button>
+      {prompt.type === 'line'
+        ? (
+          <button onClick={onAdvance} style={LINE_BUTTON_STYLE} type="button">
+            {/* Plain `<img>`, not `next/image`: `react/forbid-component-props` forbids passing `style` to `Image`. */}
+            {/* oxlint-disable-next-line next/no-img-element */}
+            {portrait !== undefined && <img alt="" height={PORTRAIT_SIZE} src={portrait} style={PORTRAIT_STYLE} width={PORTRAIT_SIZE} />}
+            <span style={SPEAKER_LABEL_STYLE}>{prompt.speaker}</span>
+            <span style={LINE_TEXT_STYLE}>{resolveText(prompt, currentLocale)}</span>
+          </button>
+        )
+        : <ScriptChoices choices={prompt.choices} onChoose={onChoose} />}
       {!frozen && (
         <button onClick={onDismiss} type="button">
           {CLOSE_LABEL}

@@ -1,4 +1,4 @@
-import { activeCompanionIds, syncCompanions } from '../src/state/companions.ts'
+import { activeCompanionIds, isCompanionFlag, syncCompanions } from '../src/state/companions.ts'
 import type { CompanionEngine } from '../src/state/companions.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
@@ -62,4 +62,8 @@ test('activeCompanionIds lists only the Companions whose Flag holds a Character'
   const active = activeCompanionIds({ 'companion:Guard': 'fluffy', 'companion:Old': false, 'companion:Blank': '', tutorial_seen: true })
 
   assert.deepEqual(active, ['Guard'])
+})
+
+test('isCompanionFlag holds for a companion: Flag of any value, and for nothing else', () => {
+  assert.deepEqual(['companion:Guard', 'Guard', 'guard-walk_seen'].map((name) => isCompanionFlag(name)), [true, false, false])
 })
