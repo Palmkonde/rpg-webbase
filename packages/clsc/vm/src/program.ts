@@ -1,18 +1,19 @@
-import type { Block, Flags, Trigger } from './run.ts'
+import type { Block, FlagDeclaration, Flags, Trigger } from './run.ts'
 import { OPERAND_COUNTS } from './opcodes.ts'
 import { Run } from './run.ts'
 
-export type { Flags, Output, Run, Trigger } from './run.ts'
+export type { Flags, Output, Run, ShownChoice, Trigger } from './run.ts'
 
 // The byte layout is documented, and owned, by the compiler's `bytecode.rs`.
 const MAGIC = 'CLSC'
 
 // Hand-written, not generated from Rust: this is the layout this decoder reads, so a file from a newer or older compiler fails loudly.
-export const FORMAT_VERSION = 2
+export const FORMAT_VERSION = 3
 
 // Decoded by position, as `bytecode.rs` writes them.
 const TRIGGERS: readonly Trigger[] = ['interact', 'enter']
 const BLOCK_KINDS: readonly Block['kind'][] = ['handler', 'cutscene']
+const FLAG_TYPES = ['bool'] as const
 
 const REBUILD = 'rebuild it with `clsc build`'
 
@@ -74,6 +75,13 @@ function readEnum<T>(table: readonly T[], index: number, what: string): T {
   return table[index]
 }
 
+// The type is checked but not kept: `bool` is the only Flag type, so a run checks a stored value with `typeof`.
+function readFlag(reader: Reader, strings: readonly string[]): FlagDeclaration {
+  const name = strings[reader.u32()]
+  readEnum(FLAG_TYPES, reader.u8(), 'Flag type')
+  return { name, default: reader.u32() === 1 }
+}
+
 function readBlock(reader: Reader): Block {
   const kind = readEnum(BLOCK_KINDS, reader.u8(), 'block kind')
 
@@ -114,6 +122,7 @@ export function loadProgram(bytes: Uint8Array): Program {
 
   const decoder = new TextDecoder('utf-8', { fatal: true })
   const strings = reader.list(() => decoder.decode(reader.take(reader.u32())))
+  const flags = reader.list(() => readFlag(reader, strings))
   const blocks = reader.list(() => readBlock(reader))
   const handlers = new Map(reader.list(() => readHandler(reader, strings, blocks)))
   if (reader.remaining > 0) {
@@ -121,9 +130,9 @@ export function loadProgram(bytes: Uint8Array): Program {
   }
 
   return {
-    start: (trigger, id) => {
+    start: (trigger, id, snapshot) => {
       const block = handlers.get(handlerKey(trigger, id))
-      return block && new Run(strings, blocks, block)
+      return block && new Run({ strings, flags, blocks }, block, snapshot)
     },
   }
 }

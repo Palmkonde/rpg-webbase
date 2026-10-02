@@ -32,3 +32,11 @@ test('a file with bytes after its handler index is refused', async () => {
   const bytes = await compiled('basics')
   assert.throws(() => loadProgram(new Uint8Array([...bytes, 0])), { message: `The bytecode has 1 unexpected bytes after its handler index: ${REBUILD}` })
 })
+
+test('a Flag of an unknown type is refused', async () => {
+  const bytes = await compiled('one-flag')
+
+  // Magic, version, the pool holding "lit", the Flag count and its name come first.
+  bytes[4 + 2 + 4 + 4 + 3 + 4 + 4] = 1
+  assert.throws(() => loadProgram(bytes), { message: `The bytecode has an unknown Flag type 1: ${REBUILD}` })
+})

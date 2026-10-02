@@ -1,0 +1,2 @@
+// One Flag and nothing else, so a test can find its type byte.
+flag lit: bool = true;

@@ -11,6 +11,7 @@ pub type ParseError = pest::error::Error<Rule>;
 pub enum Item<'s> {
     Speaker(Span<'s>),
     Enum { name: Span<'s>, variants: Vec<Span<'s>> },
+    Flag { name: Span<'s>, ty: Span<'s>, default: bool },
     Block(Block<'s>),
 }
 
@@ -47,6 +48,35 @@ impl Trigger {
 pub enum Statement<'s> {
     Line { speaker: Span<'s>, expression: Option<Span<'s>>, text: String },
     Play(Span<'s>),
+    Set { flag: Span<'s>, value: Expr<'s> },
+
+    // An `else if` is an `otherwise` holding one `If`.
+    If { condition: Expr<'s>, then: Vec<Statement<'s>>, otherwise: Vec<Statement<'s>> },
+    Choose(Vec<Choice<'s>>),
+}
+
+pub struct Choice<'s> {
+    pub text: String,
+
+    // Hides the choice when false, or shows it locked with `locked` as the reason.
+    pub condition: Option<Expr<'s>>,
+    pub locked: Option<String>,
+    pub body: Vec<Statement<'s>>,
+}
+
+pub enum Expr<'s> {
+    Bool(bool),
+    Flag(Span<'s>),
+    Not(Box<Expr<'s>>),
+    Binary(Box<Expr<'s>>, BinaryOp, Box<Expr<'s>>),
+}
+
+#[derive(Clone, Copy)]
+pub enum BinaryOp {
+    Or,
+    And,
+    Equal,
+    NotEqual,
 }
 
 pub fn parse(source: &str) -> Result<Vec<Item<'_>>, ParseError> {
@@ -61,6 +91,11 @@ fn item(pair: Pair<'_, Rule>) -> Result<Item<'_>, ParseError> {
             let names = names(pair);
             Item::Enum { name: names[0], variants: names[1..].to_vec() }
         }
+        Rule::flag_decl => {
+            let default = pair.clone().into_inner().any(|part| part.as_rule() == Rule::bool_literal && part.as_str() == "true");
+            let names = names(pair);
+            Item::Flag { name: names[0], ty: names[1], default }
+        }
         _ => Item::Block(block(pair)?),
     })
 }
@@ -73,30 +108,88 @@ fn block(pair: Pair<'_, Rule>) -> Result<Block<'_>, ParseError> {
             Rule::trigger => block.kind = BlockKind::Handler(Trigger::Enter),
             Rule::name => block.name = part.as_span(),
             Rule::cast => block.cast = names(part),
-            Rule::body => block.body = part.into_inner().map(statement).collect::<Result<_, _>>()?,
+            Rule::body => block.body = body(part)?,
             _ => {}
         }
     }
     Ok(block)
 }
 
+fn body(pair: Pair<'_, Rule>) -> Result<Vec<Statement<'_>>, ParseError> {
+    pair.into_inner().map(statement).collect()
+}
+
 fn statement(pair: Pair<'_, Rule>) -> Result<Statement<'_>, ParseError> {
     let rule = pair.as_rule();
-    let mut names = Vec::new();
-    let mut text = String::new();
+    let mut parts = pair.into_inner().filter(|part| !is_keyword(part.as_rule()));
+    let mut next = || parts.next().expect("the grammar gives every statement its parts");
+
+    Ok(match rule {
+        Rule::play => Statement::Play(next().as_span()),
+        Rule::set => Statement::Set { flag: next().as_span(), value: expr(next()) },
+        Rule::if_statement => {
+            let condition = expr(next());
+            let then = body(next())?;
+            let otherwise = match parts.next() {
+                Some(part) if part.as_rule() == Rule::if_statement => vec![statement(part)?],
+                Some(part) => body(part)?,
+                None => Vec::new(),
+            };
+            Statement::If { condition, then, otherwise }
+        }
+        Rule::choose => Statement::Choose(parts.map(choice).collect::<Result<_, _>>()?),
+        _ => {
+            let speaker = next().as_span();
+            let mut rest: Vec<_> = parts.collect();
+            let text = unescape(rest.pop().expect("a line ends with its text").as_span())?;
+            Statement::Line { speaker, expression: rest.first().map(Pair::as_span), text }
+        }
+    })
+}
+
+fn choice(pair: Pair<'_, Rule>) -> Result<Choice<'_>, ParseError> {
+    let mut choice = Choice { text: String::new(), condition: None, locked: None, body: Vec::new() };
     for part in pair.into_inner() {
         match part.as_rule() {
-            Rule::name => names.push(part.as_span()),
-            Rule::text => text = unescape(part.as_span())?,
+            Rule::text => choice.text = unescape(part.as_span())?,
+            Rule::expr => choice.condition = Some(expr(part)),
+            Rule::locked => {
+                let reason = part.into_inner().find(|part| part.as_rule() == Rule::text).expect("locked(...) holds its reason");
+                choice.locked = Some(unescape(reason.as_span())?);
+            }
+            Rule::body => choice.body = body(part)?,
             _ => {}
         }
     }
+    Ok(choice)
+}
 
-    Ok(if rule == Rule::play {
-        Statement::Play(names[0])
-    } else {
-        Statement::Line { speaker: names[0], expression: names.get(1).copied(), text }
-    })
+fn expr(pair: Pair<'_, Rule>) -> Expr<'_> {
+    match pair.as_rule() {
+        Rule::bool_literal => Expr::Bool(pair.as_str() == "true"),
+        Rule::name => Expr::Flag(pair.as_span()),
+        Rule::not => Expr::Not(Box::new(expr(pair.into_inner().next().expect("`!` has an operand")))),
+
+        // `expr`, `and_expr` and `equality` alternate operands and operators, folded to the left.
+        _ => {
+            let mut parts = pair.into_inner();
+            let mut left = expr(parts.next().expect("an operand"));
+            while let (Some(op), Some(right)) = (parts.next(), parts.next()) {
+                let op = match op.as_str() {
+                    "||" => BinaryOp::Or,
+                    "&&" => BinaryOp::And,
+                    "==" => BinaryOp::Equal,
+                    _ => BinaryOp::NotEqual,
+                };
+                left = Expr::Binary(Box::new(left), op, Box::new(expr(right)));
+            }
+            left
+        }
+    }
+}
+
+fn is_keyword(rule: Rule) -> bool {
+    matches!(rule, Rule::set_keyword | Rule::if_keyword | Rule::else_keyword | Rule::choose_keyword)
 }
 
 fn names(pair: Pair<'_, Rule>) -> Vec<Span<'_>> {

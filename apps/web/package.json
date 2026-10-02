@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "clsc": "cargo run --quiet --manifest-path ../../packages/clsc/compiler/Cargo.toml -- build src/scripts public/generated/scripts.clscb",
+    "clsc": "cargo run --quiet --manifest-path ../../packages/clsc/compiler/Cargo.toml -- build src/scripts public/generated/scripts.clscb --store src/fixtures/student-state.json",
     "dev": "concurrently --names clsc,next \"npm run --silent clsc -- --watch\" \"next dev\"",
     "prebuild": "npm run clsc",
     "build": "next build",

@@ -4,8 +4,9 @@ use std::path::{Path, PathBuf};
 type Expected = (String, usize, Severity, String);
 
 /// Each fixture under `tests/errors/` is a `.clsc` file, or a directory compiled as one scripts
-/// root. A `// error: <message>` or `// warning: <message>` comment marks the line a diagnostic
-/// points at, and the compile must report exactly those diagnostics and no others.
+/// root, with its `store.json` as the Flag seed if it has one. A `// error: <message>` or
+/// `// warning: <message>` comment marks the line a diagnostic points at, and the compile must
+/// report exactly those diagnostics and no others.
 #[test]
 fn every_error_fixture_reports_exactly_its_annotated_diagnostics() {
     let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/errors");
@@ -13,9 +14,10 @@ fn every_error_fixture_reports_exactly_its_annotated_diagnostics() {
 
     for fixture in sorted_entries(&fixtures) {
         let compiled = if fixture.is_dir() {
-            compile(&fixture).unwrap()
+            let store = fixture.join("store.json");
+            compile(&fixture, store.exists().then_some(store.as_path())).unwrap()
         } else {
-            compile_sources(&[(fixture.display().to_string(), std::fs::read_to_string(&fixture).unwrap())])
+            compile_sources(&[(fixture.display().to_string(), std::fs::read_to_string(&fixture).unwrap())], None)
         };
 
         let mut actual: Vec<Expected> = compiled

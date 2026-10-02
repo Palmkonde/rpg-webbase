@@ -1,0 +1,41 @@
+on enter(Greeting) with Campfire {
+    if talked && !polite {
+        Campfire(Angry): "Go away!";
+    } else if talked {
+        Campfire: "Welcome back.";
+    } else {
+        Campfire(Happy): "Hello, stranger.";
+    }
+}
+
+// `||` binds looser than `&&`, so c reads as `!talked || (polite && has_firewood)`.
+on enter(Logic) with Narrator {
+    if (talked || lit) && !(polite != has_firewood) {
+        Narrator: "a";
+    }
+    if talked == polite {
+        Narrator: "b";
+    }
+    if !talked || polite && has_firewood {
+        Narrator: "c";
+    }
+}
+
+on enter(Lit) with Narrator {
+    if lit {
+        Narrator: "Lit by default.";
+    }
+}
+
+on enter(Writes) with Narrator {
+    set talked = true;
+    if talked {
+        Narrator: "The run reads its own write.";
+    }
+}
+
+on enter(Inherited) with Narrator {
+    if !constructor {
+        Narrator: "constructor is false by default.";
+    }
+}

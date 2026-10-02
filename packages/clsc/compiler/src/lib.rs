@@ -2,11 +2,14 @@ pub mod bytecode;
 mod check;
 pub mod opcodes;
 mod parse;
+mod seed;
 
 use parse::{Item, ParseError};
 use pest::error::{ErrorVariant, LineColLocation};
 use pest::Span;
 use std::path::{Path, PathBuf};
+
+pub use seed::FlagSeed;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Severity {
@@ -65,8 +68,9 @@ struct SourceFile<'s> {
     items: Vec<Item<'s>>,
 }
 
-/// Compiles every `.clsc` file under `root` as one program (`adr/0032`).
-pub fn compile(root: &Path) -> Result<Compiled, String> {
+/// Compiles every `.clsc` file under `root` as one program (`adr/0032`), checking the Flags in
+/// the seed at `store`, when given, against their declarations.
+pub fn compile(root: &Path, store: Option<&Path>) -> Result<Compiled, String> {
     let mut sources = Vec::new();
 
     for path in source_files(root)? {
@@ -74,11 +78,12 @@ pub fn compile(root: &Path) -> Result<Compiled, String> {
         sources.push((path.display().to_string(), text));
     }
 
-    Ok(compile_sources(&sources))
+    let seed = store.map(read_seed).transpose()?;
+    Ok(compile_sources(&sources, seed.as_ref()))
 }
 
 /// Compiles `(path, text)` pairs as one program; `path` only labels diagnostics.
-pub fn compile_sources(sources: &[(String, String)]) -> Compiled {
+pub fn compile_sources(sources: &[(String, String)], seed: Option<&FlagSeed>) -> Compiled {
     let mut files = Vec::new();
     let mut diagnostics = Vec::new();
 
@@ -91,13 +96,18 @@ pub fn compile_sources(sources: &[(String, String)]) -> Compiled {
 
     // Names can't be resolved against a file that didn't parse.
     if diagnostics.is_empty() {
-        diagnostics = check::check(&files);
+        diagnostics = check::check(&files, seed);
     }
 
     diagnostics.sort_by(|a, b| (&a.path, a.line).cmp(&(&b.path, b.line)));
     let failed = diagnostics.iter().any(|diagnostic| diagnostic.severity == Severity::Error);
 
     Compiled { bytecode: (!failed).then(|| bytecode::encode(&files)), diagnostics }
+}
+
+fn read_seed(path: &Path) -> Result<FlagSeed, String> {
+    let text = std::fs::read_to_string(path).map_err(|error| format!("{}: {error}", path.display()))?;
+    FlagSeed::parse(&text).map_err(|error| format!("{}: {error}", path.display()))
 }
 
 /// Sorted, so a compile never depends on directory order.
@@ -129,7 +139,7 @@ mod tests {
         std::fs::create_dir_all(root.join("story")).unwrap();
         std::fs::write(root.join("story/guard.clsc"), "// fine\nnot a script\n").unwrap();
 
-        let compiled = compile(&root).unwrap();
+        let compiled = compile(&root, None).unwrap();
         std::fs::remove_dir_all(&root).unwrap();
 
         assert!(compiled.diagnostics[0].rendered.contains("story/guard.clsc:2:1"), "{}", compiled.diagnostics[0].rendered);

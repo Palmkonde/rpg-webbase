@@ -1,0 +1,15 @@
+enum Expression { Neutral }
+speaker Narrator;
+flag talked: bool = false;
+
+on enter(Camp) with Narrator {
+    if !takled { // error: no Flag named `takled`
+        set tlked = true; // error: no Flag named `tlked`
+    }
+    set talked = talked || polite; // error: no Flag named `polite`
+    choose {
+        "Hello" if Narrator => { // error: no Flag named `Narrator`
+            Narrator: "Hi.";
+        }
+    }
+}

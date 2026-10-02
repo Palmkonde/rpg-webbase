@@ -1,0 +1,30 @@
+on interact(Campfire) with Campfire {
+    choose {
+        "Nice to meet you!" if !talked => {
+            set talked = true;
+            set polite = true;
+        }
+        "Ask what the campfire has seen" if polite => {
+            Campfire(Sad): "I remember the first Student.";
+            choose {
+                "Ask what happened to them";
+                "Never mind";
+            }
+            Campfire: "...they moved on.";
+        }
+        "Warm your hands" if has_firewood else locked("You need firewood first.") => {
+            Campfire(Happy): "Ahh, warm.";
+        }
+        "Leave";
+    }
+    Campfire: "Bye.";
+}
+
+on enter(Hidden) with Campfire {
+    choose {
+        "Talk again" if talked => {
+            Campfire: "Not shown, so never said.";
+        }
+    }
+    Campfire: "Nothing to choose.";
+}
