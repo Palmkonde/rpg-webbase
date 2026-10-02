@@ -1,4 +1,5 @@
 import type { GridEngine } from 'grid-engine'
+import { MoveToResult } from 'grid-engine'
 import type { TileCoord } from './tiled-assets.ts'
 
 // Every character is created in this group, so they all block each other.
@@ -50,17 +51,18 @@ export function createCutsceneMovement(gridEngine: GridEngine, playerId: string)
   }
 
   return {
-    // Resolves once on grid-engine's one-shot completion signal, success or not.
+    // Settles on grid-engine's one-shot completion signal, rejecting when the move didn't complete, so a Script run waiting on it aborts (adr/0030).
     moveTo(charId, targetPos) {
       cancelTrail(charId)
 
       // oxlint-disable-next-line promise/avoid-new
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         gridEngine.moveTo(charId, targetPos).subscribe(({ result }) => {
-          if (result) {
-            console.warn(`[engine] moveTo(${charId} -> ${targetPos.x},${targetPos.y}) did not complete: ${result}`)
+          if (result === MoveToResult.SUCCESS) {
+            resolve()
+          } else {
+            reject(new Error(`[engine] moveTo(${charId} -> ${targetPos.x},${targetPos.y}) did not complete: ${result}`))
           }
-          resolve()
         })
       })
     },

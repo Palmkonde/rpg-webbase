@@ -1,7 +1,6 @@
 import type { Choice, ChoiceOptions, CutsceneTrigger, DialogueLine, SayOptions } from '../scripts/script.ts'
 import { PLAYER_CHAR_ID } from './player.ts'
 import type { TileCoord } from '@game-engine/engine-core'
-import { companionFlag } from './companions.ts'
 
 const DEFAULT_FOLLOW_GAP = 0
 
@@ -115,27 +114,6 @@ const REGISTRY = {
   'campfire-story-stars': createCutscene()
     .say('Look up — the same stars watched the very first fire, too.', { speaker: 'Campfire' })
     .moveTo(PLAYER_CHAR_ID, {x:10, y:2})
-    .build(),
-
-  // Loop and destination tiles are clear of collision/obstacle tiles and of every Zone on main_test.tmj.
-  // Ends on the Companion recruit Choice; the Guard walks back to its post first, so "Nah" leaves it there.
-  'guard-walk': createCutscene()
-    .say('Oh! You finally came to see me~ I\'ve been watching you ever since you arrived, you know.', { speaker: 'Guard', expression: 'Happy' })
-    .say('Come, come! Walk with me. Stay close... closer~', { speaker: 'Guard', expression: 'Happy' })
-    .follow(PLAYER_CHAR_ID, 'Guard')
-    .moveTo('Guard', { x: 9, y: 10 })
-    .moveTo('Guard', { x: 9, y: 8 })
-    .moveTo('Guard', { x: 6, y: 8 })
-    .moveTo('Guard', { x: 5, y: 10 })
-    .say('See? We walk so well together... almost like we were made for each other.', { speaker: 'Guard', expression: 'Happy' })
-    .say('Now YOU lead. I\'ll be right behind you. Always. Every single step.', { speaker: 'Guard', expression: 'Neutral' })
-    .follow('Guard', PLAYER_CHAR_ID)
-    .moveTo(PLAYER_CHAR_ID, { x: 8, y: 5 })
-    .say('Hehe... I already memorised the way you walk. That\'s not weird. It\'s devotion~', { speaker: 'Guard', expression: 'Happy' })
-    .moveTo('Guard', { x: 5, y: 11 })
-    .say('I\'m supposed to stay at my post... but you wouldn\'t leave me here all alone. Would you?', { speaker: 'Guard', expression: 'Sad' })
-    .choice('Follow me forever', { flags: { [companionFlag('Guard')]: 'fluffy' } })
-    .choice('Nah, stay here')
     .build(),
 } satisfies CutsceneRegistry
 

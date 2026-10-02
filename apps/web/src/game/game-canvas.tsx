@@ -28,7 +28,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
   const { cgFrames, cgStep, advanceCg, skipCg, playCgById } = useCgPlayback()
   const { companionIds, syncCompanions, dismissCompanion } = useCompanions(engineRef)
   const {
-    scriptLine, advanceLine, endRun, dialogue, cutsceneLine, cutsceneChoices, enginePaused, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered, fetchProgram,
+    scriptPrompt, advanceLine, choose, endRun, dialogue, cutsceneLine, cutsceneChoices, enginePaused, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered, fetchProgram,
   } = useScriptPlayback(engineRef, playCgById, syncCompanions)
 
   useEffect(() => {
@@ -102,7 +102,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
         />
       )}
       {!enginePaused && companionIds.length > 0 && <CompanionOverlay companionIds={companionIds} onDismiss={dismissCompanion} />}
-      {scriptLine && <ScriptOverlay frozen={enginePaused} line={scriptLine} onAdvance={advanceLine} onDismiss={endRun} />}
+      {scriptPrompt && <ScriptOverlay frozen={enginePaused} onAdvance={advanceLine} onChoose={choose} onDismiss={endRun} prompt={scriptPrompt} />}
       {dialogue && <DialogueOverlay dialogue={dialogue} onChoose={selectChoice} onDismiss={dismissDialogue} />}
       {(cutsceneLine !== undefined || cutsceneChoices !== undefined) && (
         <CutsceneOverlay choices={cutsceneChoices} line={cutsceneLine} onAdvance={advanceCutscene} onChoose={pickCutsceneChoice} />
