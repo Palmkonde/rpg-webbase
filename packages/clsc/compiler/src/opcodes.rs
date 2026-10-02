@@ -33,4 +33,13 @@ pub const OPCODES: &[(&str, usize)] = &[
     // Hands back the choices offered since the last Choose, or jumps to the target (below the
     // choose) when none were shown.
     ("Choose", 1),
+    // Pushes a name, a string pool index: a Character, or a Mover as a command argument.
+    ("PushName", 1),
+    // Pushes `none`.
+    ("PushNone", 0),
+    // Pushes a tile: x, then y.
+    ("PushTile", 2),
+    // Pops as many arguments as the command takes, last first, and hands it back as a `command`
+    // output: a command table index.
+    ("Command", 1),
 ];

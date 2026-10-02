@@ -11,10 +11,44 @@ pub type ParseError = pest::error::Error<Rule>;
 pub enum Item<'s> {
     // The module path, `a.b` for `use a.b;`.
     Use(Span<'s>),
-    Speaker(Span<'s>),
+    Cast { kind: CastKind, name: Span<'s> },
     Enum { name: Span<'s>, variants: Vec<Span<'s>> },
     Flag { name: Span<'s>, ty: Span<'s>, default: bool },
+    Command(Command<'s>),
     Block(Block<'s>),
+}
+
+/// `mover` declares a Character Entity, which can also speak; the Player is a Mover that can't.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum CastKind {
+    Speaker,
+    Mover,
+    Character,
+}
+
+impl CastKind {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Speaker => "Speaker",
+            Self::Mover => "Mover",
+            Self::Character => "Character",
+        }
+    }
+}
+
+pub struct Param<'s> {
+    pub name: Span<'s>,
+    pub ty: Span<'s>,
+}
+
+pub struct Command<'s> {
+    pub name: Span<'s>,
+
+    pub params: Vec<Param<'s>>,
+
+    // The `BlockKind::word`s it's allowed in.
+    pub kinds: Vec<&'s str>,
+    pub waits: bool,
 }
 
 pub struct Block<'s> {
@@ -30,6 +64,16 @@ pub struct Block<'s> {
 pub enum BlockKind {
     Handler(Trigger),
     Cutscene,
+}
+
+impl BlockKind {
+    /// How a command's `in` list, the bytecode and `clsc disasm` name the kind.
+    pub fn word(self) -> &'static str {
+        match self {
+            Self::Handler(_) => "handler",
+            Self::Cutscene => "cutscene",
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -50,7 +94,10 @@ impl Trigger {
 pub enum Statement<'s> {
     Line { speaker: Span<'s>, expression: Option<Span<'s>>, text: String },
     Play(Span<'s>),
-    Set { flag: Span<'s>, value: Expr<'s> },
+
+    // `target` is the `Name` of a Flag or a `Companion`.
+    Set { target: Expr<'s>, value: Expr<'s> },
+    Command { name: Span<'s>, args: Vec<Argument<'s>> },
 
     // An `else if` is an `otherwise` holding one `If`.
     If { condition: Expr<'s>, then: Vec<Statement<'s>>, otherwise: Vec<Statement<'s>> },
@@ -66,9 +113,33 @@ pub struct Choice<'s> {
     pub body: Vec<Statement<'s>>,
 }
 
-pub enum Expr<'s> {
+pub enum Argument<'s> {
+    Tile { span: Span<'s>, x: u32, y: u32 },
+    Expr(Expr<'s>),
+}
+
+impl<'s> Argument<'s> {
+    pub fn span(&self) -> Span<'s> {
+        match self {
+            Self::Tile { span, .. } | Self::Expr(Expr { span, .. }) => *span,
+        }
+    }
+}
+
+pub struct Expr<'s> {
+    pub span: Span<'s>,
+    pub kind: ExprKind<'s>,
+}
+
+pub enum ExprKind<'s> {
     Bool(bool),
-    Flag(Span<'s>),
+    None,
+
+    // A Flag, a Character, or a Mover as a command argument.
+    Name,
+
+    // `companion[Guard]`, holding the Character Entity's name.
+    Companion(Span<'s>),
     Not(Box<Expr<'s>>),
     Binary(Box<Expr<'s>>, BinaryOp, Box<Expr<'s>>),
 }
@@ -92,7 +163,16 @@ fn item(pair: Pair<'_, Rule>) -> Result<Item<'_>, ParseError> {
             let path = pair.into_inner().find(|part| part.as_rule() == Rule::module_path).expect("a `use` names a module");
             Item::Use(path.as_span())
         }
-        Rule::speaker => Item::Speaker(names(pair)[0]),
+        Rule::cast_decl => {
+            let mut parts = pair.into_inner();
+            let kind = match parts.next().expect("a cast kind").as_str() {
+                "speaker" => CastKind::Speaker,
+                "mover" => CastKind::Mover,
+                _ => CastKind::Character,
+            };
+            Item::Cast { kind, name: parts.next().expect("a cast name").as_span() }
+        }
+        Rule::command_decl => Item::Command(command(pair)),
         Rule::enum_decl => {
             let names = names(pair);
             Item::Enum { name: names[0], variants: names[1..].to_vec() }
@@ -104,6 +184,23 @@ fn item(pair: Pair<'_, Rule>) -> Result<Item<'_>, ParseError> {
         }
         _ => Item::Block(block(pair)?),
     })
+}
+
+fn command(pair: Pair<'_, Rule>) -> Command<'_> {
+    let mut command = Command { name: pair.as_span(), params: Vec::new(), kinds: Vec::new(), waits: false };
+    for part in pair.into_inner() {
+        match part.as_rule() {
+            Rule::name => command.name = part.as_span(),
+            Rule::param => {
+                let names = names(part);
+                command.params.push(Param { name: names[0], ty: names[1] });
+            }
+            Rule::block_kind => command.kinds.push(part.as_str()),
+            Rule::waits_keyword => command.waits = true,
+            _ => {}
+        }
+    }
+    command
 }
 
 fn block(pair: Pair<'_, Rule>) -> Result<Block<'_>, ParseError> {
@@ -132,7 +229,8 @@ fn statement(pair: Pair<'_, Rule>) -> Result<Statement<'_>, ParseError> {
 
     Ok(match rule {
         Rule::play => Statement::Play(next().as_span()),
-        Rule::set => Statement::Set { flag: next().as_span(), value: expr(next()) },
+        Rule::set => Statement::Set { target: expr(next()), value: expr(next()) },
+        Rule::command_call => Statement::Command { name: next().as_span(), args: parts.map(argument).collect::<Result<_, _>>()? },
         Rule::if_statement => {
             let condition = expr(next());
             let then = body(next())?;
@@ -170,11 +268,29 @@ fn choice(pair: Pair<'_, Rule>) -> Result<Choice<'_>, ParseError> {
     Ok(choice)
 }
 
+fn argument(pair: Pair<'_, Rule>) -> Result<Argument<'_>, ParseError> {
+    if pair.as_rule() != Rule::tile {
+        return Ok(Argument::Expr(expr(pair)));
+    }
+    let span = pair.as_span();
+    let mut coordinates = pair.into_inner().map(|coordinate| {
+        coordinate.as_str().parse().map_err(|_| {
+            let message = format!("`{}` is too large for a tile coordinate", coordinate.as_str());
+            ParseError::new_from_span(ErrorVariant::CustomError { message }, coordinate.as_span())
+        })
+    });
+    let mut next = || coordinates.next().expect("a tile has two coordinates");
+    Ok(Argument::Tile { span, x: next()?, y: next()? })
+}
+
 fn expr(pair: Pair<'_, Rule>) -> Expr<'_> {
-    match pair.as_rule() {
-        Rule::bool_literal => Expr::Bool(pair.as_str() == "true"),
-        Rule::name => Expr::Flag(pair.as_span()),
-        Rule::not => Expr::Not(Box::new(expr(pair.into_inner().next().expect("`!` has an operand")))),
+    let span = pair.as_span();
+    let kind = match pair.as_rule() {
+        Rule::bool_literal => ExprKind::Bool(pair.as_str() == "true"),
+        Rule::none_literal => ExprKind::None,
+        Rule::name => ExprKind::Name,
+        Rule::companion => ExprKind::Companion(names(pair)[0]),
+        Rule::not => ExprKind::Not(Box::new(expr(pair.into_inner().next().expect("`!` has an operand")))),
 
         // `expr`, `and_expr` and `equality` alternate operands and operators, folded to the left.
         _ => {
@@ -187,11 +303,14 @@ fn expr(pair: Pair<'_, Rule>) -> Expr<'_> {
                     "==" => BinaryOp::Equal,
                     _ => BinaryOp::NotEqual,
                 };
-                left = Expr::Binary(Box::new(left), op, Box::new(expr(right)));
+                let right = expr(right);
+                let span = left.span.start_pos().span(&right.span.end_pos());
+                left = Expr { span, kind: ExprKind::Binary(Box::new(left), op, Box::new(right)) };
             }
-            left
+            return left;
         }
-    }
+    };
+    Expr { span, kind }
 }
 
 fn is_keyword(rule: Rule) -> bool {
@@ -233,6 +352,6 @@ mod tests {
     #[test]
     fn a_keyword_ends_at_a_word_boundary() {
         assert!(parse("speakerNarrator;").is_err());
-        assert!(matches!(parse("speaker speakers;").unwrap()[..], [Item::Speaker(name)] if name.as_str() == "speakers"));
+        assert!(matches!(parse("speaker speakers;").unwrap()[..], [Item::Cast { name, .. }] if name.as_str() == "speakers"));
     }
 }

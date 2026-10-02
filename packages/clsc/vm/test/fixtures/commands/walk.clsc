@@ -1,0 +1,10 @@
+on interact(Guard) with Guard {
+    Guard: "Walk with me.";
+    play(cutscene::walk);
+}
+
+cutscene walk with Guard, Player {
+    follow(Player, Guard);
+    move(Guard, (9, 10));
+    Guard(Happy): "Here we are.";
+}

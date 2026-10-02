@@ -1,21 +1,25 @@
-import type { Block, FlagDeclaration, Flags, Trigger } from './run.ts'
+import type { Block, CommandArg, CommandDeclaration, FlagDeclaration, Flags, Trigger } from './run.ts'
 import { OPERAND_COUNTS } from './opcodes.ts'
 import { Run } from './run.ts'
 
-export type { Flags, Output, Run, ShownChoice, Trigger } from './run.ts'
+export type { CommandArg, Flags, Output, Run, ShownChoice, Tile, Trigger } from './run.ts'
 
 // The byte layout is documented, and owned, by the compiler's `bytecode.rs`.
 const MAGIC = 'CLSC'
 
 // Hand-written, not generated from Rust: this is the layout this decoder reads, so a file from a newer or older compiler fails loudly.
-export const FORMAT_VERSION = 3
+export const FORMAT_VERSION = 4
 
 // Decoded by position, as `bytecode.rs` writes them.
 const TRIGGERS: readonly Trigger[] = ['interact', 'enter']
 const BLOCK_KINDS: readonly Block['kind'][] = ['handler', 'cutscene']
-const FLAG_TYPES = ['bool'] as const
+const FLAG_TYPES: readonly FlagDeclaration['type'][] = ['bool', 'Character?']
+const PARAM_TYPES = ['Mover', 'Tile'] as const
 
 const REBUILD = 'rebuild it with `clsc build`'
+
+// The VM never calls one: it hands back a `command` output, and the Host runs the handler for it (adr/0030).
+export type CommandHandler = (args: readonly CommandArg[]) => void | Promise<void>
 
 export interface Program {
   // A run of the handler for (trigger, id), or `undefined` when there's none.
@@ -75,11 +79,30 @@ function readEnum<T>(table: readonly T[], index: number, what: string): T {
   return table[index]
 }
 
-// The type is checked but not kept: `bool` is the only Flag type, so a run checks a stored value with `typeof`.
 function readFlag(reader: Reader, strings: readonly string[]): FlagDeclaration {
   const name = strings[reader.u32()]
-  readEnum(FLAG_TYPES, reader.u8(), 'Flag type')
-  return { name, default: reader.u32() === 1 }
+  const type = readEnum(FLAG_TYPES, reader.u8(), 'Flag type')
+  // A `Character?` default is always 0, `none`, which reads as `false` too.
+  return { name, type, default: reader.u32() === 1 }
+}
+
+// Only the arity is kept: the compiler has checked each argument's type and block kind.
+function readCommand(reader: Reader, strings: readonly string[]): CommandDeclaration {
+  const name = strings[reader.u32()]
+  const params = reader.list(() => {
+    reader.u32()
+    return readEnum(PARAM_TYPES, reader.u8(), 'parameter type')
+  })
+  reader.u8()
+  return { name, arity: params.length, waits: reader.u8() === 1 }
+}
+
+function checkHandlers(commands: readonly CommandDeclaration[], handlers: Readonly<Record<string, CommandHandler>>): void {
+  for (const { name } of commands) {
+    if (!Object.hasOwn(handlers, name)) {
+      throw new Error(`The prelude declares the command "${name}", but the Host has no handler for it`)
+    }
+  }
 }
 
 function readBlock(reader: Reader): Block {
@@ -116,23 +139,34 @@ function readHandler(reader: Reader, strings: readonly string[], blocks: readonl
   return [handlerKey(trigger, strings[reader.u32()]), blocks[reader.u32()]]
 }
 
-export function loadProgram(bytes: Uint8Array): Program {
-  const reader = new Reader(bytes)
-  checkHeader(reader)
-
+function readStrings(reader: Reader): string[] {
   const decoder = new TextDecoder('utf-8', { fatal: true })
-  const strings = reader.list(() => decoder.decode(reader.take(reader.u32())))
-  const flags = reader.list(() => readFlag(reader, strings))
-  const blocks = reader.list(() => readBlock(reader))
-  const handlers = new Map(reader.list(() => readHandler(reader, strings, blocks)))
+  return reader.list(() => decoder.decode(reader.take(reader.u32())))
+}
+
+function checkEnd(reader: Reader): void {
   if (reader.remaining > 0) {
     throw new Error(`The bytecode has ${reader.remaining} unexpected bytes after its handler index: ${REBUILD}`)
   }
+}
+
+// `handlers` holds one per command the prelude declares, so a Script can't call a command nobody handles.
+export function loadProgram(bytes: Uint8Array, handlers: Readonly<Record<string, CommandHandler>>): Program {
+  const reader = new Reader(bytes)
+  checkHeader(reader)
+
+  const strings = readStrings(reader)
+  const flags = reader.list(() => readFlag(reader, strings))
+  const commands = reader.list(() => readCommand(reader, strings))
+  const blocks = reader.list(() => readBlock(reader))
+  const handlerIndex = new Map(reader.list(() => readHandler(reader, strings, blocks)))
+  checkEnd(reader)
+  checkHandlers(commands, handlers)
 
   return {
     start: (trigger, id, snapshot) => {
-      const block = handlers.get(handlerKey(trigger, id))
-      return block && new Run({ strings, flags, blocks }, block, snapshot)
+      const block = handlerIndex.get(handlerKey(trigger, id))
+      return block && new Run({ strings, flags, commands, blocks }, block, snapshot)
     },
   }
 }

@@ -1,0 +1,9 @@
+on interact(Guard) with Guard, fluffy {
+    if companion[Guard] == none {
+        Guard: "Take me along?";
+        set companion[Guard] = fluffy;
+    } else if companion[Guard] == fluffy {
+        Guard: "Still here.";
+        set companion[Guard] = none;
+    }
+}

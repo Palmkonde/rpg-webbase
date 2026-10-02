@@ -8,10 +8,22 @@ pub struct FlagSeed {
 
 #[derive(Clone, Copy)]
 pub(crate) enum Stored {
-    Bool,
+    Bool(bool),
+    String,
 
-    // Anything else, described for an error message: "a string", "null", …
+    // Anything else, described for an error message: "null", "a number", …
     Other(&'static str),
+}
+
+impl Stored {
+    pub(crate) fn describe(self) -> &'static str {
+        match self {
+            Self::Bool(true) => "true",
+            Self::Bool(false) => "false",
+            Self::String => "a string",
+            Self::Other(description) => description,
+        }
+    }
 }
 
 impl FlagSeed {
@@ -32,10 +44,10 @@ impl FlagSeed {
 
 fn stored(value: &Value) -> Stored {
     match value {
-        Value::Bool(_) => Stored::Bool,
+        Value::Bool(value) => Stored::Bool(*value),
         Value::Null => Stored::Other("null"),
         Value::Number(_) => Stored::Other("a number"),
-        Value::String(_) => Stored::Other("a string"),
+        Value::String(_) => Stored::String,
         Value::Array(_) => Stored::Other("an array"),
         Value::Object(_) => Stored::Other("an object"),
     }

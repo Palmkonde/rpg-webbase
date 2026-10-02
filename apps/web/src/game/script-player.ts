@@ -66,7 +66,8 @@ export class ScriptPlayer {
     if (!response.ok) {
       throw new Error(`Script bytecode ${SCRIPTS_URL} is missing (HTTP ${response.status}): run \`npm run dev\`, or \`npm run clsc\` in apps/web`)
     }
-    this.program = loadProgram(new Uint8Array(await response.arrayBuffer()))
+    // No command handlers yet: the prelude declares no commands, so loading would name any it did.
+    this.program = loadProgram(new Uint8Array(await response.arrayBuffer()), {})
   }
 
   public advanceCutscene = (): void => { this.cutscene?.advance() }

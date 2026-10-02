@@ -1,0 +1,19 @@
+on interact(Guard) with Guard {
+    move(Guard, (1, 2)); // error: `move` is only allowed in a cutscene
+}
+
+cutscene walk with Guard, Narrator, Player, fluffy {
+    move(Guard); // error: `move` takes 2 arguments, got 1
+    move(Narrator, (1, 2)); // error: `Narrator` is a Speaker, not a Mover
+    move(fluffy, (1, 2)); // error: `fluffy` is a Character, not a Mover
+    follow(Guard, (1, 2)); // error: `follow` takes a Mover as `leader`
+    move(Guard, Player); // error: `move` takes a Tile as `to`
+    jump(Guard); // error: no command named `jump`
+    Player: "Hi."; // error: `Player` never speaks
+    fluffy: "Hi."; // error: `fluffy` is a Character, not a Speaker
+    follow(Guard, Ghost); // error: unknown Mover `Ghost`
+}
+
+cutscene unlisted with Guard {
+    follow(Guard, Player); // error: `Player` is not in this block's `with` list
+}

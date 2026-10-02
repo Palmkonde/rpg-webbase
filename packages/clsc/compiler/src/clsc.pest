@@ -1,13 +1,14 @@
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 COMMENT    = _{ "//" ~ (!"\n" ~ ANY)* }
 
-file = { SOI ~ use_decl* ~ (speaker | enum_decl | flag_decl | cutscene | handler)* ~ EOI }
+file = { SOI ~ use_decl* ~ (cast_decl | enum_decl | flag_decl | command_decl | cutscene | handler)* ~ EOI }
 
 // `use a.b;` names `a/b.clsc` under the scripts root. Atomic, so a module path holds no spaces.
 use_decl    = { use_keyword ~ module_path ~ ";" }
 module_path = @{ name ~ ("." ~ name)* }
 
-speaker   = { speaker_keyword ~ name ~ ";" }
+cast_decl = { cast_kind ~ name ~ ";" }
+cast_kind = { speaker_keyword | mover_keyword | character_keyword }
 enum_decl = { enum_keyword ~ name ~ "{" ~ name ~ ("," ~ name)* ~ ","? ~ "}" }
 flag_decl = { flag_keyword ~ name ~ ":" ~ name ~ "=" ~ bool_literal ~ ";" }
 cutscene  = { cutscene_keyword ~ name ~ cast? ~ body }
@@ -16,25 +17,39 @@ trigger   = { "interact" | "enter" }
 cast      = { with_keyword ~ name ~ ("," ~ name)* }
 body      = { "{" ~ statement* ~ "}" }
 
-statement    = _{ play | set | if_statement | choose | line }
+// The Host declares each command in its prelude (`adr/0030`); `in` is required, so no command is
+// allowed in a block kind by omission.
+command_decl = { command_keyword ~ name ~ "(" ~ (param ~ ("," ~ param)*)? ~ ")" ~ in_keyword ~ block_kind ~ ("," ~ block_kind)* ~ waits_keyword? ~ ";" }
+param        = { name ~ ":" ~ name }
+block_kind   = @{ ("handler" | "cutscene") ~ !name_char }
+
+statement    = _{ play | set | if_statement | choose | command_call | line }
 play         = { "play" ~ "(" ~ "cutscene" ~ "::" ~ name ~ ")" ~ ";" }
-set          = { set_keyword ~ name ~ "=" ~ expr ~ ";" }
+set          = { set_keyword ~ (companion | name) ~ "=" ~ expr ~ ";" }
 if_statement = { if_keyword ~ expr ~ body ~ (else_keyword ~ (if_statement | body))? }
 choose       = { choose_keyword ~ "{" ~ choice+ ~ "}" }
 choice       = { text ~ (if_keyword ~ expr ~ locked?)? ~ ("=>" ~ body | ";") }
 locked       = { else_keyword ~ locked_keyword ~ "(" ~ text ~ ")" }
+
+// Before `line`, which `Guard(Happy): "…"` falls back to once the `;` after `)` fails to match.
+command_call = { name ~ "(" ~ (argument ~ ("," ~ argument)*)? ~ ")" ~ ";" }
+argument     = _{ tile | expr }
+tile         = { "(" ~ coordinate ~ "," ~ coordinate ~ ")" }
+coordinate   = @{ ASCII_DIGIT+ }
 line         = { name ~ ("(" ~ name ~ ")")? ~ ":" ~ text ~ ";" }
 
 // Loosest first, so `&&` binds tighter than `||`, and `!` tighter than `==` / `!=`.
 expr         = { and_expr ~ (or_op ~ and_expr)* }
 and_expr     = { equality ~ (and_op ~ equality)* }
 equality     = { unary ~ (equality_op ~ unary)* }
-unary        = _{ not | bool_literal | name | "(" ~ expr ~ ")" }
+unary        = _{ not | bool_literal | none_literal | companion | name | "(" ~ expr ~ ")" }
 not          = { "!" ~ unary }
 or_op        = { "||" }
 and_op       = { "&&" }
 equality_op  = { "==" | "!=" }
 bool_literal = @{ ("true" | "false") ~ !name_char }
+none_literal = @{ "none" ~ !name_char }
+companion    = { companion_keyword ~ "[" ~ name ~ "]" }
 
 // Atomic, so whitespace and `//` inside the quotes are part of the text. Any escape parses, so
 // `parse.rs` can reject one with a message naming it.
@@ -42,20 +57,27 @@ text      = ${ "\"" ~ text_char* ~ "\"" }
 text_char = _{ "\\" ~ ANY | !("\"" | "\\" | "\n") ~ ANY }
 
 // Atomic, so a keyword ends at a word boundary: `speakerNarrator` is a name, not `speaker Narrator`.
-use_keyword      = @{ "use" ~ !name_char }
-speaker_keyword  = @{ "speaker" ~ !name_char }
-enum_keyword     = @{ "enum" ~ !name_char }
-flag_keyword     = @{ "flag" ~ !name_char }
-cutscene_keyword = @{ "cutscene" ~ !name_char }
-on_keyword       = @{ "on" ~ !name_char }
-with_keyword     = @{ "with" ~ !name_char }
-set_keyword      = @{ "set" ~ !name_char }
-if_keyword       = @{ "if" ~ !name_char }
-else_keyword     = @{ "else" ~ !name_char }
-choose_keyword   = @{ "choose" ~ !name_char }
-locked_keyword   = @{ "locked" ~ !name_char }
-keyword          = @{
-    ("use" | "speaker" | "enum" | "flag" | "cutscene" | "on" | "with" | "play" | "set" | "if" | "else" | "choose" | "locked" | "true" | "false")
+use_keyword       = @{ "use" ~ !name_char }
+speaker_keyword   = @{ "speaker" ~ !name_char }
+mover_keyword     = @{ "mover" ~ !name_char }
+character_keyword = @{ "character" ~ !name_char }
+enum_keyword      = @{ "enum" ~ !name_char }
+flag_keyword      = @{ "flag" ~ !name_char }
+command_keyword   = @{ "command" ~ !name_char }
+in_keyword        = @{ "in" ~ !name_char }
+waits_keyword     = @{ "waits" ~ !name_char }
+cutscene_keyword  = @{ "cutscene" ~ !name_char }
+on_keyword        = @{ "on" ~ !name_char }
+with_keyword      = @{ "with" ~ !name_char }
+set_keyword       = @{ "set" ~ !name_char }
+if_keyword        = @{ "if" ~ !name_char }
+else_keyword      = @{ "else" ~ !name_char }
+choose_keyword    = @{ "choose" ~ !name_char }
+locked_keyword    = @{ "locked" ~ !name_char }
+companion_keyword = @{ "companion" ~ !name_char }
+keyword           = @{
+    ("use" | "speaker" | "mover" | "character" | "enum" | "flag" | "command" | "in" | "waits" | "cutscene" | "on" | "with" | "play"
+        | "set" | "if" | "else" | "choose" | "locked" | "true" | "false" | "none" | "companion")
     ~ !name_char
 }
 

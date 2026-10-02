@@ -4,7 +4,7 @@ import { loadProgram } from '../src/program.ts'
 import { test } from 'node:test'
 
 test('a handler plays a cutscene and reads a Flag from a file it uses in a nested folder', async () => {
-  const program = loadProgram(await compiled('modules'))
+  const program = loadProgram(await compiled('modules'), {})
   assert.deepEqual(play(program, { on: ['interact', 'Campfire'], flags: { heard_story: true } }), [
     { type: 'line', speaker: 'Campfire', expression: 'Neutral', text: 'Again?' },
     { type: 'freeze' },

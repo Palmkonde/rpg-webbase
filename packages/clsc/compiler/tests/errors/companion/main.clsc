@@ -1,0 +1,19 @@
+flag lit: bool = false;
+
+on interact(Guard) with fluffy {
+    set companion[Player] = fluffy; // error: the Player can't be a Companion
+    set companion[Narrator] = fluffy; // error: `Narrator` is a Speaker, not a Mover
+    set companion[Guard] = true; // error: `companion[Guard]` is Character?, got bool
+    set lit = companion[Guard]; // error: `lit` is bool, got Character?
+    if companion[Guard] { // error: a condition is bool, got Character?
+    }
+    if lit == fluffy { // error: `==` compares bool with Character?
+    }
+    if !companion[Guard] { // error: `!` takes bool, got Character?
+    }
+    set companion[Guard] = fluffy;
+}
+
+on interact(Camp) {
+    set companion[Guard] = fluffy; // error: `fluffy` is not in this block's `with` list
+}

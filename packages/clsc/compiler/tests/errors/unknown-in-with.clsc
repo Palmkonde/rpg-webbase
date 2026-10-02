@@ -1,6 +1,6 @@
 enum Expression { Neutral }
 speaker Narrator;
 
-on enter(Camp) with Narrator, Ghost { // error: unknown Speaker `Ghost`
+on enter(Camp) with Narrator, Ghost { // error: unknown cast name `Ghost`
     Narrator: "Nobody else is here.";
 }

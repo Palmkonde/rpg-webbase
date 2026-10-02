@@ -1,0 +1,3 @@
+mover Player; // error: `Player` is already declared
+flag lit: bool = false;
+character lit; // error: `lit` is already declared

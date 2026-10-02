@@ -1,0 +1,1 @@
+command jump(who: Mover) in cutscene; // error: `jump` is a command, which only prelude.clsc declares

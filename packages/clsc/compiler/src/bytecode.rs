@@ -7,35 +7,51 @@
 //! | magic          | the ASCII bytes `CLSC`                                                  |
 //! | format version | u16                                                                     |
 //! | string pool    | u32 count, then each string as a u32 byte length and its UTF-8 bytes    |
-//! | Flag table     | u32 count, then each Flag as a u32 name string, a u8 type and a u32 default (0 or 1) |
+//! | Flag table     | u32 count, then each Flag as a u32 name string, a u8 type and a u32 default (0 or 1 for `bool`, 0 for a `Character?`'s `none`) |
+//! | command table  | u32 count, then each command as below                                   |
 //! | blocks         | u32 count, then each block as below                                     |
 //! | handler index  | u32 count, then each handler as a u8 trigger, a u32 id string and a u32 block index |
+//!
+//! A command is a u32 name string, a u32 parameter count, then each parameter as a u32 name string
+//! and a u8 type, then a u8 of the block kinds it's allowed in (bit n for `BLOCK_KINDS[n]`), then a
+//! u8 that's 1 when it waits.
 //!
 //! A block is a u8 kind, a u32 name string, a u32 instruction count, then its instructions. An
 //! instruction is a u8 opcode followed by the u32 operands `OPCODES` gives it. A position in a
 //! block's code is an instruction index, not a byte offset.
 
 use crate::opcodes::OPCODES;
-use crate::parse::{BinaryOp, Block, BlockKind, Expr, Item, Statement, Trigger};
+use crate::parse::{Argument, BinaryOp, Block, BlockKind, CastKind, Command, Expr, ExprKind, Item, Statement, Trigger};
 use crate::SourceFile;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
 const MAGIC: &[u8; 4] = b"CLSC";
-const FORMAT_VERSION: u16 = 3;
+const FORMAT_VERSION: u16 = 4;
 
 // The VM decodes these by position, so the order is part of the layout.
 const TRIGGERS: [Trigger; 2] = [Trigger::Interact, Trigger::Enter];
 const BLOCK_KINDS: [&str; 2] = ["handler", "cutscene"];
-pub(crate) const FLAG_TYPES: [&str; 1] = ["bool"];
+const FLAG_TYPES: [&str; 2] = ["bool", CHARACTER_FLAG_TYPE];
+const CHARACTER_FLAG_TYPE: &str = "Character?";
+pub(crate) const PARAM_TYPES: [&str; 2] = ["Mover", "Tile"];
 
 /// A line without an Expression shows the Speaker's Neutral Portrait.
 pub(crate) const DEFAULT_EXPRESSION: &str = "Neutral";
+
+/// The Host stores a Companion as the Flag `companion:<entity id>` (`adr/0028`); its
+/// `companionFlag()` must build the same name.
+const COMPANION_FLAG_PREFIX: &str = "companion:";
+
+pub(crate) fn companion_flag(entity: &str) -> String {
+    format!("{COMPANION_FLAG_PREFIX}{entity}")
+}
 
 /// What a block's code refers to by index.
 struct Indices<'p> {
     cutscenes: HashMap<&'p str, u32>,
     flags: HashMap<&'p str, u32>,
+    commands: HashMap<&'p str, u32>,
 }
 
 /// Encodes a program that has passed `check`.
@@ -47,9 +63,18 @@ pub(crate) fn encode(files: &[SourceFile<'_>]) -> Vec<u8> {
             _ => None,
         })
         .collect();
-    let flags: Vec<(&str, &str, bool)> = items()
+
+    // Every Character Entity has a Companion Flag, `none` until a Script recruits it.
+    let flags: Vec<(String, &str, bool)> = items()
         .filter_map(|item| match item {
-            Item::Flag { name, ty, default } => Some((name.as_str(), ty.as_str(), *default)),
+            Item::Flag { name, ty, default } => Some((name.as_str().to_owned(), ty.as_str(), *default)),
+            Item::Cast { kind: CastKind::Mover, name } => Some((companion_flag(name.as_str()), CHARACTER_FLAG_TYPE, false)),
+            _ => None,
+        })
+        .collect();
+    let commands: Vec<&Command<'_>> = items()
+        .filter_map(|item| match item {
+            Item::Command(command) => Some(command),
             _ => None,
         })
         .collect();
@@ -60,7 +85,8 @@ pub(crate) fn encode(files: &[SourceFile<'_>]) -> Vec<u8> {
             .filter(|(_, block)| block.kind == BlockKind::Cutscene)
             .map(|(index, block)| (block.name.as_str(), to_u32(index)))
             .collect(),
-        flags: flags.iter().enumerate().map(|(index, (name, _, _))| (*name, to_u32(index))).collect(),
+        flags: flags.iter().enumerate().map(|(index, (name, _, _))| (name.as_str(), to_u32(index))).collect(),
+        commands: commands.iter().enumerate().map(|(index, command)| (command.name.as_str(), to_u32(index))).collect(),
     };
 
     let mut strings = StringPool::default();
@@ -69,6 +95,11 @@ pub(crate) fn encode(files: &[SourceFile<'_>]) -> Vec<u8> {
         write_u32(&mut encoded_flags, strings.intern(name));
         encoded_flags.push(position(&FLAG_TYPES, ty));
         write_u32(&mut encoded_flags, u32::from(*default));
+    }
+
+    let mut encoded_commands = Vec::new();
+    for command in &commands {
+        encode_command(command, &mut strings, &mut encoded_commands);
     }
 
     let mut encoded_blocks = Vec::new();
@@ -91,6 +122,9 @@ pub(crate) fn encode(files: &[SourceFile<'_>]) -> Vec<u8> {
     write_u32(&mut bytes, to_u32(flags.len()));
     bytes.extend(encoded_flags);
 
+    write_u32(&mut bytes, to_u32(commands.len()));
+    bytes.extend(encoded_commands);
+
     write_u32(&mut bytes, to_u32(encoded_blocks.len()));
     for block in encoded_blocks {
         bytes.extend(block);
@@ -105,17 +139,28 @@ pub(crate) fn encode(files: &[SourceFile<'_>]) -> Vec<u8> {
     bytes
 }
 
+fn encode_command(command: &Command<'_>, strings: &mut StringPool, bytes: &mut Vec<u8>) {
+    write_u32(bytes, strings.intern(command.name.as_str()));
+    write_u32(bytes, to_u32(command.params.len()));
+    for param in &command.params {
+        write_u32(bytes, strings.intern(param.name.as_str()));
+        bytes.push(position(&PARAM_TYPES, &param.ty.as_str()));
+    }
+    bytes.push(command.kinds.iter().map(|kind| 1 << position(&BLOCK_KINDS, kind)).fold(0, |mask, bit| mask | bit));
+    bytes.push(u8::from(command.waits));
+}
+
 fn encode_block(block: &Block<'_>, indices: &Indices<'_>, strings: &mut StringPool) -> Vec<u8> {
-    let (kind, name) = match block.kind {
-        BlockKind::Handler(trigger) => ("handler", format!("on {}({})", trigger.keyword(), block.name.as_str())),
-        BlockKind::Cutscene => ("cutscene", block.name.as_str().to_owned()),
+    let name = match block.kind {
+        BlockKind::Handler(trigger) => format!("on {}({})", trigger.keyword(), block.name.as_str()),
+        BlockKind::Cutscene => block.name.as_str().to_owned(),
     };
 
     let mut code = BlockCode { instructions: Vec::new(), indices, strings };
     code.statements(&block.body);
     code.emit("Return", Vec::new());
 
-    let mut bytes = vec![position(&BLOCK_KINDS, &kind)];
+    let mut bytes = vec![position(&BLOCK_KINDS, &block.kind.word())];
     write_u32(&mut bytes, code.strings.intern(&name));
     write_u32(&mut bytes, to_u32(code.instructions.len()));
     for (opcode, operands) in code.instructions {
@@ -163,9 +208,20 @@ impl BlockCode<'_, '_> {
             Statement::Play(cutscene) => {
                 self.emit("Play", vec![self.indices.cutscenes[cutscene.as_str()]]);
             }
-            Statement::Set { flag, value } => {
+            Statement::Set { target, value } => {
                 self.expr(value);
-                self.emit("Set", vec![self.indices.flags[flag.as_str()]]);
+                self.emit("Set", vec![self.flag(target)]);
+            }
+            Statement::Command { name, args } => {
+                for arg in args {
+                    match arg {
+                        Argument::Tile { x, y, .. } => self.emit("PushTile", vec![*x, *y]),
+
+                        // `check` lets a Mover name be the only other argument.
+                        Argument::Expr(Expr { span, .. }) => self.push_name(span.as_str()),
+                    };
+                }
+                self.emit("Command", vec![self.indices.commands[name.as_str()]]);
             }
             Statement::If { condition, then, otherwise } => {
                 self.expr(condition);
@@ -220,19 +276,40 @@ impl BlockCode<'_, '_> {
         }
     }
 
+    fn push_name(&mut self, name: &str) -> usize {
+        let name = self.strings.intern(name);
+        self.emit("PushName", vec![name])
+    }
+
+    /// The Flag table index of a `Name` that `check` resolved to a Flag, or of a `Companion`.
+    fn flag(&self, expr: &Expr<'_>) -> u32 {
+        match expr.kind {
+            ExprKind::Companion(entity) => self.indices.flags[companion_flag(entity.as_str()).as_str()],
+            _ => self.indices.flags[expr.span.as_str()],
+        }
+    }
+
     fn expr(&mut self, expr: &Expr<'_>) {
-        match expr {
-            Expr::Bool(value) => {
+        match &expr.kind {
+            ExprKind::Bool(value) => {
                 self.emit("PushBool", vec![u32::from(*value)]);
             }
-            Expr::Flag(name) => {
-                self.emit("PushFlag", vec![self.indices.flags[name.as_str()]]);
+            ExprKind::None => {
+                self.emit("PushNone", Vec::new());
             }
-            Expr::Not(operand) => {
+
+            // `check` resolved a name that isn't a Flag to a Character.
+            ExprKind::Name if !self.indices.flags.contains_key(expr.span.as_str()) => {
+                self.push_name(expr.span.as_str());
+            }
+            ExprKind::Name | ExprKind::Companion(_) => {
+                self.emit("PushFlag", vec![self.flag(expr)]);
+            }
+            ExprKind::Not(operand) => {
                 self.expr(operand);
                 self.emit("Not", Vec::new());
             }
-            Expr::Binary(left, op, right) => {
+            ExprKind::Binary(left, op, right) => {
                 self.expr(left);
                 self.expr(right);
                 let opcode = match op {
@@ -247,7 +324,7 @@ impl BlockCode<'_, '_> {
     }
 }
 
-/// Prints a bytecode file as text: the header, string pool, Flag table, blocks and handler index. Operands
+/// Prints a bytecode file as text: the header, string pool, Flag table, command table, blocks and handler index. Operands
 /// print as raw numbers, so a string operand is an index into the pool printed above.
 pub fn disasm(bytes: &[u8]) -> Result<String, String> {
     let mut reader = Reader { bytes, offset: 0 };
@@ -278,12 +355,26 @@ pub fn disasm(bytes: &[u8]) -> Result<String, String> {
     for index in 0..reader.u32()? {
         let flag = name(reader.u32()?)?;
         let ty = FLAG_TYPES.get(usize::from(reader.u8()?)).ok_or("unknown Flag type")?;
-        let default = match reader.u32()? {
-            0 => "false",
-            1 => "true",
-            _ => return Err(format!("Flag `{flag}` has a default that isn't 0 or 1")),
+        let default = match (*ty, reader.u32()?) {
+            ("bool", 0) => "false",
+            ("bool", 1) => "true",
+            (_, 0) => "none",
+            ("bool", _) => return Err(format!("Flag `{flag}` has a default that isn't 0 or 1")),
+            _ => return Err(format!("Flag `{flag}` has a default that isn't 0 (none)")),
         };
         writeln!(out, "  {index:>4}  {flag}: {ty} = {default}").unwrap();
+    }
+
+    writeln!(out, "\ncommands").unwrap();
+    for index in 0..reader.u32()? {
+        let command = name(reader.u32()?)?;
+        let params = (0..reader.u32()?)
+            .map(|_| Ok(format!("{}: {}", name(reader.u32()?)?, PARAM_TYPES.get(usize::from(reader.u8()?)).ok_or("unknown parameter type")?)))
+            .collect::<Result<Vec<_>, String>>()?;
+        let mask = reader.u8()?;
+        let kinds: Vec<_> = BLOCK_KINDS.iter().enumerate().filter(|(bit, _)| mask & (1 << bit) != 0).map(|(_, kind)| *kind).collect();
+        let waits = if reader.u8()? == 1 { " waits" } else { "" };
+        writeln!(out, "  {index:>4}  {command}({}) in {}{waits}", params.join(", "), kinds.join(", ")).unwrap();
     }
 
     writeln!(out, "\nblocks").unwrap();
@@ -377,34 +468,48 @@ mod tests {
 
     #[test]
     fn disasm_prints_the_header_string_pool_flag_table_blocks_and_handler_index() {
-        let source = "enum Expression { Neutral }\nspeaker Narrator;\nflag lit: bool = true;\n\non enter(Camp) with Narrator {\n    play(cutscene::story);\n}\n\ncutscene story with Narrator {\n    if lit {\n        Narrator: \"Hi\";\n    }\n}\n";
-        let bytecode = compile_sources(Path::new(""), &[("main.clsc".to_owned(), source.to_owned())], None).bytecode.unwrap();
+        let prelude = "command move(who: Mover, to: Tile) in cutscene waits;\n";
+        let source = "enum Expression { Neutral }\nspeaker Narrator;\nmover Guard;\nflag lit: bool = true;\n\non enter(Camp) with Narrator {\n    play(cutscene::story);\n}\n\ncutscene story with Narrator, Guard {\n    if lit {\n        Narrator: \"Hi\";\n    }\n    move(Guard, (9, 10));\n}\n";
+        let sources = [("prelude.clsc".to_owned(), prelude.to_owned()), ("main.clsc".to_owned(), source.to_owned())];
+        let bytecode = compile_sources(Path::new(""), &sources, None).bytecode.unwrap();
 
         assert_eq!(
             disasm(&bytecode).unwrap(),
-            "format version 3
+            "format version 4
 
 strings
-     0  \"lit\"
-     1  \"on enter(Camp)\"
-     2  \"Camp\"
-     3  \"Narrator\"
-     4  \"Neutral\"
-     5  \"Hi\"
-     6  \"story\"
+     0  \"companion:Guard\"
+     1  \"lit\"
+     2  \"move\"
+     3  \"who\"
+     4  \"to\"
+     5  \"on enter(Camp)\"
+     6  \"Camp\"
+     7  \"Narrator\"
+     8  \"Neutral\"
+     9  \"Hi\"
+    10  \"Guard\"
+    11  \"story\"
 
 flags
-     0  lit: bool = true
+     0  companion:Guard: Character? = none
+     1  lit: bool = true
+
+commands
+     0  move(who: Mover, to: Tile) in cutscene waits
 
 blocks
      0  handler \"on enter(Camp)\"
            0  Play 1
            1  Return
      1  cutscene \"story\"
-           0  PushFlag 0
+           0  PushFlag 1
            1  JumpIfFalse 3
-           2  Line 3 4 5
-           3  Return
+           2  Line 7 8 9
+           3  PushName 10
+           4  PushTile 9 10
+           5  Command 0
+           6  Return
 
 handlers
   on enter(Camp) -> block 0
@@ -419,5 +524,14 @@ handlers
         // Magic, version, the pool holding "lit", the Flag count, its name and its type come first.
         bytecode[4 + 2 + 4 + 4 + 3 + 4 + 4 + 1] = 2;
         assert_eq!(disasm(&bytecode).unwrap_err(), "Flag `lit` has a default that isn't 0 or 1");
+    }
+
+    #[test]
+    fn disasm_refuses_a_companion_flag_default_that_is_not_none() {
+        let mut bytecode = compile_sources(Path::new(""), &[("main.clsc".to_owned(), "mover Guard;".to_owned())], None).bytecode.unwrap();
+
+        // Magic, version, the pool holding "companion:Guard", the Flag count, its name and its type come first.
+        bytecode[4 + 2 + 4 + 4 + 15 + 4 + 4 + 1] = 1;
+        assert_eq!(disasm(&bytecode).unwrap_err(), "Flag `companion:Guard` has a default that isn't 0 (none)");
     }
 }

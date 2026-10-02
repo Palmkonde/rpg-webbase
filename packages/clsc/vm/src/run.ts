@@ -4,6 +4,18 @@ export type Trigger = 'interact' | 'enter'
 
 export type Flags = Readonly<Record<string, boolean | number | string>>
 
+export interface Tile {
+  x: number
+  y: number
+}
+
+// A Mover is passed by name: a Character Entity id, or `Player`.
+export type CommandArg = string | Tile
+
+// A `Character?` holds a Character, or `false` for `none`: the Host's own value for a dismissed Companion (adr/0028).
+type FlagValue = boolean | string
+type Value = FlagValue | Tile
+
 export interface ShownChoice {
   text: string
   locked?: string
@@ -12,7 +24,8 @@ export interface ShownChoice {
 export type Output =
   | { type: 'line'; speaker: string; expression: string; text: string }
   | { type: 'choices'; choices: ShownChoice[] }
-  | { type: 'flag'; name: string; value: boolean }
+  | { type: 'command'; name: string; args: CommandArg[]; waits: boolean }
+  | { type: 'flag'; name: string; value: boolean | string }
   | { type: 'freeze' }
   | { type: 'unfreeze' }
   | { type: 'done' }
@@ -29,12 +42,20 @@ export interface Block {
 
 export interface FlagDeclaration {
   name: string
-  default: boolean
+  type: 'bool' | 'Character?'
+  default: FlagValue
+}
+
+export interface CommandDeclaration {
+  name: string
+  arity: number
+  waits: boolean
 }
 
 export interface ProgramData {
   strings: readonly string[]
   flags: readonly FlagDeclaration[]
+  commands: readonly CommandDeclaration[]
   blocks: readonly Block[]
 }
 
@@ -54,13 +75,18 @@ function jump(frame: Frame, target: number): undefined {
   return undefined
 }
 
-// Gives `undefined` for a wrong-typed Flag, after naming it; `bool` is the only Flag type.
-function readSnapshot(declarations: readonly FlagDeclaration[], snapshot: Flags): boolean[] | undefined {
-  const values: boolean[] = []
-  for (const { name, default: fallback } of declarations) {
-    const value = Object.hasOwn(snapshot, name) ? snapshot[name] : fallback
-    if (typeof value !== 'boolean') {
-      console.error(`Flag "${name}" is stored as ${JSON.stringify(value)}, but it is declared bool: the run is aborted`)
+function readStoredFlag(type: FlagDeclaration['type'], stored: Flags[string]): FlagValue | undefined {
+  if (type === 'bool') {return typeof stored === 'boolean' ? stored : undefined}
+  return stored === false || typeof stored === 'string' ? stored : undefined
+}
+
+// Gives `undefined` for a wrong-typed Flag, after naming it.
+function readSnapshot(declarations: readonly FlagDeclaration[], snapshot: Flags): FlagValue[] | undefined {
+  const values: FlagValue[] = []
+  for (const { name, type, default: fallback } of declarations) {
+    const value = Object.hasOwn(snapshot, name) ? readStoredFlag(type, snapshot[name]) : fallback
+    if (value === undefined) {
+      console.error(`Flag "${name}" is stored as ${JSON.stringify(snapshot[name])}, but it is declared ${type}: the run is aborted`)
       return undefined
     }
     values.push(value)
@@ -74,10 +100,10 @@ export class Run {
   private readonly stack: Frame[]
 
   // The snapshot taken at start, plus this run's own writes, by Flag table index.
-  private readonly flagValues: boolean[]
+  private readonly flagValues: FlagValue[]
 
   // Where expressions are evaluated.
-  private readonly valueStack: boolean[] = []
+  private readonly valueStack: Value[] = []
 
   private offered: OfferedChoice[] = []
 
@@ -140,41 +166,64 @@ export class Run {
     [Opcode.PushBool]: ([value]) => this.push(value === 1),
     [Opcode.PushFlag]: ([flag]) => this.push(this.flagValues[flag]),
     [Opcode.Set]: ([flag]) => this.set(flag),
-    [Opcode.Not]: () => this.push(!this.pop()),
-    [Opcode.Or]: () => this.binary((left, right) => left || right),
-    [Opcode.And]: () => this.binary((left, right) => left && right),
-    [Opcode.Equal]: () => this.binary((left, right) => left === right),
-    [Opcode.NotEqual]: () => this.binary((left, right) => left !== right),
+    [Opcode.Not]: () => this.push(!this.popBool()),
+    [Opcode.Or]: () => this.logic((left, right) => left || right),
+    [Opcode.And]: () => this.logic((left, right) => left && right),
+    [Opcode.Equal]: () => this.compare((left, right) => left === right),
+    [Opcode.NotEqual]: () => this.compare((left, right) => left !== right),
     [Opcode.Jump]: ([target], frame) => jump(frame, target),
-    [Opcode.JumpIfFalse]: ([target], frame) => (this.pop() ? undefined : jump(frame, target)),
+    [Opcode.JumpIfFalse]: ([target], frame) => (this.popBool() ? undefined : jump(frame, target)),
     [Opcode.Choice]: ([text, target]) => this.offer(text, undefined, target),
     [Opcode.LockedChoice]: ([text, reason, target]) => this.offer(text, reason, target),
     [Opcode.Choose]: ([below], frame) => this.offerChoices(frame, below),
+    [Opcode.PushName]: ([name]) => this.push(this.program.strings[name]),
+    [Opcode.PushNone]: () => this.push(false),
+    [Opcode.PushTile]: ([x, y]) => this.push({ x, y }),
+    [Opcode.Command]: ([command]) => this.command(command),
   }
 
-  private push(value: boolean): undefined {
+  private push(value: Value): undefined {
     this.valueStack.push(value)
     return undefined
   }
 
-  private pop(): boolean {
+  private pop(): Value {
     return this.valueStack.pop()!
   }
 
-  private binary(operator: (left: boolean, right: boolean) => boolean): undefined {
+  // The compiler type-checks every operand, so a bool operation only ever pops a bool.
+  private popBool(): boolean {
+    return this.pop() === true
+  }
+
+  private logic(operator: (left: boolean, right: boolean) => boolean): undefined {
+    const right = this.popBool()
+    return this.push(operator(this.popBool(), right))
+  }
+
+  // Both operands share a type, so `===` compares bools, Characters and `none` alike.
+  private compare(operator: (left: Value, right: Value) => boolean): undefined {
     const right = this.pop()
     return this.push(operator(this.pop(), right))
   }
 
+  // The compiler type-checks the value against the Flag, so it is never a Tile.
   private set(index: number): Output {
-    const value = this.pop()
+    const value = this.pop() as FlagValue
     this.flagValues[index] = value
     return { type: 'flag', name: this.program.flags[index].name, value }
   }
 
+  // The arguments were pushed first to last, each a Mover name or a Tile as the compiler checked.
+  private command(index: number): Output {
+    const { name, arity, waits } = this.program.commands[index]
+    const args = this.valueStack.splice(this.valueStack.length - arity) as CommandArg[]
+    return { type: 'command', name, args, waits }
+  }
+
   // A false condition hides the choice, unless it has a locked reason to show instead.
   private offer(text: number, reason: number | undefined, target: number): undefined {
-    const holds = this.pop()
+    const holds = this.popBool()
     if (holds) {
       this.offered.push({ text: this.program.strings[text], target })
     } else if (reason !== undefined) {

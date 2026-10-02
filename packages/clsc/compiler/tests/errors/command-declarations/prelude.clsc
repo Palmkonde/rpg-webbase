@@ -1,0 +1,3 @@
+command wait(seconds: Number) in cutscene; // error: unknown parameter type `Number` (expected Mover | Tile)
+command wave(who: Mover) in handler, cutscene;
+command wave(who: Mover) in cutscene; // error: `wave` is already declared

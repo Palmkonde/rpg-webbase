@@ -1,0 +1,6 @@
+mover Guard;
+command move(who: Mover, to: Tile) in cutscene waits;
+
+cutscene walk with Guard {
+    move(Guard, (1, 99999999999)); // error: `99999999999` is too large for a tile coordinate
+}
