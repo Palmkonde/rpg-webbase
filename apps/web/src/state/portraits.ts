@@ -1,6 +1,5 @@
-import type { Expression } from '../scripts/script.ts'
-
-export type PortraitRegistry = Record<string, Partial<Record<Expression, string>>>
+// Keyed by Expression name as a string: a VM line's Expression comes from `prelude.clsc`, not a TS type.
+export type PortraitRegistry = Record<string, Record<string, string>>
 
 const REGISTRY = {
   Campfire: {
@@ -15,7 +14,7 @@ const REGISTRY = {
 
 export function resolvePortrait(
   speaker: string | undefined,
-  expression: Expression | undefined,
+  expression: string | undefined,
   registry: PortraitRegistry = REGISTRY,
 ): string | undefined {
   if (speaker === undefined || expression === undefined) {

@@ -38,13 +38,17 @@ export const flagStore = createFlagStore()
 
 export const currentStudentId: string = seed.studentId
 
+export function seenFlag(id: string): string {
+  return `${id}_seen`
+}
+
 // Shared "don't replay" gate for CG/Cutscene, per spec's "CG & Cutscene" section.
 export async function runOnce(
   scope: { store: FlagStore; studentId: string },
   id: string,
   playFn: () => Promise<void> | void,
 ): Promise<void> {
-  const seenKey = `${id}_seen`
+  const seenKey = seenFlag(id)
   const flags = await scope.store.getFlags(scope.studentId)
 
   if (flags[seenKey]) {return}

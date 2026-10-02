@@ -7,9 +7,12 @@ import { CgOverlay } from '../temp-ui/cg-overlay.tsx'
 import { CompanionOverlay } from '../temp-ui/companion-overlay.tsx'
 import { CutsceneOverlay } from '../temp-ui/cutscene-overlay.tsx'
 import { DialogueOverlay } from '../temp-ui/dialogue-overlay.tsx'
+import { ScriptOverlay } from '../temp-ui/script-overlay.tsx'
 import { createEngine } from '@game-engine/engine-core'
 import { useCgPlayback } from './use-cg-playback.ts'
 import { useCompanions } from './use-companions.ts'
+
+// oxlint-disable-next-line import/max-dependencies -- one over only while the TS-era Dialogue and Cutscene overlays outlive ScriptOverlay; deleting the TS Script path removes both.
 import { useScriptPlayback } from './use-script-playback.ts'
 
 const CANVAS_STYLE = { width: '100vw', height: '100vh' }
@@ -25,7 +28,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
   const { cgFrames, cgStep, advanceCg, skipCg, playCgById } = useCgPlayback()
   const { companionIds, syncCompanions, dismissCompanion } = useCompanions(engineRef)
   const {
-    dialogue, cutsceneLine, cutsceneChoices, enginePaused, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered, fetchProgram,
+    scriptLine, advanceLine, endRun, dialogue, cutsceneLine, cutsceneChoices, enginePaused, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered, fetchProgram,
   } = useScriptPlayback(engineRef, playCgById, syncCompanions)
 
   useEffect(() => {
@@ -79,10 +82,13 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
     return (): void => {
       cancelled = true
       skipCg()
+
+      // Before destroy, so a run aborted while frozen unpauses the Engine it paused.
+      endRun()
       engineRef.current?.destroy()
       engineRef.current = undefined
     }
-  }, [worldConfig, runInteraction, runZoneEntered, fetchProgram, playCgById, skipCg, syncCompanions])
+  }, [worldConfig, runInteraction, runZoneEntered, fetchProgram, playCgById, skipCg, syncCompanions, endRun])
 
   return (
     <>
@@ -96,6 +102,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
         />
       )}
       {!enginePaused && companionIds.length > 0 && <CompanionOverlay companionIds={companionIds} onDismiss={dismissCompanion} />}
+      {scriptLine && <ScriptOverlay frozen={enginePaused} line={scriptLine} onAdvance={advanceLine} onDismiss={endRun} />}
       {dialogue && <DialogueOverlay dialogue={dialogue} onChoose={selectChoice} onDismiss={dismissDialogue} />}
       {(cutsceneLine !== undefined || cutsceneChoices !== undefined) && (
         <CutsceneOverlay choices={cutsceneChoices} line={cutsceneLine} onAdvance={advanceCutscene} onChoose={pickCutsceneChoice} />

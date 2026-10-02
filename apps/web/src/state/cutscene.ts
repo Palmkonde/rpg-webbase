@@ -137,11 +137,6 @@ const REGISTRY = {
     .choice('Follow me forever', { flags: { [companionFlag('Guard')]: 'fluffy' } })
     .choice('Nah, stay here')
     .build(),
-
-  // Zone enter script issues #32
-  'campfire-story-step-into-zone': createCutscene()
-    .say('You step on the zone of unreturn.', { speaker: 'Narrator' })
-    .build(),
 } satisfies CutsceneRegistry
 
 export function resolveCutscene(id: string, registry: CutsceneRegistry = REGISTRY): CutsceneStep[] | undefined {
