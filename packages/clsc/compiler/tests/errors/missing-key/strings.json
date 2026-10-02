@@ -1,0 +1,7 @@
+{
+  "locale": "en",
+  "table": {
+    "en": { "camp.hello": "Hello", "camp.stay": "Stay", "camp.locked": "Locked" },
+    "th": { "camp.stay": "อยู่ต่อ" }
+  }
+}

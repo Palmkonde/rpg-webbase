@@ -1,5 +1,6 @@
 use serde_json::Value;
 use std::collections::HashMap;
+use std::path::Path;
 
 /// A Flag seed, the Host's Student state fixture: `{ "studentId": …, "flags": { name: value } }`.
 pub struct FlagSeed {
@@ -38,6 +39,13 @@ impl FlagSeed {
             return Err("a Flag seed needs a `flags` object".to_owned());
         };
         Ok(Self { stored: flags.into_iter().map(|(name, value)| (name, stored(&value))).collect() })
+    }
+
+    /// # Errors
+    ///
+    /// When the file at `path` can't be read, or isn't a Flag seed.
+    pub fn read(path: &Path) -> Result<Self, String> {
+        crate::read_json(path, Self::parse)
     }
 
     pub(crate) fn get(&self, name: &str) -> Option<Stored> {

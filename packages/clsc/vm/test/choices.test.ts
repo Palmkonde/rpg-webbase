@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { loadProgram } from '../src/program.ts'
 import { test } from 'node:test'
 
-const FIRST_TALK = { type: 'choices', choices: [{ text: 'Nice to meet you!' }, { text: 'Warm your hands', locked: 'You need firewood first.' }, { text: 'Leave' }] } as const
+const FIRST_TALK = { type: 'choices', choices: [{ text: 'Nice to meet you!' }, { text: 'Warm your hands', locked: { text: 'You need firewood first.' } }, { text: 'Leave' }] } as const
 const BYE = { type: 'line', speaker: 'Campfire', expression: 'Neutral', text: 'Bye.' } as const
 
 test('a choice whose condition is false is hidden, unless it has a locked reason to show', async () => {

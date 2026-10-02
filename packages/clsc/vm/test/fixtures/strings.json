@@ -1,0 +1,17 @@
+{
+  "locale": "en",
+  "table": {
+    "en": {
+      "campfire.greeting": "Howdy!",
+      "campfire.leave": "Leave",
+      "campfire.need_firewood": "You need firewood first.",
+      "cg.intro.1": "Long ago..."
+    },
+    "th": {
+      "campfire.greeting": "สวัสดี!",
+      "campfire.leave": "ไปก่อนนะ",
+      "campfire.need_firewood": "ต้องมีฟืนก่อน",
+      "cg.intro.1": "นานมาแล้ว..."
+    }
+  }
+}

@@ -1,7 +1,8 @@
 //! The bytecode file's byte layout.
 //!
 //! Every number is little-endian, and every `u32` that names a string is an index into the string
-//! pool. Bump `FORMAT_VERSION` whenever this layout changes (`docs/spec/clsc.md` → Bytecode
+//! pool, except a text operand: player-visible text, which is twice its pool index, plus one when
+//! it's a String Table key. Bump `FORMAT_VERSION` whenever this layout changes (`docs/spec/clsc.md` → Bytecode
 //! contract).
 //!
 //! | field          | layout                                                                  |
@@ -23,13 +24,13 @@
 //! block's code is an instruction index, not a byte offset.
 
 use crate::opcodes::OPCODES;
-use crate::parse::{Argument, BinaryOp, Block, BlockKind, CastKind, Command, Expr, ExprKind, Item, Playable, Statement, Trigger};
+use crate::parse::{Argument, BinaryOp, Block, BlockKind, CastKind, Command, Expr, ExprKind, Item, Playable, Statement, Text, Trigger};
 use crate::SourceFile;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
 const MAGIC: &[u8; 4] = b"CLSC";
-const FORMAT_VERSION: u16 = 5;
+const FORMAT_VERSION: u16 = 6;
 
 // The VM decodes these by position, so the order is part of the layout.
 const TRIGGERS: [Trigger; 2] = [Trigger::Interact, Trigger::Enter];
@@ -227,7 +228,7 @@ impl BlockCode<'_, '_> {
         match statement {
             Statement::Line { speaker, expression, text } => {
                 let expression = expression.map_or(DEFAULT_EXPRESSION, |expression| expression.as_str());
-                let operands = vec![self.strings.intern(speaker.as_str()), self.strings.intern(expression), self.strings.intern(text)];
+                let operands = vec![self.strings.intern(speaker.as_str()), self.strings.intern(expression), self.text(text)];
                 self.emit("Line", operands);
             }
             Statement::Play { kind, name } => {
@@ -285,10 +286,10 @@ impl BlockCode<'_, '_> {
                     self.emit("PushBool", vec![1]);
                 }
             }
-            let text = self.strings.intern(&choice.text);
+            let text = self.text(&choice.text);
             offers.push(match &choice.locked {
                 Some(reason) => {
-                    let reason = self.strings.intern(reason);
+                    let reason = self.text(reason);
                     self.emit("LockedChoice", vec![text, reason, 0])
                 }
                 None => self.emit("Choice", vec![text, 0]),
@@ -307,6 +308,13 @@ impl BlockCode<'_, '_> {
         }
         for jump in below {
             self.land(jump);
+        }
+    }
+
+    fn text(&mut self, text: &Text<'_>) -> u32 {
+        match text {
+            Text::Literal(literal) => self.strings.intern(literal) * 2,
+            Text::Key(key) => self.strings.intern(key.as_str()) * 2 + 1,
         }
     }
 
@@ -361,7 +369,8 @@ impl BlockCode<'_, '_> {
 /// Prints a bytecode file as text.
 ///
 /// That's the header, string pool, Flag table, command table, blocks and handler index. Operands
-/// print as raw numbers, so a string operand is an index into the pool printed above.
+/// print as raw numbers, so a string operand is an index into the pool printed above, and a text
+/// operand is encoded as the module docs describe.
 ///
 /// # Errors
 ///
@@ -503,7 +512,7 @@ fn position<T: PartialEq>(table: &[T], value: &T) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::disasm;
-    use crate::compile_sources;
+    use crate::{compile_sources, HostData};
     use std::path::Path;
 
     #[test]
@@ -511,11 +520,11 @@ mod tests {
         let prelude = "command move(who: Mover, to: Tile) in cutscene waits;\n";
         let source = "enum Expression { Neutral }\nspeaker Narrator;\nmover Guard;\nflag lit: bool = true;\n\non enter(Camp) with Narrator {\n    play(cutscene::story);\n    play(cg::vision);\n}\n\ncutscene story with Narrator, Guard {\n    if lit {\n        Narrator: \"Hi\";\n    }\n    move(Guard, (9, 10));\n}\n\ncg vision set seen_vision = true;\n";
         let sources = [("prelude.clsc".to_owned(), prelude.to_owned()), ("main.clsc".to_owned(), source.to_owned())];
-        let bytecode = compile_sources(Path::new(""), &sources, None).bytecode.unwrap();
+        let bytecode = compile_sources(Path::new(""), &sources, &HostData::default()).bytecode.unwrap();
 
         assert_eq!(
             disasm(&bytecode).unwrap(),
-            "format version 5
+            "format version 6
 
 strings
      0  \"companion:Guard\"
@@ -552,7 +561,7 @@ blocks
      1  cutscene \"story\"
            0  PushFlag 1
            1  JumpIfFalse 3
-           2  Line 8 9 10
+           2  Line 8 9 20
            3  PushName 11
            4  PushTile 9 10
            5  Command 0
@@ -571,7 +580,7 @@ handlers
 
     #[test]
     fn disasm_refuses_a_flag_default_that_is_not_0_or_1() {
-        let mut bytecode = compile_sources(Path::new(""), &[("main.clsc".to_owned(), "flag lit: bool = true;".to_owned())], None).bytecode.unwrap();
+        let mut bytecode = compile_sources(Path::new(""), &[("main.clsc".to_owned(), "flag lit: bool = true;".to_owned())], &HostData::default()).bytecode.unwrap();
 
         // Magic, version, the pool holding "lit", the Flag count, its name and its type come first.
         bytecode[4 + 2 + 4 + 4 + 3 + 4 + 4 + 1] = 2;
@@ -580,7 +589,7 @@ handlers
 
     #[test]
     fn disasm_refuses_a_companion_flag_default_that_is_not_none() {
-        let mut bytecode = compile_sources(Path::new(""), &[("main.clsc".to_owned(), "mover Guard;".to_owned())], None).bytecode.unwrap();
+        let mut bytecode = compile_sources(Path::new(""), &[("main.clsc".to_owned(), "mover Guard;".to_owned())], &HostData::default()).bytecode.unwrap();
 
         // Magic, version, the pool holding "companion:Guard", the Flag count, its name and its type come first.
         bytecode[4 + 2 + 4 + 4 + 15 + 4 + 4 + 1] = 1;

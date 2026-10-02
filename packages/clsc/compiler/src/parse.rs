@@ -118,7 +118,7 @@ impl Trigger {
 }
 
 pub enum Statement<'s> {
-    Line { speaker: Span<'s>, expression: Option<Span<'s>>, text: String },
+    Line { speaker: Span<'s>, expression: Option<Span<'s>>, text: Text<'s> },
     Play { kind: Playable, name: Span<'s> },
 
     // `target` is the `Name` of a Flag or a `Companion`.
@@ -130,12 +130,20 @@ pub enum Statement<'s> {
     Choose(Vec<Choice<'s>>),
 }
 
+/// Player-visible text: written inline, or a String Table key the Host resolves.
+pub enum Text<'s> {
+    Literal(String),
+
+    // The key, without its `@`.
+    Key(Span<'s>),
+}
+
 pub struct Choice<'s> {
-    pub text: String,
+    pub text: Text<'s>,
 
     // Hides the choice when false, or shows it locked with `locked` as the reason.
     pub condition: Option<Expr<'s>>,
-    pub locked: Option<String>,
+    pub locked: Option<Text<'s>>,
     pub body: Vec<Statement<'s>>,
 }
 
@@ -280,21 +288,21 @@ fn statement(pair: Pair<'_, Rule>) -> Result<Statement<'_>, ParseError> {
         _ => {
             let speaker = next().as_span();
             let mut rest: Vec<_> = parts.collect();
-            let text = unescape(rest.pop().expect("a line ends with its text").as_span())?;
+            let text = text(rest.pop().expect("a line ends with its text"))?;
             Statement::Line { speaker, expression: rest.first().map(Pair::as_span), text }
         }
     })
 }
 
 fn choice(pair: Pair<'_, Rule>) -> Result<Choice<'_>, ParseError> {
-    let mut choice = Choice { text: String::new(), condition: None, locked: None, body: Vec::new() };
+    let mut choice = Choice { text: Text::Literal(String::new()), condition: None, locked: None, body: Vec::new() };
     for part in pair.into_inner() {
         match part.as_rule() {
-            Rule::text => choice.text = unescape(part.as_span())?,
+            Rule::quoted | Rule::key => choice.text = text(part)?,
             Rule::expr => choice.condition = Some(expr(part)),
             Rule::locked => {
-                let reason = part.into_inner().find(|part| part.as_rule() == Rule::text).expect("locked(...) holds its reason");
-                choice.locked = Some(unescape(reason.as_span())?);
+                let reason = part.into_inner().find(|part| matches!(part.as_rule(), Rule::quoted | Rule::key)).expect("locked(...) holds its reason");
+                choice.locked = Some(text(reason)?);
             }
             Rule::body => choice.body = body(part)?,
             _ => {}
@@ -354,6 +362,13 @@ const fn is_keyword(rule: Rule) -> bool {
 
 fn names(pair: Pair<'_, Rule>) -> Vec<Span<'_>> {
     pair.into_inner().filter(|part| part.as_rule() == Rule::name).map(|part| part.as_span()).collect()
+}
+
+fn text(pair: Pair<'_, Rule>) -> Result<Text<'_>, ParseError> {
+    match pair.as_rule() {
+        Rule::key => Ok(Text::Key(pair.into_inner().next().expect("a key has a name").as_span())),
+        _ => unescape(pair.as_span()).map(Text::Literal),
+    }
 }
 
 /// `quoted` still has its quotes. Only `\"` and `\\` escape.

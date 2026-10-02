@@ -56,10 +56,17 @@ bool_literal = @{ ("true" | "false") ~ !name_char }
 none_literal = @{ "none" ~ !name_char }
 companion    = { companion_keyword ~ "[" ~ name ~ "]" }
 
+// Player-visible text: quoted inline, or a String Table key.
+text = _{ quoted | key }
+
+// Dotted, each segment any word, so `@cg.intro.1` is a key though `cg` is a keyword.
+key      = ${ "@" ~ key_name }
+key_name = @{ (ASCII_ALPHANUMERIC | "_")+ ~ ("." ~ (ASCII_ALPHANUMERIC | "_")+)* }
+
 // Atomic, so whitespace and `//` inside the quotes are part of the text. Any escape parses, so
 // `parse.rs` can reject one with a message naming it.
-text      = ${ "\"" ~ text_char* ~ "\"" }
-text_char = _{ "\\" ~ ANY | !("\"" | "\\" | "\n") ~ ANY }
+quoted      = ${ "\"" ~ quoted_char* ~ "\"" }
+quoted_char = _{ "\\" ~ ANY | !("\"" | "\\" | "\n") ~ ANY }
 
 // Atomic, so a keyword ends at a word boundary: `speakerNarrator` is a name, not `speaker Narrator`.
 use_keyword       = @{ "use" ~ !name_char }

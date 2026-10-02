@@ -1,0 +1,10 @@
+flag has_firewood: bool = false;
+
+on enter(Camp) with Narrator {
+    Narrator: @campfire.greeting;
+    choose {
+        @campfire.leave;
+        "Warm up" if has_firewood else locked(@campfire.need_firewood);
+        @cg.intro.1 if has_firewood else locked("Not yet.");
+    }
+}

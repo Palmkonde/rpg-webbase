@@ -1,0 +1,8 @@
+on enter(Camp) with Narrator {
+    Narrator: @camp.hello; // error: `@camp.hello` is missing from the String Table in Locale th
+    choose {
+        @camp.stay;
+        "Leave" if true else locked(@camp.locked); // error: `@camp.locked` is missing from the String Table in Locale th
+        @camp.gone; // error: `@camp.gone` is missing from the String Table in Locales en, th
+    }
+}

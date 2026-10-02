@@ -146,7 +146,7 @@ The spec fixes what the file contains, not its byte layout. The layout is worked
 | out | Host does | then |
 |---|---|---|
 | `line { speaker, expression, text \| key }` | resolve a key, show it | `next()` on click |
-| `choices [{ text \| key, locked?: reason }]`, hidden ones removed | show them | `choose(i)`, an index into what was shown |
+| `choices [{ text \| key, locked?: { text \| key } }]`, hidden ones removed | show them | `choose(i)`, an index into what was shown |
 | `command { name, args, waits }` | run the handler, awaiting it if `waits` | `next()`, or `abort()` on failure |
 | `cg { id }` | play the CG | `next()` when it ends or is skipped |
 | `flag { name, value }` | save it; re-sync Companions if it's a Companion Flag and not frozen | `next()`, or `abort()` on failure |

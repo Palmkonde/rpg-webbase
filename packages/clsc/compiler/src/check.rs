@@ -1,7 +1,7 @@
 use crate::bytecode::{companion_flag, DEFAULT_EXPRESSION, PARAM_TYPES};
-use crate::parse::{Argument, BinaryOp, Block, BlockKind, CastKind, Command, Expr, ExprKind, Item, Once, Playable, Statement};
+use crate::parse::{Argument, BinaryOp, Block, BlockKind, CastKind, Command, Expr, ExprKind, Item, Once, Playable, Statement, Text};
 use crate::seed::Stored;
-use crate::{Diagnostic, FlagSeed, SourceFile};
+use crate::{Diagnostic, FlagSeed, HostData, SourceFile, StringTable};
 use pest::Span;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -76,7 +76,7 @@ impl<'f> Scope<'f> {
     }
 }
 
-pub fn check(files: &[SourceFile<'_>], seed: Option<&FlagSeed>) -> Vec<Diagnostic> {
+pub fn check(files: &[SourceFile<'_>], host: &HostData) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     let declarations = collect_declarations_and_duplicates(files, &mut diagnostics);
     let modules: HashSet<&str> = files.iter().map(|file| file.module.as_str()).collect();
@@ -88,12 +88,12 @@ pub fn check(files: &[SourceFile<'_>], seed: Option<&FlagSeed>) -> Vec<Diagnosti
                 Item::Use(path) => check_use(&file.path, *path, &modules, &mut diagnostics),
                 Item::Flag { ty, .. } => check_flag_type(&file.path, *ty, &mut diagnostics),
                 Item::Command(command) => check_command_declaration(&scope, command, &mut diagnostics),
-                Item::Block(block) => check_block(&scope, block, &declarations, &mut diagnostics),
+                Item::Block(block) => check_block(&scope, block, &declarations, host.strings.as_ref(), &mut diagnostics),
                 Item::Cast { .. } | Item::Enum { .. } => {}
             }
         }
     }
-    if let Some(seed) = seed {
+    if let Some(seed) = &host.seed {
         check_seed(files, seed, &mut diagnostics);
     }
     diagnostics
@@ -226,18 +226,19 @@ struct BlockChecker<'c, 's> {
     kind: BlockKind,
     cast: &'c [Span<'s>],
     declarations: &'c Declarations<'c>,
+    strings: Option<&'c StringTable>,
     diagnostics: &'c mut Vec<Diagnostic>,
     used: Vec<&'s str>,
 }
 
-fn check_block(scope: &Scope<'_>, block: &Block<'_>, declarations: &Declarations<'_>, diagnostics: &mut Vec<Diagnostic>) {
+fn check_block(scope: &Scope<'_>, block: &Block<'_>, declarations: &Declarations<'_>, strings: Option<&StringTable>, diagnostics: &mut Vec<Diagnostic>) {
     if let Some(Once { value, .. }) = &block.once {
         if value.as_str() != "true" {
             diagnostics.push(Diagnostic::error(scope.path, *value, "a once-only Flag can only be set to `true`".to_owned()));
         }
     }
 
-    let mut checker = BlockChecker { scope, kind: block.kind, cast: &block.cast, declarations, diagnostics, used: Vec::new() };
+    let mut checker = BlockChecker { scope, kind: block.kind, cast: &block.cast, declarations, strings, diagnostics, used: Vec::new() };
     let listed: Vec<_> = block.cast.iter().filter(|name| checker.resolve_or_report(**name, &declarations.cast, "unknown cast name").is_some()).collect();
     checker.statements(&block.body);
     let used = checker.used;
@@ -253,9 +254,10 @@ impl<'s> BlockChecker<'_, 's> {
     fn statements(&mut self, statements: &[Statement<'s>]) {
         for statement in statements {
             match statement {
-                Statement::Line { speaker, expression, .. } => {
+                Statement::Line { speaker, expression, text } => {
                     self.cast_member(*speaker, Role::Speaker);
                     self.expression(*speaker, *expression);
+                    self.text(text);
                 }
                 Statement::Play { kind, name } => {
                     self.resolve_or_report(*name, &self.declarations.played[kind], &format!("no {} named", kind.noun()));
@@ -269,6 +271,10 @@ impl<'s> BlockChecker<'_, 's> {
                 }
                 Statement::Choose(choices) => {
                     for choice in choices {
+                        self.text(&choice.text);
+                        if let Some(reason) = &choice.locked {
+                            self.text(reason);
+                        }
                         if let Some(condition) = &choice.condition {
                             self.condition(condition);
                         }
@@ -424,6 +430,20 @@ impl<'s> BlockChecker<'_, 's> {
         };
         self.error(name, message);
         None
+    }
+
+    /// A key must be in every Locale, so no keyed text ships untranslated.
+    fn text(&mut self, text: &Text<'_>) {
+        let Text::Key(key) = text else { return };
+        let message = match self.strings.map(|strings| strings.locales_missing(key.as_str())) {
+            None => format!("`@{}` is a String Table key, but the compile was given no String Table", key.as_str()),
+            Some(locales) => match locales[..] {
+                [] => return,
+                [locale] => format!("`@{}` is missing from the String Table in Locale {locale}", key.as_str()),
+                _ => format!("`@{}` is missing from the String Table in Locales {}", key.as_str(), locales.join(", ")),
+            },
+        };
+        self.error(*key, message);
     }
 
     /// A line without an Expression shows `DEFAULT_EXPRESSION`, so that variant must be declared too.

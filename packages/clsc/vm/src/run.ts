@@ -16,13 +16,13 @@ export type CommandArg = string | Tile
 type FlagValue = boolean | string
 type Value = FlagValue | Tile
 
-export interface ShownChoice {
-  text: string
-  locked?: string
-}
+// Player-visible text: written inline, or a String Table key the Host resolves against its current Locale.
+export type Text = { text: string } | { key: string }
+
+export type ShownChoice = Text & { locked?: Text }
 
 export type Output =
-  | { type: 'line'; speaker: string; expression: string; text: string }
+  | ({ type: 'line'; speaker: string; expression: string } & Text)
   | { type: 'choices'; choices: ShownChoice[] }
   | { type: 'command'; name: string; args: CommandArg[]; waits: boolean }
   | { type: 'flag'; name: string; value: boolean | string }
@@ -67,9 +67,7 @@ interface Frame {
 
 type Execute = (operands: readonly number[], frame: Frame) => Output | undefined
 
-interface OfferedChoice extends ShownChoice {
-  target: number
-}
+type OfferedChoice = ShownChoice & { target: number }
 
 function jump(frame: Frame, target: number): undefined {
   frame.pc = target
@@ -159,10 +157,12 @@ export class Run {
 
   private readonly instructions: Readonly<Record<number, Execute>> = {
     [Opcode.Return]: (_, frame) => this.returnFrom(frame),
-    [Opcode.Line]: (operands) => {
-      const [speaker, expression, text] = operands.map((index) => this.program.strings[index])
-      return { type: 'line', speaker, expression, text }
-    },
+    [Opcode.Line]: ([speaker, expression, text]) => ({
+      type: 'line',
+      speaker: this.program.strings[speaker],
+      expression: this.program.strings[expression],
+      ...this.text(text),
+    }),
     [Opcode.Play]: ([block]) => this.play(this.program.blocks[block]),
     [Opcode.PushBool]: ([value]) => this.push(value === 1),
     [Opcode.PushFlag]: ([flag]) => this.push(this.flagValues[flag]),
@@ -223,13 +223,19 @@ export class Run {
     return { type: 'command', name, args, waits }
   }
 
+  // Twice a string pool index, plus one for a String Table key, as `bytecode.rs` encodes it.
+  private text(operand: number): Text {
+    const string = this.program.strings[Math.floor(operand / 2)]
+    return operand % 2 === 1 ? { key: string } : { text: string }
+  }
+
   // A false condition hides the choice, unless it has a locked reason to show instead.
   private offer(text: number, reason: number | undefined, target: number): undefined {
     const holds = this.popBool()
     if (holds) {
-      this.offered.push({ text: this.program.strings[text], target })
+      this.offered.push({ ...this.text(text), target })
     } else if (reason !== undefined) {
-      this.offered.push({ text: this.program.strings[text], locked: this.program.strings[reason], target })
+      this.offered.push({ ...this.text(text), locked: this.text(reason), target })
     }
     return undefined
   }
@@ -241,7 +247,7 @@ export class Run {
     if (offered.length === 0) {return jump(frame, below)}
 
     this.shown = offered
-    return { type: 'choices', choices: offered.map(({ text, locked }) => (locked === undefined ? { text } : { text, locked })) }
+    return { type: 'choices', choices: offered.map(({ target: _target, ...choice }) => choice) }
   }
 
   // Freezes when the first frozen frame enters the stack.

@@ -1,0 +1,5 @@
+on enter(Camp) {
+    choose {
+        @camp.stay; // error: `@camp.stay` is a String Table key, but the compile was given no String Table
+    }
+}

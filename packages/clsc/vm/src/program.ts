@@ -2,13 +2,13 @@ import type { Block, CommandArg, CommandDeclaration, FlagDeclaration, Flags, Tri
 import { OPERAND_COUNTS } from './opcodes.ts'
 import { Run } from './run.ts'
 
-export type { CommandArg, Flags, Output, Run, ShownChoice, Tile, Trigger } from './run.ts'
+export type { CommandArg, Flags, Output, Run, ShownChoice, Text, Tile, Trigger } from './run.ts'
 
 // The byte layout is documented, and owned, by the compiler's `bytecode.rs`.
 const MAGIC = 'CLSC'
 
 // Hand-written, not generated from Rust: this is the layout this decoder reads, so a file from a newer or older compiler fails loudly.
-export const FORMAT_VERSION = 5
+export const FORMAT_VERSION = 6
 
 // Decoded by position, as `bytecode.rs` writes them.
 const TRIGGERS: readonly Trigger[] = ['interact', 'enter']

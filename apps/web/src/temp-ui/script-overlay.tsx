@@ -1,5 +1,6 @@
 'use client'
 
+import { currentLocale, resolveText } from '../state/strings.ts'
 import type { ScriptLine } from '../game/script-player.ts'
 import { resolvePortrait } from '../state/portraits.ts'
 
@@ -76,7 +77,7 @@ export function ScriptOverlay({
         {/* oxlint-disable-next-line next/no-img-element */}
         {portrait !== undefined && <img alt="" height={PORTRAIT_SIZE} src={portrait} style={PORTRAIT_STYLE} width={PORTRAIT_SIZE} />}
         <span style={SPEAKER_LABEL_STYLE}>{line.speaker}</span>
-        <span style={LINE_TEXT_STYLE}>{line.text}</span>
+        <span style={LINE_TEXT_STYLE}>{resolveText(line, currentLocale)}</span>
       </button>
       {!frozen && (
         <button onClick={onDismiss} type="button">
