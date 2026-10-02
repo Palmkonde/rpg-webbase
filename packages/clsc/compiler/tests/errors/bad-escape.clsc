@@ -1,0 +1,5 @@
+speaker Narrator;
+
+on enter(Camp) with Narrator {
+    Narrator: "Only \" and \\ escape, not \n"; // error: unknown escape `\n`: only `\"` and `\\` escape
+}

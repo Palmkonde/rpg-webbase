@@ -1,0 +1,16 @@
+enum Expression { Neutral }
+speaker Narrator;
+speaker Campfire;
+flag lit: bool = false;
+
+on enter(Camp) with Narrator {
+    if lit {
+    } else {
+        choose {
+            "Look" => {
+                Narrator(Happy): "Only used in here, so no unused warning."; // error: unknown Expression `Happy` (expected Neutral)
+                Campfire: "Hello."; // error: `Campfire` is not in this block's `with` list
+            }
+        }
+    }
+}

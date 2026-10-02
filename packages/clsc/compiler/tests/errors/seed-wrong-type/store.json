@@ -1,0 +1,8 @@
+{
+  "studentId": "test-student",
+  "flags": {
+    "talked": "yes",
+    "lit": true,
+    "campfire_seen": 3
+  }
+}

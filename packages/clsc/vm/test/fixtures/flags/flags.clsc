@@ -1,0 +1,5 @@
+flag talked: bool = false;
+flag polite: bool = false;
+flag has_firewood: bool = false;
+flag lit: bool = true;
+flag constructor: bool = false;

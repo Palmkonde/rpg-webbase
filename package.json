@@ -9,7 +9,7 @@
     "test": "npm test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "npm run dev --workspace=web",
-    "lint": "oxlint",
+    "lint": "oxlint && npm run lint --workspaces --if-present",
     "lint:fix": "oxlint --fix"
   },
   "devDependencies": {

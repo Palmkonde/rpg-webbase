@@ -1,0 +1,7 @@
+enum Expression { Neutral }
+speaker Narrator;
+speaker Guard;
+
+on interact(Guard) with Narrator, Guard { // warning: `Guard` is listed in `with` but never used
+    Narrator: "The Guard says nothing.";
+}

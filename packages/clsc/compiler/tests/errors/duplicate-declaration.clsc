@@ -1,0 +1,8 @@
+speaker Narrator;
+speaker Narrator; // error: `Narrator` is already declared
+
+cutscene story {}
+cutscene story {} // error: `story` is already declared
+
+flag lit: bool = false;
+flag lit: bool = true; // error: `lit` is already declared

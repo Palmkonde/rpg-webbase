@@ -1,0 +1,1 @@
+flag count: int = false; // error: unknown Flag type `int` (expected bool)

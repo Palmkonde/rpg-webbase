@@ -1,0 +1,7 @@
+enum Expression { Neutral }
+speaker Narrator;
+
+on enter(Camp) with Narrator {
+    Narrator: "The fire crackles.";
+    Nrrator: "A typo."; // error: unknown Speaker `Nrrator`
+}

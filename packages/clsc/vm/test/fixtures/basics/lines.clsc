@@ -1,0 +1,4 @@
+on enter(Lines) with Narrator, Campfire {
+    Narrator: "The fire crackles.";
+    Campfire(Happy): "สวัสดี!  Two spaces, a \"quote\", a \\ and // not a comment.";
+}

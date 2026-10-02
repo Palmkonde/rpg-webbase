@@ -1,0 +1,58 @@
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT    = _{ "//" ~ (!"\n" ~ ANY)* }
+
+file = { SOI ~ (speaker | enum_decl | flag_decl | cutscene | handler)* ~ EOI }
+
+speaker   = { speaker_keyword ~ name ~ ";" }
+enum_decl = { enum_keyword ~ name ~ "{" ~ name ~ ("," ~ name)* ~ ","? ~ "}" }
+flag_decl = { flag_keyword ~ name ~ ":" ~ name ~ "=" ~ bool_literal ~ ";" }
+cutscene  = { cutscene_keyword ~ name ~ cast? ~ body }
+handler   = { on_keyword ~ trigger ~ "(" ~ name ~ ")" ~ cast? ~ body }
+trigger   = { "interact" | "enter" }
+cast      = { with_keyword ~ name ~ ("," ~ name)* }
+body      = { "{" ~ statement* ~ "}" }
+
+statement    = _{ play | set | if_statement | choose | line }
+play         = { "play" ~ "(" ~ "cutscene" ~ "::" ~ name ~ ")" ~ ";" }
+set          = { set_keyword ~ name ~ "=" ~ expr ~ ";" }
+if_statement = { if_keyword ~ expr ~ body ~ (else_keyword ~ (if_statement | body))? }
+choose       = { choose_keyword ~ "{" ~ choice+ ~ "}" }
+choice       = { text ~ (if_keyword ~ expr ~ locked?)? ~ ("=>" ~ body | ";") }
+locked       = { else_keyword ~ locked_keyword ~ "(" ~ text ~ ")" }
+line         = { name ~ ("(" ~ name ~ ")")? ~ ":" ~ text ~ ";" }
+
+// Loosest first, so `&&` binds tighter than `||`, and `!` tighter than `==` / `!=`.
+expr         = { and_expr ~ (or_op ~ and_expr)* }
+and_expr     = { equality ~ (and_op ~ equality)* }
+equality     = { unary ~ (equality_op ~ unary)* }
+unary        = _{ not | bool_literal | name | "(" ~ expr ~ ")" }
+not          = { "!" ~ unary }
+or_op        = { "||" }
+and_op       = { "&&" }
+equality_op  = { "==" | "!=" }
+bool_literal = @{ ("true" | "false") ~ !name_char }
+
+// Atomic, so whitespace and `//` inside the quotes are part of the text. Any escape parses, so
+// `parse.rs` can reject one with a message naming it.
+text      = ${ "\"" ~ text_char* ~ "\"" }
+text_char = _{ "\\" ~ ANY | !("\"" | "\\" | "\n") ~ ANY }
+
+// Atomic, so a keyword ends at a word boundary: `speakerNarrator` is a name, not `speaker Narrator`.
+speaker_keyword  = @{ "speaker" ~ !name_char }
+enum_keyword     = @{ "enum" ~ !name_char }
+flag_keyword     = @{ "flag" ~ !name_char }
+cutscene_keyword = @{ "cutscene" ~ !name_char }
+on_keyword       = @{ "on" ~ !name_char }
+with_keyword     = @{ "with" ~ !name_char }
+set_keyword      = @{ "set" ~ !name_char }
+if_keyword       = @{ "if" ~ !name_char }
+else_keyword     = @{ "else" ~ !name_char }
+choose_keyword   = @{ "choose" ~ !name_char }
+locked_keyword   = @{ "locked" ~ !name_char }
+keyword          = @{
+    ("speaker" | "enum" | "flag" | "cutscene" | "on" | "with" | "play" | "set" | "if" | "else" | "choose" | "locked" | "true" | "false")
+    ~ !name_char
+}
+
+name      = @{ !keyword ~ (ASCII_ALPHA | "_") ~ name_char* }
+name_char = _{ ASCII_ALPHANUMERIC | "_" }

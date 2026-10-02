@@ -25,7 +25,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
   const { cgFrames, cgStep, advanceCg, skipCg, playCgById } = useCgPlayback()
   const { companionIds, syncCompanions, dismissCompanion } = useCompanions(engineRef)
   const {
-    dialogue, cutsceneLine, cutsceneChoices, enginePaused, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered,
+    dialogue, cutsceneLine, cutsceneChoices, enginePaused, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered, fetchProgram,
   } = useScriptPlayback(engineRef, playCgById, syncCompanions)
 
   useEffect(() => {
@@ -45,6 +45,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
 
     async function start(element: HTMLElement): Promise<void> {
       try {
+        await fetchProgram()
         const created = await createEngine(element, {
           worldConfig,
           catalogs: { maps, characters },
@@ -81,7 +82,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
       engineRef.current?.destroy()
       engineRef.current = undefined
     }
-  }, [worldConfig, runInteraction, runZoneEntered, playCgById, skipCg, syncCompanions])
+  }, [worldConfig, runInteraction, runZoneEntered, fetchProgram, playCgById, skipCg, syncCompanions])
 
   return (
     <>
