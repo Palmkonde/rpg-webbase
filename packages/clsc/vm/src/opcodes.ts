@@ -21,9 +21,10 @@ export const Opcode = {
   PushNone: 17,
   PushTile: 18,
   Command: 19,
+  Cg: 20,
 } as const
 
 export type Opcode = (typeof Opcode)[keyof typeof Opcode]
 
 // How many u32 operands follow each opcode, indexed by opcode byte.
-export const OPERAND_COUNTS: readonly number[] = [0, 3, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 2, 3, 1, 1, 0, 2, 1]
+export const OPERAND_COUNTS: readonly number[] = [0, 3, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 2, 3, 1, 1, 0, 2, 1, 1]

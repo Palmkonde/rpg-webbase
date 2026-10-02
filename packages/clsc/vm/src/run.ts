@@ -26,6 +26,7 @@ export type Output =
   | { type: 'choices'; choices: ShownChoice[] }
   | { type: 'command'; name: string; args: CommandArg[]; waits: boolean }
   | { type: 'flag'; name: string; value: boolean | string }
+  | { type: 'cg'; id: string }
   | { type: 'freeze' }
   | { type: 'unfreeze' }
   | { type: 'done' }
@@ -36,7 +37,7 @@ export interface Instruction {
 }
 
 export interface Block {
-  kind: 'handler' | 'cutscene'
+  kind: 'handler' | 'cutscene' | 'cg'
   code: Instruction[]
 }
 
@@ -110,8 +111,8 @@ export class Run {
   // Set while a `choices` output waits for choose(i).
   private shown: OfferedChoice[] | undefined
 
-  // The Player is frozen exactly while this is above zero.
-  private cutsceneFrames = 0
+  // The `cutscene` and `cg` frames on the stack: the Player is frozen exactly while this is above zero.
+  private frozenFrames = 0
 
   public constructor(program: ProgramData, handler: Block, snapshot: Flags) {
     this.program = program
@@ -180,6 +181,7 @@ export class Run {
     [Opcode.PushNone]: () => this.push(false),
     [Opcode.PushTile]: ([x, y]) => this.push({ x, y }),
     [Opcode.Command]: ([command]) => this.command(command),
+    [Opcode.Cg]: ([id]) => ({ type: 'cg', id: this.program.strings[id] }),
   }
 
   private push(value: Value): undefined {
@@ -242,19 +244,19 @@ export class Run {
     return { type: 'choices', choices: offered.map(({ text, locked }) => (locked === undefined ? { text } : { text, locked })) }
   }
 
-  // Freezes when the first cutscene frame enters the stack.
+  // Freezes when the first frozen frame enters the stack.
   private play(block: Block): Output | undefined {
     this.stack.push({ block, pc: 0 })
-    if (block.kind !== 'cutscene') {return undefined}
-    this.cutsceneFrames += 1
-    return this.cutsceneFrames === 1 ? { type: 'freeze' } : undefined
+    if (block.kind === 'handler') {return undefined}
+    this.frozenFrames += 1
+    return this.frozenFrames === 1 ? { type: 'freeze' } : undefined
   }
 
-  // Unfreezes when the last cutscene frame leaves it.
+  // Unfreezes when the last frozen frame leaves it.
   private returnFrom(frame: Frame): Output | undefined {
     this.stack.pop()
-    if (frame.block.kind !== 'cutscene') {return undefined}
-    this.cutsceneFrames -= 1
-    return this.cutsceneFrames === 0 ? { type: 'unfreeze' } : undefined
+    if (frame.block.kind === 'handler') {return undefined}
+    this.frozenFrames -= 1
+    return this.frozenFrames === 0 ? { type: 'unfreeze' } : undefined
   }
 }

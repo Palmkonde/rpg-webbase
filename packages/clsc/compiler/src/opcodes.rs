@@ -43,4 +43,6 @@ pub const OPCODES: &[(&str, usize)] = &[
     // Pops as many arguments as the command takes, last first, and hands it back as a `command`
     // output: a command table index.
     ("Command", 1),
+    // Hands back a `cg` output: the CG id, a string pool index.
+    ("Cg", 1),
 ];

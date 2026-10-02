@@ -1,0 +1,41 @@
+cg vision;
+cg intro set seen_intro = true;
+
+cutscene story with Narrator {
+    Narrator: "Once upon a time...";
+} set seen_story = true;
+
+cutscene dream with Narrator {
+    Narrator: "A dream.";
+    play(cg::vision);
+}
+
+cutscene _helper with Narrator {
+    Narrator: "Again.";
+}
+
+on enter(Vision) with Narrator {
+    play(cg::vision);
+    Narrator: "The vision fades.";
+}
+
+on enter(Dream) {
+    play(cutscene::dream);
+}
+
+on enter(Intro) {
+    play(cg::intro);
+}
+
+on enter(Story) with Narrator {
+    play(cutscene::story);
+    play(cutscene::story);
+    if seen_story {
+        Narrator: "Seen it.";
+    }
+}
+
+on enter(Helper) {
+    play(cutscene::_helper);
+    play(cutscene::_helper);
+}

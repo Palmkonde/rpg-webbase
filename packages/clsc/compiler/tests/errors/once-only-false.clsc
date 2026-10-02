@@ -1,0 +1,1 @@
+cutscene story {} set seen_story = false; // error: a once-only Flag can only be set to `true`

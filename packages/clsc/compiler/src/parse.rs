@@ -58,12 +58,19 @@ pub struct Block<'s> {
     pub name: Span<'s>,
     pub cast: Vec<Span<'s>>,
     pub body: Vec<Statement<'s>>,
+    pub once: Option<Once<'s>>,
+}
+
+/// `set seen_x = true;` after a `cutscene` or `cg`: the Flag that marks it once-only.
+pub struct Once<'s> {
+    pub flag: Span<'s>,
+    pub value: Span<'s>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum BlockKind {
     Handler(Trigger),
-    Cutscene,
+    Played(Playable),
 }
 
 impl BlockKind {
@@ -71,7 +78,26 @@ impl BlockKind {
     pub const fn word(self) -> &'static str {
         match self {
             Self::Handler(_) => "handler",
+            Self::Played(Playable::Cutscene) => "cutscene",
+            Self::Played(Playable::Cg) => "cg",
+        }
+    }
+}
+
+/// What `play(<kind>::id)` can name.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Playable {
+    Cutscene,
+
+    // A CG has no body: its block only hands the CG back to the Host.
+    Cg,
+}
+
+impl Playable {
+    pub const fn noun(self) -> &'static str {
+        match self {
             Self::Cutscene => "cutscene",
+            Self::Cg => "CG",
         }
     }
 }
@@ -93,7 +119,7 @@ impl Trigger {
 
 pub enum Statement<'s> {
     Line { speaker: Span<'s>, expression: Option<Span<'s>>, text: String },
-    Play(Span<'s>),
+    Play { kind: Playable, name: Span<'s> },
 
     // `target` is the `Name` of a Flag or a `Companion`.
     Set { target: Expr<'s>, value: Expr<'s> },
@@ -204,7 +230,7 @@ fn command(pair: Pair<'_, Rule>) -> Command<'_> {
 }
 
 fn block(pair: Pair<'_, Rule>) -> Result<Block<'_>, ParseError> {
-    let mut block = Block { kind: BlockKind::Cutscene, name: pair.as_span(), cast: Vec::new(), body: Vec::new() };
+    let mut block = Block { kind: BlockKind::Played(Playable::Cutscene), name: pair.as_span(), cast: Vec::new(), body: Vec::new(), once: None };
     for part in pair.into_inner() {
         match part.as_rule() {
             Rule::trigger if part.as_str() == "interact" => block.kind = BlockKind::Handler(Trigger::Interact),
@@ -212,6 +238,12 @@ fn block(pair: Pair<'_, Rule>) -> Result<Block<'_>, ParseError> {
             Rule::name => block.name = part.as_span(),
             Rule::cast => block.cast = names(part),
             Rule::body => block.body = body(part)?,
+            Rule::cg_keyword => block.kind = BlockKind::Played(Playable::Cg),
+            Rule::once => {
+                let mut parts = part.into_inner().filter(|part| part.as_rule() != Rule::set_keyword);
+                let mut next = || parts.next().expect("a once-only marker names its Flag and value").as_span();
+                block.once = Some(Once { flag: next(), value: next() });
+            }
             _ => {}
         }
     }
@@ -228,7 +260,10 @@ fn statement(pair: Pair<'_, Rule>) -> Result<Statement<'_>, ParseError> {
     let mut next = || parts.next().expect("the grammar gives every statement its parts");
 
     Ok(match rule {
-        Rule::play => Statement::Play(next().as_span()),
+        Rule::play => {
+            let kind = if next().as_str() == "cg" { Playable::Cg } else { Playable::Cutscene };
+            Statement::Play { kind, name: next().as_span() }
+        }
         Rule::set => Statement::Set { target: expr(next()), value: expr(next()) },
         Rule::command_call => Statement::Command { name: next().as_span(), args: parts.map(argument).collect::<Result<_, _>>()? },
         Rule::if_statement => {

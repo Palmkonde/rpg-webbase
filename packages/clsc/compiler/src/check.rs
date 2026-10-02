@@ -1,5 +1,5 @@
 use crate::bytecode::{companion_flag, DEFAULT_EXPRESSION, PARAM_TYPES};
-use crate::parse::{Argument, BinaryOp, Block, BlockKind, CastKind, Command, Expr, ExprKind, Item, Statement};
+use crate::parse::{Argument, BinaryOp, Block, BlockKind, CastKind, Command, Expr, ExprKind, Item, Once, Playable, Statement};
 use crate::seed::Stored;
 use crate::{Diagnostic, FlagSeed, SourceFile};
 use pest::Span;
@@ -58,7 +58,7 @@ struct Declarations<'f> {
     cast: HashMap<&'f str, Declared<'f, CastKind>>,
     enums: HashMap<&'f str, Vec<&'f str>>,
     flags: HashMap<&'f str, Declared<'f, Type>>,
-    cutscenes: HashMap<&'f str, Declared<'f, ()>>,
+    played: HashMap<Playable, HashMap<&'f str, Declared<'f, ()>>>,
     commands: HashMap<&'f str, Declared<'f, &'f Command<'f>>>,
 }
 
@@ -105,11 +105,14 @@ fn collect_declarations_and_duplicates<'f>(files: &'f [SourceFile<'_>], diagnost
         cast: HashMap::from([(PLAYER, Declared { module: PRELUDE, what: CastKind::Mover })]),
         enums: HashMap::new(),
         flags: HashMap::new(),
-        cutscenes: HashMap::new(),
+        played: HashMap::from([(Playable::Cutscene, HashMap::new()), (Playable::Cg, HashMap::new())]),
         commands: HashMap::new(),
     };
     for file in files {
         let module = file.module.as_str();
+        let mut report_duplicate = |name: Span<'_>| {
+            diagnostics.push(Diagnostic::error(&file.path, name, format!("`{}` is already declared", name.as_str())));
+        };
         for item in &file.items {
             let (name, is_new) = match item {
                 // A bare name reads as a Flag or a Character, so Flags and cast names share one namespace.
@@ -120,24 +123,34 @@ fn collect_declarations_and_duplicates<'f>(files: &'f [SourceFile<'_>], diagnost
                 Item::Enum { name, variants } => {
                     (name, declarations.enums.insert(name.as_str(), variants.iter().map(Span::as_str).collect()).is_none())
                 }
-                Item::Flag { name, .. } => {
-                    let is_new = declarations.flags.insert(name.as_str(), Declared { module, what: Type::Bool }).is_none();
-                    (name, is_new && !declarations.cast.contains_key(name.as_str()))
-                }
+                Item::Flag { name, .. } => (name, declarations.declare_flag(*name, module)),
                 Item::Command(command) => {
                     (&command.name, declarations.commands.insert(command.name.as_str(), Declared { module, what: command }).is_none())
                 }
-                Item::Block(block) if block.kind == BlockKind::Cutscene => {
-                    (&block.name, declarations.cutscenes.insert(block.name.as_str(), Declared { module, what: () }).is_none())
+                Item::Block(block) => {
+                    if let Some(once) = block.once.as_ref().filter(|once| !declarations.declare_flag(once.flag, module)) {
+                        report_duplicate(once.flag);
+                    }
+                    let BlockKind::Played(kind) = block.kind else { continue };
+                    let played = declarations.played.get_mut(&kind).expect("every Playable has a map");
+                    (&block.name, played.insert(block.name.as_str(), Declared { module, what: () }).is_none())
                 }
-                Item::Use(_) | Item::Block(_) => continue,
+                Item::Use(_) => continue,
             };
             if !is_new {
-                diagnostics.push(Diagnostic::error(&file.path, *name, format!("`{}` is already declared", name.as_str())));
+                report_duplicate(*name);
             }
         }
     }
     declarations
+}
+
+impl<'f> Declarations<'f> {
+    /// Like `HashSet::insert`, answers whether `name` was new among the Flags and cast names.
+    fn declare_flag(&mut self, name: Span<'f>, module: &'f str) -> bool {
+        let is_new = self.flags.insert(name.as_str(), Declared { module, what: Type::Bool }).is_none();
+        is_new && !self.cast.contains_key(name.as_str())
+    }
 }
 
 /// A duplicate prints at every definition, so neither one silently shadows the other.
@@ -195,7 +208,7 @@ fn check_seed(files: &[SourceFile<'_>], seed: &FlagSeed, diagnostics: &mut Vec<D
     for file in files {
         for item in &file.items {
             let (flag, ty, span) = match item {
-                Item::Flag { name, .. } => (name.as_str().to_owned(), Type::Bool, *name),
+                Item::Flag { name, .. } | Item::Block(Block { once: Some(Once { flag: name, .. }), .. }) => (name.as_str().to_owned(), Type::Bool, *name),
                 Item::Cast { kind: CastKind::Mover, name } => (companion_flag(name.as_str()), Type::Character, *name),
                 _ => continue,
             };
@@ -218,6 +231,12 @@ struct BlockChecker<'c, 's> {
 }
 
 fn check_block(scope: &Scope<'_>, block: &Block<'_>, declarations: &Declarations<'_>, diagnostics: &mut Vec<Diagnostic>) {
+    if let Some(Once { value, .. }) = &block.once {
+        if value.as_str() != "true" {
+            diagnostics.push(Diagnostic::error(scope.path, *value, "a once-only Flag can only be set to `true`".to_owned()));
+        }
+    }
+
     let mut checker = BlockChecker { scope, kind: block.kind, cast: &block.cast, declarations, diagnostics, used: Vec::new() };
     let listed: Vec<_> = block.cast.iter().filter(|name| checker.resolve_or_report(**name, &declarations.cast, "unknown cast name").is_some()).collect();
     checker.statements(&block.body);
@@ -238,8 +257,8 @@ impl<'s> BlockChecker<'_, 's> {
                     self.cast_member(*speaker, Role::Speaker);
                     self.expression(*speaker, *expression);
                 }
-                Statement::Play(cutscene) => {
-                    self.resolve_or_report(*cutscene, &self.declarations.cutscenes, "no cutscene named");
+                Statement::Play { kind, name } => {
+                    self.resolve_or_report(*name, &self.declarations.played[kind], &format!("no {} named", kind.noun()));
                 }
                 Statement::Set { target, value } => self.set(target, value),
                 Statement::Command { name, args } => self.command(*name, args),

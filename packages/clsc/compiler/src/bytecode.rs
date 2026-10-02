@@ -23,17 +23,17 @@
 //! block's code is an instruction index, not a byte offset.
 
 use crate::opcodes::OPCODES;
-use crate::parse::{Argument, BinaryOp, Block, BlockKind, CastKind, Command, Expr, ExprKind, Item, Statement, Trigger};
+use crate::parse::{Argument, BinaryOp, Block, BlockKind, CastKind, Command, Expr, ExprKind, Item, Playable, Statement, Trigger};
 use crate::SourceFile;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
 const MAGIC: &[u8; 4] = b"CLSC";
-const FORMAT_VERSION: u16 = 4;
+const FORMAT_VERSION: u16 = 5;
 
 // The VM decodes these by position, so the order is part of the layout.
 const TRIGGERS: [Trigger; 2] = [Trigger::Interact, Trigger::Enter];
-const BLOCK_KINDS: [&str; 2] = ["handler", "cutscene"];
+const BLOCK_KINDS: [&str; 3] = ["handler", "cutscene", "cg"];
 const FLAG_TYPES: [&str; 2] = ["bool", CHARACTER_FLAG_TYPE];
 const CHARACTER_FLAG_TYPE: &str = "Character?";
 pub(crate) const PARAM_TYPES: [&str; 2] = ["Mover", "Tile"];
@@ -49,9 +49,16 @@ pub(crate) fn companion_flag(entity: &str) -> String {
     format!("{COMPANION_FLAG_PREFIX}{entity}")
 }
 
+/// A block `play` can push, and the Flag that skips it once true when it's once-only.
+#[derive(Clone, Copy)]
+struct PlayTarget {
+    block: u32,
+    once: Option<u32>,
+}
+
 /// What a block's code refers to by index.
 struct Indices<'p> {
-    cutscenes: HashMap<&'p str, u32>,
+    played: HashMap<(Playable, &'p str), PlayTarget>,
     flags: HashMap<&'p str, u32>,
     commands: HashMap<&'p str, u32>,
 }
@@ -70,6 +77,7 @@ pub(crate) fn encode(files: &[SourceFile<'_>]) -> Vec<u8> {
     let flags: Vec<(String, &str, bool)> = items()
         .filter_map(|item| match item {
             Item::Flag { name, ty, default } => Some((name.as_str().to_owned(), ty.as_str(), *default)),
+            Item::Block(Block { once: Some(once), .. }) => Some((once.flag.as_str().to_owned(), "bool", false)),
             Item::Cast { kind: CastKind::Mover, name } => Some((companion_flag(name.as_str()), CHARACTER_FLAG_TYPE, false)),
             _ => None,
         })
@@ -80,14 +88,18 @@ pub(crate) fn encode(files: &[SourceFile<'_>]) -> Vec<u8> {
             _ => None,
         })
         .collect();
+    let flag_indices: HashMap<&str, u32> = flags.iter().enumerate().map(|(index, (name, _, _))| (name.as_str(), to_u32(index))).collect();
     let indices = Indices {
-        cutscenes: blocks
+        played: blocks
             .iter()
             .enumerate()
-            .filter(|(_, block)| block.kind == BlockKind::Cutscene)
-            .map(|(index, block)| (block.name.as_str(), to_u32(index)))
+            .filter_map(|(index, block)| {
+                let BlockKind::Played(kind) = block.kind else { return None };
+                let once = block.once.as_ref().map(|once| flag_indices[once.flag.as_str()]);
+                Some(((kind, block.name.as_str()), PlayTarget { block: to_u32(index), once }))
+            })
             .collect(),
-        flags: flags.iter().enumerate().map(|(index, (name, _, _))| (name.as_str(), to_u32(index))).collect(),
+        flags: flag_indices,
         commands: commands.iter().enumerate().map(|(index, command)| (command.name.as_str(), to_u32(index))).collect(),
     };
 
@@ -155,11 +167,22 @@ fn encode_command(command: &Command<'_>, strings: &mut StringPool, bytes: &mut V
 fn encode_block(block: &Block<'_>, indices: &Indices<'_>, strings: &mut StringPool) -> Vec<u8> {
     let name = match block.kind {
         BlockKind::Handler(trigger) => format!("on {}({})", trigger.keyword(), block.name.as_str()),
-        BlockKind::Cutscene => block.name.as_str().to_owned(),
+        BlockKind::Played(_) => block.name.as_str().to_owned(),
     };
 
     let mut code = BlockCode { instructions: Vec::new(), indices, strings };
+    if block.kind == BlockKind::Played(Playable::Cg) {
+        let id = code.strings.intern(block.name.as_str());
+        code.emit("Cg", vec![id]);
+    }
     code.statements(&block.body);
+
+    // Only a block that runs to here sets its once-only Flag (`adr/0030`), so any later way out
+    // of a block must jump here rather than emit its own `Return`.
+    if let Some(once) = &block.once {
+        code.emit("PushBool", vec![1]);
+        code.emit("Set", vec![indices.flags[once.flag.as_str()]]);
+    }
     code.emit("Return", Vec::new());
 
     let mut bytes = vec![position(&BLOCK_KINDS, &block.kind.word())];
@@ -207,8 +230,17 @@ impl BlockCode<'_, '_> {
                 let operands = vec![self.strings.intern(speaker.as_str()), self.strings.intern(expression), self.strings.intern(text)];
                 self.emit("Line", operands);
             }
-            Statement::Play(cutscene) => {
-                self.emit("Play", vec![self.indices.cutscenes[cutscene.as_str()]]);
+            Statement::Play { kind, name } => {
+                let PlayTarget { block, once } = self.indices.played[&(*kind, name.as_str())];
+                let skip = once.map(|flag| {
+                    self.emit("PushFlag", vec![flag]);
+                    self.emit("Not", Vec::new());
+                    self.emit("JumpIfFalse", vec![0])
+                });
+                self.emit("Play", vec![block]);
+                if let Some(skip) = skip {
+                    self.land(skip);
+                }
             }
             Statement::Set { target, value } => {
                 self.expr(value);
@@ -477,31 +509,34 @@ mod tests {
     #[test]
     fn disasm_prints_the_header_string_pool_flag_table_blocks_and_handler_index() {
         let prelude = "command move(who: Mover, to: Tile) in cutscene waits;\n";
-        let source = "enum Expression { Neutral }\nspeaker Narrator;\nmover Guard;\nflag lit: bool = true;\n\non enter(Camp) with Narrator {\n    play(cutscene::story);\n}\n\ncutscene story with Narrator, Guard {\n    if lit {\n        Narrator: \"Hi\";\n    }\n    move(Guard, (9, 10));\n}\n";
+        let source = "enum Expression { Neutral }\nspeaker Narrator;\nmover Guard;\nflag lit: bool = true;\n\non enter(Camp) with Narrator {\n    play(cutscene::story);\n    play(cg::vision);\n}\n\ncutscene story with Narrator, Guard {\n    if lit {\n        Narrator: \"Hi\";\n    }\n    move(Guard, (9, 10));\n}\n\ncg vision set seen_vision = true;\n";
         let sources = [("prelude.clsc".to_owned(), prelude.to_owned()), ("main.clsc".to_owned(), source.to_owned())];
         let bytecode = compile_sources(Path::new(""), &sources, None).bytecode.unwrap();
 
         assert_eq!(
             disasm(&bytecode).unwrap(),
-            "format version 4
+            "format version 5
 
 strings
      0  \"companion:Guard\"
      1  \"lit\"
-     2  \"move\"
-     3  \"who\"
-     4  \"to\"
-     5  \"on enter(Camp)\"
-     6  \"Camp\"
-     7  \"Narrator\"
-     8  \"Neutral\"
-     9  \"Hi\"
-    10  \"Guard\"
-    11  \"story\"
+     2  \"seen_vision\"
+     3  \"move\"
+     4  \"who\"
+     5  \"to\"
+     6  \"on enter(Camp)\"
+     7  \"Camp\"
+     8  \"Narrator\"
+     9  \"Neutral\"
+    10  \"Hi\"
+    11  \"Guard\"
+    12  \"story\"
+    13  \"vision\"
 
 flags
      0  companion:Guard: Character? = none
      1  lit: bool = true
+     2  seen_vision: bool = false
 
 commands
      0  move(who: Mover, to: Tile) in cutscene waits
@@ -509,15 +544,24 @@ commands
 blocks
      0  handler \"on enter(Camp)\"
            0  Play 1
-           1  Return
+           1  PushFlag 2
+           2  Not
+           3  JumpIfFalse 5
+           4  Play 2
+           5  Return
      1  cutscene \"story\"
            0  PushFlag 1
            1  JumpIfFalse 3
-           2  Line 7 8 9
-           3  PushName 10
+           2  Line 8 9 10
+           3  PushName 11
            4  PushTile 9 10
            5  Command 0
            6  Return
+     2  cg \"vision\"
+           0  Cg 13
+           1  PushBool 1
+           2  Set 2
+           3  Return
 
 handlers
   on enter(Camp) -> block 0

@@ -8,11 +8,11 @@ export type { CommandArg, Flags, Output, Run, ShownChoice, Tile, Trigger } from 
 const MAGIC = 'CLSC'
 
 // Hand-written, not generated from Rust: this is the layout this decoder reads, so a file from a newer or older compiler fails loudly.
-export const FORMAT_VERSION = 4
+export const FORMAT_VERSION = 5
 
 // Decoded by position, as `bytecode.rs` writes them.
 const TRIGGERS: readonly Trigger[] = ['interact', 'enter']
-const BLOCK_KINDS: readonly Block['kind'][] = ['handler', 'cutscene']
+const BLOCK_KINDS: readonly Block['kind'][] = ['handler', 'cutscene', 'cg']
 const FLAG_TYPES: readonly FlagDeclaration['type'][] = ['bool', 'Character?']
 const PARAM_TYPES = ['Mover', 'Tile'] as const
 

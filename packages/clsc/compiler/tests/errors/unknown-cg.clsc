@@ -1,0 +1,5 @@
+cg vision;
+
+on enter(Camp) {
+    play(cg::visoin); // error: no CG named `visoin`
+}

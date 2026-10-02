@@ -1,0 +1,2 @@
+flag seen_story: bool = false;
+cutscene story {} set seen_story = true; // error: `seen_story` is already declared

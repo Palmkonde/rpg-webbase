@@ -1,7 +1,7 @@
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 COMMENT    = _{ "//" ~ (!"\n" ~ ANY)* }
 
-file = { SOI ~ use_decl* ~ (cast_decl | enum_decl | flag_decl | command_decl | cutscene | handler)* ~ EOI }
+file = { SOI ~ use_decl* ~ (cast_decl | enum_decl | flag_decl | command_decl | cutscene | cg | handler)* ~ EOI }
 
 // `use a.b;` names `a/b.clsc` under the scripts root. Atomic, so a module path holds no spaces.
 use_decl    = { use_keyword ~ module_path ~ ";" }
@@ -11,7 +11,11 @@ cast_decl = { cast_kind ~ name ~ ";" }
 cast_kind = { speaker_keyword | mover_keyword | character_keyword }
 enum_decl = { enum_keyword ~ name ~ "{" ~ name ~ ("," ~ name)* ~ ","? ~ "}" }
 flag_decl = { flag_keyword ~ name ~ ":" ~ name ~ "=" ~ bool_literal ~ ";" }
-cutscene  = { cutscene_keyword ~ name ~ cast? ~ body }
+cutscene  = { cutscene_keyword ~ name ~ cast? ~ body ~ once? }
+cg        = { cg_keyword ~ name ~ (once | ";") }
+
+// Any bool parses, so `check.rs` can reject `false` with a message saying why.
+once      = { set_keyword ~ name ~ "=" ~ bool_literal ~ ";" }
 handler   = { on_keyword ~ trigger ~ "(" ~ name ~ ")" ~ cast? ~ body }
 trigger   = { "interact" | "enter" }
 cast      = { with_keyword ~ name ~ ("," ~ name)* }
@@ -24,7 +28,8 @@ param        = { name ~ ":" ~ name }
 block_kind   = @{ ("handler" | "cutscene") ~ !name_char }
 
 statement    = _{ play | set | if_statement | choose | command_call | line }
-play         = { "play" ~ "(" ~ "cutscene" ~ "::" ~ name ~ ")" ~ ";" }
+play         = { "play" ~ "(" ~ playable ~ "::" ~ name ~ ")" ~ ";" }
+playable     = { "cutscene" | "cg" }
 set          = { set_keyword ~ (companion | name) ~ "=" ~ expr ~ ";" }
 if_statement = { if_keyword ~ expr ~ body ~ (else_keyword ~ (if_statement | body))? }
 choose       = { choose_keyword ~ "{" ~ choice+ ~ "}" }
@@ -67,6 +72,7 @@ command_keyword   = @{ "command" ~ !name_char }
 in_keyword        = @{ "in" ~ !name_char }
 waits_keyword     = @{ "waits" ~ !name_char }
 cutscene_keyword  = @{ "cutscene" ~ !name_char }
+cg_keyword        = @{ "cg" ~ !name_char }
 on_keyword        = @{ "on" ~ !name_char }
 with_keyword      = @{ "with" ~ !name_char }
 set_keyword       = @{ "set" ~ !name_char }
@@ -76,7 +82,7 @@ choose_keyword    = @{ "choose" ~ !name_char }
 locked_keyword    = @{ "locked" ~ !name_char }
 companion_keyword = @{ "companion" ~ !name_char }
 keyword           = @{
-    ("use" | "speaker" | "mover" | "character" | "enum" | "flag" | "command" | "in" | "waits" | "cutscene" | "on" | "with" | "play"
+    ("use" | "speaker" | "mover" | "character" | "enum" | "flag" | "command" | "in" | "waits" | "cutscene" | "cg" | "on" | "with" | "play"
         | "set" | "if" | "else" | "choose" | "locked" | "true" | "false" | "none" | "companion")
     ~ !name_char
 }

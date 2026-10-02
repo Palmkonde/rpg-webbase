@@ -3,6 +3,7 @@
   "flags": {
     "talked": "yes",
     "lit": true,
+    "seen_story": "yes",
     "campfire_seen": 3
   }
 }
