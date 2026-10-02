@@ -23,6 +23,7 @@
             pkgs.git
             pkgs.gh
             pkgs.nodejs_22
+            pkgs.python315
           ];
           RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
         };
