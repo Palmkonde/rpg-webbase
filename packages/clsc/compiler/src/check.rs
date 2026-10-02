@@ -229,6 +229,10 @@ struct BlockChecker<'c, 's> {
     strings: Option<&'c StringTable>,
     diagnostics: &'c mut Vec<Diagnostic>,
     used: Vec<&'s str>,
+
+    // The block's sections, which only its own `goto`s can name.
+    sections: Vec<&'s str>,
+    loops: usize,
 }
 
 fn check_block(scope: &Scope<'_>, block: &Block<'_>, declarations: &Declarations<'_>, strings: Option<&StringTable>, diagnostics: &mut Vec<Diagnostic>) {
@@ -238,9 +242,21 @@ fn check_block(scope: &Scope<'_>, block: &Block<'_>, declarations: &Declarations
         }
     }
 
-    let mut checker = BlockChecker { scope, kind: block.kind, cast: &block.cast, declarations, strings, diagnostics, used: Vec::new() };
+    let mut checker =
+        BlockChecker { scope, kind: block.kind, cast: &block.cast, declarations, strings, diagnostics, used: Vec::new(), sections: Vec::new(), loops: 0 };
     let listed: Vec<_> = block.cast.iter().filter(|name| checker.resolve_or_report(**name, &declarations.cast, "unknown cast name").is_some()).collect();
+
+    // Collected before any body is checked, so a `goto` can jump forward.
+    for section in &block.sections {
+        if checker.sections.contains(&section.name.as_str()) {
+            checker.error(section.name, format!("`{}` is already a section in this block", section.name.as_str()));
+        }
+        checker.sections.push(section.name.as_str());
+    }
     checker.statements(&block.body);
+    for section in &block.sections {
+        checker.statements(&section.body);
+    }
     let used = checker.used;
 
     for name in listed {
@@ -281,6 +297,22 @@ impl<'s> BlockChecker<'_, 's> {
                         self.statements(&choice.body);
                     }
                 }
+                Statement::Goto(name) => {
+                    if !self.sections.contains(&name.as_str()) {
+                        self.error(*name, format!("no section named `{}` in this block", name.as_str()));
+                    }
+                }
+                Statement::Loop(body) => {
+                    self.loops += 1;
+                    self.statements(body);
+                    self.loops -= 1;
+                }
+                Statement::Break(span) => {
+                    if self.loops == 0 {
+                        self.error(*span, "`break` is outside any `loop`".to_owned());
+                    }
+                }
+                Statement::Return => {}
             }
         }
     }

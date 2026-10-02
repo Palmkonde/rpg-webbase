@@ -58,7 +58,14 @@ pub struct Block<'s> {
     pub name: Span<'s>,
     pub cast: Vec<Span<'s>>,
     pub body: Vec<Statement<'s>>,
+    pub sections: Vec<Section<'s>>,
     pub once: Option<Once<'s>>,
+}
+
+/// `section name { … }`: a point in its block that only a `goto` reaches.
+pub struct Section<'s> {
+    pub name: Span<'s>,
+    pub body: Vec<Statement<'s>>,
 }
 
 /// `set seen_x = true;` after a `cutscene` or `cg`: the Flag that marks it once-only.
@@ -128,6 +135,15 @@ pub enum Statement<'s> {
     // An `else if` is an `otherwise` holding one `If`.
     If { condition: Expr<'s>, then: Vec<Self>, otherwise: Vec<Self> },
     Choose(Vec<Choice<'s>>),
+
+    // A section in the same block.
+    Goto(Span<'s>),
+
+    Loop(Vec<Self>),
+
+    // The `break;` itself, for the error when it's outside a loop.
+    Break(Span<'s>),
+    Return,
 }
 
 /// Player-visible text: written inline, or a String Table key the Host resolves.
@@ -238,14 +254,22 @@ fn command(pair: Pair<'_, Rule>) -> Command<'_> {
 }
 
 fn block(pair: Pair<'_, Rule>) -> Result<Block<'_>, ParseError> {
-    let mut block = Block { kind: BlockKind::Played(Playable::Cutscene), name: pair.as_span(), cast: Vec::new(), body: Vec::new(), once: None };
+    let mut block =
+        Block { kind: BlockKind::Played(Playable::Cutscene), name: pair.as_span(), cast: Vec::new(), body: Vec::new(), sections: Vec::new(), once: None };
     for part in pair.into_inner() {
         match part.as_rule() {
             Rule::trigger if part.as_str() == "interact" => block.kind = BlockKind::Handler(Trigger::Interact),
             Rule::trigger => block.kind = BlockKind::Handler(Trigger::Enter),
             Rule::name => block.name = part.as_span(),
             Rule::cast => block.cast = names(part),
-            Rule::body => block.body = body(part)?,
+            Rule::block_body => {
+                for child in part.into_inner() {
+                    match child.as_rule() {
+                        Rule::section => block.sections.push(section(child)?),
+                        _ => block.body.push(statement(child)?),
+                    }
+                }
+            }
             Rule::cg_keyword => block.kind = BlockKind::Played(Playable::Cg),
             Rule::once => {
                 let mut parts = part.into_inner().filter(|part| part.as_rule() != Rule::set_keyword);
@@ -258,12 +282,19 @@ fn block(pair: Pair<'_, Rule>) -> Result<Block<'_>, ParseError> {
     Ok(block)
 }
 
+fn section(pair: Pair<'_, Rule>) -> Result<Section<'_>, ParseError> {
+    let mut parts = pair.into_inner().filter(|part| !is_keyword(part.as_rule()));
+    let name = parts.next().expect("a section has a name").as_span();
+    Ok(Section { name, body: body(parts.next().expect("a section has a body"))? })
+}
+
 fn body(pair: Pair<'_, Rule>) -> Result<Vec<Statement<'_>>, ParseError> {
     pair.into_inner().map(statement).collect()
 }
 
 fn statement(pair: Pair<'_, Rule>) -> Result<Statement<'_>, ParseError> {
     let rule = pair.as_rule();
+    let span = pair.as_span();
     let mut parts = pair.into_inner().filter(|part| !is_keyword(part.as_rule()));
     let mut next = || parts.next().expect("the grammar gives every statement its parts");
 
@@ -285,6 +316,10 @@ fn statement(pair: Pair<'_, Rule>) -> Result<Statement<'_>, ParseError> {
             Statement::If { condition, then, otherwise }
         }
         Rule::choose => Statement::Choose(parts.map(choice).collect::<Result<_, _>>()?),
+        Rule::goto => Statement::Goto(next().as_span()),
+        Rule::loop_statement => Statement::Loop(body(next())?),
+        Rule::break_statement => Statement::Break(span),
+        Rule::return_statement => Statement::Return,
         _ => {
             let speaker = next().as_span();
             let mut rest: Vec<_> = parts.collect();
@@ -357,7 +392,7 @@ fn expr(pair: Pair<'_, Rule>) -> Expr<'_> {
 }
 
 const fn is_keyword(rule: Rule) -> bool {
-    matches!(rule, Rule::set_keyword | Rule::if_keyword | Rule::else_keyword | Rule::choose_keyword)
+    matches!(rule, Rule::set_keyword | Rule::if_keyword | Rule::else_keyword | Rule::choose_keyword | Rule::section_keyword | Rule::goto_keyword | Rule::loop_keyword)
 }
 
 fn names(pair: Pair<'_, Rule>) -> Vec<Span<'_>> {
@@ -403,5 +438,11 @@ mod tests {
     fn a_keyword_ends_at_a_word_boundary() {
         assert!(parse("speakerNarrator;").is_err());
         assert!(matches!(parse("speaker speakers;").unwrap()[..], [Item::Cast { name, .. }] if name.as_str() == "speakers"));
+    }
+
+    #[test]
+    fn only_sections_follow_a_section() {
+        assert!(parse("on enter(Camp) { section a {} section b {} }").is_ok());
+        assert!(parse("on enter(Camp) { section a {} return; }").is_err());
     }
 }

@@ -1,0 +1,8 @@
+on enter(Camp) {
+    goto nowhere; // error: no section named `nowhere` in this block
+    goto elsewhere; // error: no section named `elsewhere` in this block
+}
+
+on enter(Gate) {
+    section elsewhere {}
+}

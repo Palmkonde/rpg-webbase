@@ -1,0 +1,6 @@
+on enter(Camp) {
+    loop {
+        break;
+    }
+    break; // error: `break` is outside any `loop`
+}

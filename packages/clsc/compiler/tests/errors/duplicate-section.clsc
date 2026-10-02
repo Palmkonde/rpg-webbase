@@ -1,0 +1,6 @@
+on enter(Camp) {
+    goto again;
+
+    section again {}
+    section again {} // error: `again` is already a section in this block
+}

@@ -1,0 +1,72 @@
+flag open: bool = false;
+
+on enter(Gate) with Narrator {
+    Narrator: "The gate is shut.";
+
+    section beyond {
+        Narrator: "Never reached.";
+    }
+}
+
+on interact(Sage) with Sage {
+    Sage: "Riddle me this.";
+    goto riddle;
+    Sage: "Never said.";
+
+    section riddle {
+        Sage: "What walks on four legs?";
+        choose {
+            "A dog" => {
+                Sage: "Wrong.";
+                goto riddle;
+            }
+            "A person";
+        }
+        Sage: "Right.";
+    }
+
+    section farewell {
+        Sage: "Sections never fall through.";
+    }
+}
+
+on interact(Merchant) with Merchant {
+    loop {
+        choose {
+            "Buy" => {
+                Merchant: "Sold.";
+            }
+            "Leave" => {
+                break;
+            }
+        }
+    }
+    Merchant: "Come again.";
+}
+
+on enter(Maze) with Narrator {
+    loop {
+        loop {
+            Narrator: "Inner.";
+            break;
+        }
+        Narrator: "Outer.";
+        break;
+    }
+    Narrator: "Out.";
+}
+
+cutscene vault with Narrator {
+    if !open {
+        Narrator: "Locked.";
+        return;
+    }
+    Narrator: "Gold!";
+} set seen_vault = true;
+
+on enter(Vault) with Narrator {
+    play(cutscene::vault);
+    Narrator: "Back outside.";
+    return;
+    Narrator: "Never said.";
+}

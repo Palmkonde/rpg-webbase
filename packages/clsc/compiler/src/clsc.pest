@@ -11,15 +11,19 @@ cast_decl = { cast_kind ~ name ~ ";" }
 cast_kind = { speaker_keyword | mover_keyword | character_keyword }
 enum_decl = { enum_keyword ~ name ~ "{" ~ name ~ ("," ~ name)* ~ ","? ~ "}" }
 flag_decl = { flag_keyword ~ name ~ ":" ~ name ~ "=" ~ bool_literal ~ ";" }
-cutscene  = { cutscene_keyword ~ name ~ cast? ~ body ~ once? }
+cutscene  = { cutscene_keyword ~ name ~ cast? ~ block_body ~ once? }
 cg        = { cg_keyword ~ name ~ (once | ";") }
 
 // Any bool parses, so `check.rs` can reject `false` with a message saying why.
 once      = { set_keyword ~ name ~ "=" ~ bool_literal ~ ";" }
-handler   = { on_keyword ~ trigger ~ "(" ~ name ~ ")" ~ cast? ~ body }
+handler   = { on_keyword ~ trigger ~ "(" ~ name ~ ")" ~ cast? ~ block_body }
 trigger   = { "interact" | "enter" }
 cast      = { with_keyword ~ name ~ ("," ~ name)* }
 body      = { "{" ~ statement* ~ "}" }
+
+// The main body stops at the first section, so only sections follow one.
+block_body = { "{" ~ statement* ~ section* ~ "}" }
+section    = { section_keyword ~ name ~ body }
 
 // The Host declares each command in its prelude (`adr/0030`); `in` is required, so no command is
 // allowed in a block kind by omission.
@@ -27,8 +31,12 @@ command_decl = { command_keyword ~ name ~ "(" ~ (param ~ ("," ~ param)*)? ~ ")" 
 param        = { name ~ ":" ~ name }
 block_kind   = @{ ("handler" | "cutscene") ~ !name_char }
 
-statement    = _{ play | set | if_statement | choose | command_call | line }
+statement    = _{ play | set | if_statement | choose | goto | loop_statement | break_statement | return_statement | command_call | line }
 play         = { "play" ~ "(" ~ playable ~ "::" ~ name ~ ")" ~ ";" }
+goto         = { goto_keyword ~ name ~ ";" }
+loop_statement   = { loop_keyword ~ body }
+break_statement  = { break_keyword ~ ";" }
+return_statement = { return_keyword ~ ";" }
 playable     = { "cutscene" | "cg" }
 set          = { set_keyword ~ (companion | name) ~ "=" ~ expr ~ ";" }
 if_statement = { if_keyword ~ expr ~ body ~ (else_keyword ~ (if_statement | body))? }
@@ -88,9 +96,15 @@ else_keyword      = @{ "else" ~ !name_char }
 choose_keyword    = @{ "choose" ~ !name_char }
 locked_keyword    = @{ "locked" ~ !name_char }
 companion_keyword = @{ "companion" ~ !name_char }
+section_keyword   = @{ "section" ~ !name_char }
+goto_keyword      = @{ "goto" ~ !name_char }
+loop_keyword      = @{ "loop" ~ !name_char }
+break_keyword     = @{ "break" ~ !name_char }
+return_keyword    = @{ "return" ~ !name_char }
 keyword           = @{
     ("use" | "speaker" | "mover" | "character" | "enum" | "flag" | "command" | "in" | "waits" | "cutscene" | "cg" | "on" | "with" | "play"
-        | "set" | "if" | "else" | "choose" | "locked" | "true" | "false" | "none" | "companion")
+        | "set" | "if" | "else" | "choose" | "locked" | "true" | "false" | "none" | "companion" | "section" | "goto" | "loop" | "break"
+        | "return")
     ~ !name_char
 }
 

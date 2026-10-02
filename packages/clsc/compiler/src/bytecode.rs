@@ -171,15 +171,30 @@ fn encode_block(block: &Block<'_>, indices: &Indices<'_>, strings: &mut StringPo
         BlockKind::Played(_) => block.name.as_str().to_owned(),
     };
 
-    let mut code = BlockCode { instructions: Vec::new(), indices, strings };
+    let mut code = BlockCode { instructions: Vec::new(), indices, strings, exits: Vec::new(), breaks: Vec::new(), gotos: Vec::new() };
     if block.kind == BlockKind::Played(Playable::Cg) {
         let id = code.strings.intern(block.name.as_str());
         code.emit("Cg", vec![id]);
     }
     code.statements(&block.body);
 
+    // Sections never fall through: the main body, and each section, ends the block.
+    let mut sections = HashMap::new();
+    for section in &block.sections {
+        let exit = code.emit("Jump", vec![0]);
+        code.exits.push(exit);
+        sections.insert(section.name.as_str(), to_u32(code.instructions.len()));
+        code.statements(&section.body);
+    }
+    for (jump, section) in std::mem::take(&mut code.gotos) {
+        code.point(jump, sections[section.as_str()]);
+    }
+
     // Only a block that runs to here sets its once-only Flag (`adr/0030`), so any later way out
     // of a block must jump here rather than emit its own `Return`.
+    for exit in std::mem::take(&mut code.exits) {
+        code.land(exit);
+    }
     if let Some(once) = &block.once {
         code.emit("PushBool", vec![1]);
         code.emit("Set", vec![indices.flags[once.flag.as_str()]]);
@@ -204,6 +219,15 @@ struct BlockCode<'b, 'p> {
     instructions: Vec<(&'static str, Vec<u32>)>,
     indices: &'b Indices<'p>,
     strings: &'b mut StringPool,
+
+    // The jumps that end the block, landed on its end once it's all emitted.
+    exits: Vec<usize>,
+
+    // Each enclosing `loop`'s `break` jumps, innermost last.
+    breaks: Vec<Vec<usize>>,
+
+    // Each `goto` jump and its section, pointed once every section is emitted.
+    gotos: Vec<(usize, String)>,
 }
 
 impl BlockCode<'_, '_> {
@@ -214,7 +238,10 @@ impl BlockCode<'_, '_> {
 
     /// Points the jump at `instruction` to the next instruction emitted.
     fn land(&mut self, instruction: usize) {
-        let target = to_u32(self.instructions.len());
+        self.point(instruction, to_u32(self.instructions.len()));
+    }
+
+    fn point(&mut self, instruction: usize, target: u32) {
         *self.instructions[instruction].1.last_mut().expect("a jump's last operand is its target") = target;
     }
 
@@ -272,6 +299,27 @@ impl BlockCode<'_, '_> {
                 self.land(skip_otherwise);
             }
             Statement::Choose(choices) => self.choose(choices),
+            Statement::Goto(section) => {
+                let jump = self.emit("Jump", vec![0]);
+                self.gotos.push((jump, section.as_str().to_owned()));
+            }
+            Statement::Loop(body) => {
+                let start = to_u32(self.instructions.len());
+                self.breaks.push(Vec::new());
+                self.statements(body);
+                self.emit("Jump", vec![start]);
+                for jump in self.breaks.pop().expect("the loop's own breaks") {
+                    self.land(jump);
+                }
+            }
+            Statement::Break(_) => {
+                let jump = self.emit("Jump", vec![0]);
+                self.breaks.last_mut().expect("`check` puts every break inside a loop").push(jump);
+            }
+            Statement::Return => {
+                let jump = self.emit("Jump", vec![0]);
+                self.exits.push(jump);
+            }
         }
     }
 
