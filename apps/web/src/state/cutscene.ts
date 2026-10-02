@@ -1,5 +1,4 @@
-import type { Choice, ChoiceOptions, CutsceneTrigger, DialogueLine, SayOptions } from '../scripts/script.ts'
-import { PLAYER_CHAR_ID } from './player.ts'
+import type { Choice, ChoiceOptions, DialogueLine, SayOptions } from '../scripts/script.ts'
 import type { TileCoord } from '@game-engine/engine-core'
 
 const DEFAULT_FOLLOW_GAP = 0
@@ -81,41 +80,9 @@ export function createCutscene(): CutsceneBuilder {
 
 export type CutsceneRegistry = Record<string, CutsceneStep[]>
 
-
-// Functions for testing issues #27
-function campfireEmbersBranch(): CutsceneTrigger {
-  return { type: 'cutscene', id: 'campfire-story-embers' }
-}
-
-function campfireStarsBranch(): CutsceneTrigger {
-  return { type: 'cutscene', id: 'campfire-story-stars' }
-}
-
 // Not in scripts/: per GLOSSARY.md a Script produces a Cutscene trigger; the Cutscene's own steps live here, mirroring cg.ts's split from the Script that triggers it.
-const REGISTRY = {
-  // Target tile sits north of the Campfire Entity (main_test.tmj), clear of the nearby collision wall — proves a Movement step alongside Dialogue (ticket #26).
-  'campfire-story': createCutscene()
-    .say('The fire dims, as if settling in to tell a longer story than usual.', { speaker: 'Narrator', expression: 'Neutral' })
-    .say('Before any Student ever found this clearing, I was just a pile of cold wood.', { speaker: 'Campfire' })
-    .say('...and then someone struck the first spark, and I have been telling stories ever since.', { speaker: 'Campfire', expression: 'Happy' })
-    .moveTo(PLAYER_CHAR_ID, { x: 9, y: 11 })
-    .say('You find yourself drawn a little closer, as if the fire pulled you in.', { speaker: 'Narrator' })
-
-    // Proves a Choice step branches the Cutscene mid-scene (ticket #27).
-    .choice('Ask about the embers', { next: campfireEmbersBranch })
-    .choice('Ask about the stars overhead', { next: campfireStarsBranch })
-    .build(),
-
-  'campfire-story-embers': createCutscene()
-    .say('The embers pulse like a slow heartbeat, holding the last of the warmth.', { speaker: 'Campfire' })
-    .moveTo(PLAYER_CHAR_ID, {x: 2, y:2})
-    .build(),
-
-  'campfire-story-stars': createCutscene()
-    .say('Look up — the same stars watched the very first fire, too.', { speaker: 'Campfire' })
-    .moveTo(PLAYER_CHAR_ID, {x:10, y:2})
-    .build(),
-} satisfies CutsceneRegistry
+// Kept, empty, until the TS Script path is removed.
+const REGISTRY: CutsceneRegistry = {}
 
 export function resolveCutscene(id: string, registry: CutsceneRegistry = REGISTRY): CutsceneStep[] | undefined {
   return registry[id]

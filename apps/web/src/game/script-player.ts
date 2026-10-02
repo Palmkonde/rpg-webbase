@@ -227,7 +227,9 @@ export class ScriptPlayer {
     } else if (output.type === 'flag') {
       await this.saveFlag(output)
     } else {
-      throw new Error(`The Host doesn't play a "${output.type}" output yet`)
+
+      // The Script's own once-only marker decides whether it plays, not runOnce (adr/0030).
+      await this.playCgById(output.id, () => false)
     }
   }
 

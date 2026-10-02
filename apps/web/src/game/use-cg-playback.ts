@@ -1,5 +1,6 @@
 'use client'
 
+import { currentStudentId, flagStore, runOnce } from '../state/flags.ts'
 import { useCallback, useRef, useState } from 'react'
 import type { CgFrame } from '../state/cg.ts'
 import type { CgStep } from './play-cg.ts'
@@ -12,6 +13,9 @@ export interface CgPlayback {
   advanceCg: () => void
   skipCg: () => void
   playCgById: (id: string, isStale: () => boolean) => Promise<void>
+
+  // The boot CG's gate; a Script's CG is gated by its own once-only marker instead (adr/0030).
+  playCgOnce: (id: string, isStale: () => boolean) => Promise<void>
 }
 
 export function useCgPlayback(): CgPlayback {
@@ -42,5 +46,10 @@ export function useCgPlayback(): CgPlayback {
     }
   }, [])
 
-  return { cgFrames, cgStep, advanceCg, skipCg, playCgById }
+  const playCgOnce = useCallback(
+    (id: string, isStale: () => boolean): Promise<void> => runOnce({ store: flagStore, studentId: currentStudentId }, id, () => playCgById(id, isStale)),
+    [playCgById],
+  )
+
+  return { cgFrames, cgStep, advanceCg, skipCg, playCgById, playCgOnce }
 }

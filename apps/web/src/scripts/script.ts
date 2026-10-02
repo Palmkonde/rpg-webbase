@@ -52,7 +52,7 @@ export interface ScriptBuilder {
   build: () => Dialogue
 }
 
-// `defaultSpeaker` is the owning Entity's display name — a Script author supplies it once (see entities/CampFire.ts) since nothing else in the Host/Engine boundary carries it (Tiled's `name` field is an authoring label, not Player-facing text).
+// `defaultSpeaker` is the owning Entity's display name — a Script author supplies it once since nothing else in the Host/Engine boundary carries it (Tiled's `name` field is an authoring label, not Player-facing text).
 export function createScript(defaultSpeaker?: string): ScriptBuilder {
   const lines: DialogueLine[] = []
   const choices: Choice[] = []

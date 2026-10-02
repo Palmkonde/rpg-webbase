@@ -25,7 +25,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
   // oxlint-disable-next-line unicorn/no-useless-undefined -- this useRef overload requires an argument; omitting it doesn't typecheck.
   const engineRef = useRef<Awaited<ReturnType<typeof createEngine>> | undefined>(undefined)
 
-  const { cgFrames, cgStep, advanceCg, skipCg, playCgById } = useCgPlayback()
+  const { cgFrames, cgStep, advanceCg, skipCg, playCgById, playCgOnce } = useCgPlayback()
   const { companionIds, syncCompanions, dismissCompanion } = useCompanions(engineRef)
   const {
     scriptPrompt, advanceLine, choose, endRun, dialogue, cutsceneLine, cutsceneChoices, enginePaused, dismissDialogue, advanceCutscene, pickCutsceneChoice, selectChoice, runInteraction, runZoneEntered, fetchProgram,
@@ -72,7 +72,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
     }
 
     async function boot(element: HTMLElement): Promise<void> {
-      await playCgById(BOOT_CG_ID, () => cancelled)
+      await playCgOnce(BOOT_CG_ID, () => cancelled)
       if (cancelled) {return}
       await start(element)
     }
@@ -88,7 +88,7 @@ export function GameCanvas({ worldConfig }: { worldConfig: WorldConfig }): React
       engineRef.current?.destroy()
       engineRef.current = undefined
     }
-  }, [worldConfig, runInteraction, runZoneEntered, fetchProgram, playCgById, skipCg, syncCompanions, endRun])
+  }, [worldConfig, runInteraction, runZoneEntered, fetchProgram, playCgOnce, skipCg, syncCompanions, endRun])
 
   return (
     <>

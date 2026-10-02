@@ -15,9 +15,8 @@ const INTRO_FRAMES: CgFrame[] = [
 const REGISTRY = {
   intro: INTRO_FRAMES,
 
-  // Script running INTRO_FRAMES test of issues #30
-  // Own id — boot already marks intro_seen, so this id can't reuse intro's
-  'campfire-vision': INTRO_FRAMES,
+  // Declared in `campfire.clsc`, whose once-only Flag is its own, so it doesn't share intro_seen.
+  campfire_vision: INTRO_FRAMES,
 } satisfies CgRegistry
 
 export function resolveCg(id: string, registry: CgRegistry = REGISTRY): CgFrame[] | undefined {
