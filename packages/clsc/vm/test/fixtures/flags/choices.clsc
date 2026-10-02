@@ -1,3 +1,5 @@
+use flags;
+
 on interact(Campfire) with Campfire {
     choose {
         "Nice to meet you!" if !talked => {

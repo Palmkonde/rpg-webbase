@@ -9,6 +9,8 @@ struct ClscParser;
 pub type ParseError = pest::error::Error<Rule>;
 
 pub enum Item<'s> {
+    // The module path, `a.b` for `use a.b;`.
+    Use(Span<'s>),
     Speaker(Span<'s>),
     Enum { name: Span<'s>, variants: Vec<Span<'s>> },
     Flag { name: Span<'s>, ty: Span<'s>, default: bool },
@@ -86,6 +88,10 @@ pub fn parse(source: &str) -> Result<Vec<Item<'_>>, ParseError> {
 
 fn item(pair: Pair<'_, Rule>) -> Result<Item<'_>, ParseError> {
     Ok(match pair.as_rule() {
+        Rule::use_decl => {
+            let path = pair.into_inner().find(|part| part.as_rule() == Rule::module_path).expect("a `use` names a module");
+            Item::Use(path.as_span())
+        }
         Rule::speaker => Item::Speaker(names(pair)[0]),
         Rule::enum_decl => {
             let names = names(pair);

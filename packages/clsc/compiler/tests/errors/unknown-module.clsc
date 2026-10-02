@@ -1,0 +1,1 @@
+use story.missing; // error: `use story.missing;` found no `story/missing.clsc` under the scripts root

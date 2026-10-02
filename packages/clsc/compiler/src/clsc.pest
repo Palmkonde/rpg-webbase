@@ -1,7 +1,11 @@
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 COMMENT    = _{ "//" ~ (!"\n" ~ ANY)* }
 
-file = { SOI ~ (speaker | enum_decl | flag_decl | cutscene | handler)* ~ EOI }
+file = { SOI ~ use_decl* ~ (speaker | enum_decl | flag_decl | cutscene | handler)* ~ EOI }
+
+// `use a.b;` names `a/b.clsc` under the scripts root. Atomic, so a module path holds no spaces.
+use_decl    = { use_keyword ~ module_path ~ ";" }
+module_path = @{ name ~ ("." ~ name)* }
 
 speaker   = { speaker_keyword ~ name ~ ";" }
 enum_decl = { enum_keyword ~ name ~ "{" ~ name ~ ("," ~ name)* ~ ","? ~ "}" }
@@ -38,6 +42,7 @@ text      = ${ "\"" ~ text_char* ~ "\"" }
 text_char = _{ "\\" ~ ANY | !("\"" | "\\" | "\n") ~ ANY }
 
 // Atomic, so a keyword ends at a word boundary: `speakerNarrator` is a name, not `speaker Narrator`.
+use_keyword      = @{ "use" ~ !name_char }
 speaker_keyword  = @{ "speaker" ~ !name_char }
 enum_keyword     = @{ "enum" ~ !name_char }
 flag_keyword     = @{ "flag" ~ !name_char }
@@ -50,7 +55,7 @@ else_keyword     = @{ "else" ~ !name_char }
 choose_keyword   = @{ "choose" ~ !name_char }
 locked_keyword   = @{ "locked" ~ !name_char }
 keyword          = @{
-    ("speaker" | "enum" | "flag" | "cutscene" | "on" | "with" | "play" | "set" | "if" | "else" | "choose" | "locked" | "true" | "false")
+    ("use" | "speaker" | "enum" | "flag" | "cutscene" | "on" | "with" | "play" | "set" | "if" | "else" | "choose" | "locked" | "true" | "false")
     ~ !name_char
 }
 

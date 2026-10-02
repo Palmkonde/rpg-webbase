@@ -1,0 +1,5 @@
+use b;
+
+cutscene from_a {
+    play(cutscene::from_b);
+}

@@ -1,0 +1,4 @@
+on enter(Camp) {
+    play(cutscene::guard_walk); // error: `guard_walk` is declared in `story.guard`, which this file doesn't `use`
+    set met_guard = true; // error: `met_guard` is declared in `story.guard`, which this file doesn't `use`
+}

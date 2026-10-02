@@ -1,0 +1,6 @@
+use story;
+
+on enter(Camp) {
+    play(cutscene::_secret); // error: `_secret` is private to `story`
+    set _heard = true; // error: `_heard` is private to `story`
+}

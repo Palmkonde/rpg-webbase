@@ -1,0 +1,6 @@
+flag _heard: bool = false;
+
+// A file uses its own private names freely.
+cutscene _secret {
+    set _heard = true;
+}

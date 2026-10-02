@@ -5,23 +5,44 @@ use crate::{Diagnostic, FlagSeed, SourceFile};
 use pest::Span;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-/// Every top-level name is program-wide, so `cast.clsc` and `prelude.clsc` need no `use` (`adr/0032`).
-struct Declarations<'s> {
-    speakers: HashSet<&'s str>,
-    enums: HashMap<&'s str, Vec<&'s str>>,
-    flags: HashSet<&'s str>,
-    cutscenes: HashSet<&'s str>,
+/// Every file sees these without a `use` (`adr/0032`).
+const RESERVED_MODULES: [&str; 2] = ["cast", "prelude"];
+
+/// Each top-level name, mapped to the module declaring it. A name is unique program-wide, a
+/// `_private` one too: the bytecode and the Host's Flag storage both key on the bare name.
+struct Declarations<'f> {
+    speakers: HashMap<&'f str, &'f str>,
+    enums: HashMap<&'f str, Vec<&'f str>>,
+    flags: HashMap<&'f str, &'f str>,
+    cutscenes: HashMap<&'f str, &'f str>,
+}
+
+/// One file, its module, and the modules it `use`s.
+struct Scope<'f> {
+    path: &'f str,
+    module: &'f str,
+    uses: Vec<&'f str>,
+}
+
+impl<'f> Scope<'f> {
+    fn of(file: &'f SourceFile<'_>) -> Self {
+        let uses = file.items.iter().filter_map(|item| if let Item::Use(path) = item { Some(path.as_str()) } else { None }).collect();
+        Self { path: &file.path, module: &file.module, uses }
+    }
 }
 
 pub fn check(files: &[SourceFile<'_>], seed: Option<&FlagSeed>) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     let declarations = collect_declarations_and_duplicates(files, &mut diagnostics);
+    let modules: HashSet<&str> = files.iter().map(|file| file.module.as_str()).collect();
     check_handlers_are_unique(files, &mut diagnostics);
     for file in files {
+        let scope = Scope::of(file);
         for item in &file.items {
             match item {
+                Item::Use(path) => check_use(&file.path, *path, &modules, &mut diagnostics),
                 Item::Flag { ty, .. } => check_flag_type(&file.path, *ty, &mut diagnostics),
-                Item::Block(block) => check_block(&file.path, block, &declarations, &mut diagnostics),
+                Item::Block(block) => check_block(&scope, block, &declarations, &mut diagnostics),
                 _ => {}
             }
         }
@@ -32,20 +53,21 @@ pub fn check(files: &[SourceFile<'_>], seed: Option<&FlagSeed>) -> Vec<Diagnosti
     diagnostics
 }
 
-fn collect_declarations_and_duplicates<'s>(files: &[SourceFile<'s>], diagnostics: &mut Vec<Diagnostic>) -> Declarations<'s> {
-    let mut declarations = Declarations { speakers: HashSet::new(), enums: HashMap::new(), flags: HashSet::new(), cutscenes: HashSet::new() };
+fn collect_declarations_and_duplicates<'f>(files: &'f [SourceFile<'_>], diagnostics: &mut Vec<Diagnostic>) -> Declarations<'f> {
+    let mut declarations = Declarations { speakers: HashMap::new(), enums: HashMap::new(), flags: HashMap::new(), cutscenes: HashMap::new() };
     for file in files {
+        let module = file.module.as_str();
         for item in &file.items {
             let (name, is_new) = match item {
-                Item::Speaker(name) => (name, declarations.speakers.insert(name.as_str())),
+                Item::Speaker(name) => (name, declarations.speakers.insert(name.as_str(), module).is_none()),
                 Item::Enum { name, variants } => {
                     (name, declarations.enums.insert(name.as_str(), variants.iter().map(Span::as_str).collect()).is_none())
                 }
-                Item::Flag { name, .. } => (name, declarations.flags.insert(name.as_str())),
+                Item::Flag { name, .. } => (name, declarations.flags.insert(name.as_str(), module).is_none()),
                 Item::Block(block) if block.kind == BlockKind::Cutscene => {
-                    (&block.name, declarations.cutscenes.insert(block.name.as_str()))
+                    (&block.name, declarations.cutscenes.insert(block.name.as_str(), module).is_none())
                 }
-                Item::Block(_) => continue,
+                Item::Use(_) | Item::Block(_) => continue,
             };
             if !is_new {
                 diagnostics.push(Diagnostic::error(&file.path, *name, format!("`{}` is already declared", name.as_str())));
@@ -77,6 +99,13 @@ fn check_handlers_are_unique(files: &[SourceFile<'_>], diagnostics: &mut Vec<Dia
     }
 }
 
+fn check_use(path: &str, module: Span<'_>, modules: &HashSet<&str>, diagnostics: &mut Vec<Diagnostic>) {
+    if !modules.contains(module.as_str()) {
+        let message = format!("`use {};` found no `{}.clsc` under the scripts root", module.as_str(), module.as_str().replace('.', "/"));
+        diagnostics.push(Diagnostic::error(path, module, message));
+    }
+}
+
 fn check_flag_type(path: &str, ty: Span<'_>, diagnostics: &mut Vec<Diagnostic>) {
     if !FLAG_TYPES.contains(&ty.as_str()) {
         diagnostics.push(Diagnostic::error(path, ty, format!("unknown Flag type `{}` (expected {})", ty.as_str(), FLAG_TYPES.join(" | "))));
@@ -96,27 +125,22 @@ fn check_seed(files: &[SourceFile<'_>], seed: &FlagSeed, diagnostics: &mut Vec<D
 }
 
 struct BlockChecker<'c, 's> {
-    path: &'c str,
+    scope: &'c Scope<'c>,
     cast: &'c [Span<'s>],
     declarations: &'c Declarations<'c>,
     diagnostics: &'c mut Vec<Diagnostic>,
     used: Vec<&'s str>,
 }
 
-fn check_block(path: &str, block: &Block<'_>, declarations: &Declarations<'_>, diagnostics: &mut Vec<Diagnostic>) {
-    for name in &block.cast {
-        if !declarations.speakers.contains(name.as_str()) {
-            diagnostics.push(Diagnostic::error(path, *name, format!("unknown Speaker `{}`", name.as_str())));
-        }
-    }
-
-    let mut checker = BlockChecker { path, cast: &block.cast, declarations, diagnostics, used: Vec::new() };
+fn check_block(scope: &Scope<'_>, block: &Block<'_>, declarations: &Declarations<'_>, diagnostics: &mut Vec<Diagnostic>) {
+    let mut checker = BlockChecker { scope, cast: &block.cast, declarations, diagnostics, used: Vec::new() };
+    let listed: Vec<_> = block.cast.iter().filter(|name| checker.resolve_or_report_speaker(**name)).collect();
     checker.statements(&block.body);
     let used = checker.used;
 
-    for name in &block.cast {
-        if declarations.speakers.contains(name.as_str()) && !used.contains(&name.as_str()) {
-            diagnostics.push(Diagnostic::warning(path, *name, format!("`{}` is listed in `with` but never used", name.as_str())));
+    for name in listed {
+        if !used.contains(&name.as_str()) {
+            diagnostics.push(Diagnostic::warning(scope.path, *name, format!("`{}` is listed in `with` but never used", name.as_str())));
         }
     }
 }
@@ -131,9 +155,7 @@ impl<'s> BlockChecker<'_, 's> {
                     self.expression(*speaker, *expression);
                 }
                 Statement::Play(cutscene) => {
-                    if !self.declarations.cutscenes.contains(cutscene.as_str()) {
-                        self.error(*cutscene, format!("no cutscene named `{}`", cutscene.as_str()));
-                    }
+                    self.resolve_or_report(*cutscene, &self.declarations.cutscenes, "no cutscene named");
                 }
                 Statement::Set { flag, value } => {
                     self.flag(*flag);
@@ -170,18 +192,33 @@ impl<'s> BlockChecker<'_, 's> {
     }
 
     fn flag(&mut self, name: Span<'_>) {
-        if !self.declarations.flags.contains(name.as_str()) {
-            self.error(name, format!("no Flag named `{}`", name.as_str()));
-        }
+        self.resolve_or_report(name, &self.declarations.flags, "no Flag named");
     }
 
     fn speaker(&mut self, speaker: Span<'_>) {
         let name = speaker.as_str();
-        if !self.declarations.speakers.contains(name) {
-            self.error(speaker, format!("unknown Speaker `{name}`"));
-        } else if !self.cast.iter().any(|listed| listed.as_str() == name) {
+        if self.resolve_or_report_speaker(speaker) && !self.cast.iter().any(|listed| listed.as_str() == name) {
             self.error(speaker, format!("`{name}` is not in this block's `with` list"));
         }
+    }
+
+    fn resolve_or_report_speaker(&mut self, speaker: Span<'_>) -> bool {
+        self.resolve_or_report(speaker, &self.declarations.speakers, "unknown Speaker")
+    }
+
+    /// Whether `name` is in `declared` and in this file's scope: declared in this file, a reserved
+    /// module or a module it `use`s, and not `_private` to another. Reports why not, as
+    /// `<unknown> \`name\`` when it's declared nowhere.
+    fn resolve_or_report(&mut self, name: Span<'_>, declared: &HashMap<&str, &str>, unknown: &str) -> bool {
+        let message = match declared.get(name.as_str()).copied() {
+            None => format!("{unknown} `{}`", name.as_str()),
+            Some(module) if module == self.scope.module => return true,
+            Some(module) if name.as_str().starts_with('_') => format!("`{}` is private to `{module}`", name.as_str()),
+            Some(module) if RESERVED_MODULES.contains(&module) || self.scope.uses.contains(&module) => return true,
+            Some(module) => format!("`{}` is declared in `{module}`, which this file doesn't `use`", name.as_str()),
+        };
+        self.error(name, message);
+        false
     }
 
     /// A line without an Expression shows `DEFAULT_EXPRESSION`, so that variant must be declared too.
@@ -204,6 +241,6 @@ impl<'s> BlockChecker<'_, 's> {
     }
 
     fn error(&mut self, span: Span<'_>, message: String) {
-        self.diagnostics.push(Diagnostic::error(self.path, span, message));
+        self.diagnostics.push(Diagnostic::error(self.scope.path, span, message));
     }
 }

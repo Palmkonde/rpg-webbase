@@ -1,0 +1,8 @@
+use story.campfire;
+
+on interact(Campfire) with Campfire {
+    if heard_story {
+        Campfire: "Again?";
+    }
+    play(cutscene::campfire_story);
+}

@@ -1,0 +1,6 @@
+use a;
+use b;
+
+on enter(Camp) {
+    play(cutscene::story);
+}

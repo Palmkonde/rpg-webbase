@@ -17,7 +17,7 @@ fn every_error_fixture_reports_exactly_its_annotated_diagnostics() {
             let store = fixture.join("store.json");
             compile(&fixture, store.exists().then_some(store.as_path())).unwrap()
         } else {
-            compile_sources(&[(fixture.display().to_string(), std::fs::read_to_string(&fixture).unwrap())], None)
+            compile_sources(&fixtures, &[(relative(&fixtures, &fixture), std::fs::read_to_string(&fixture).unwrap())], None)
         };
 
         let mut actual: Vec<Expected> = compiled
@@ -38,10 +38,9 @@ fn every_error_fixture_reports_exactly_its_annotated_diagnostics() {
 
 /// Read straight from the text, never through the parser, which may be what's failing.
 fn annotations(fixtures: &Path, fixture: &Path) -> Vec<Expected> {
-    let files = if fixture.is_dir() { sorted_entries(fixture) } else { vec![fixture.to_path_buf()] };
     let mut expected = Vec::new();
 
-    for file in files {
+    for file in files_under(fixture) {
         for (index, line) in std::fs::read_to_string(&file).unwrap().lines().enumerate() {
             for (marker, severity) in [("// error: ", Severity::Error), ("// warning: ", Severity::Warning)] {
                 if let Some((_, message)) = line.split_once(marker) {
@@ -53,6 +52,13 @@ fn annotations(fixtures: &Path, fixture: &Path) -> Vec<Expected> {
 
     expected.sort();
     expected
+}
+
+fn files_under(path: &Path) -> Vec<PathBuf> {
+    if !path.is_dir() {
+        return vec![path.to_path_buf()];
+    }
+    sorted_entries(path).iter().flat_map(|entry| files_under(entry)).collect()
 }
 
 fn sorted_entries(dir: &Path) -> Vec<PathBuf> {

@@ -1,3 +1,5 @@
+use flags;
+
 on enter(Greeting) with Campfire {
     if talked && !polite {
         Campfire(Angry): "Go away!";

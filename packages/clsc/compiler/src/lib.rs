@@ -65,6 +65,9 @@ pub struct Compiled {
 
 struct SourceFile<'s> {
     path: String,
+
+    // What `use` names this file by: `a.b` for `a/b.clsc` under the scripts root.
+    module: String,
     items: Vec<Item<'s>>,
 }
 
@@ -75,22 +78,24 @@ pub fn compile(root: &Path, store: Option<&Path>) -> Result<Compiled, String> {
 
     for path in source_files(root)? {
         let text = std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
-        sources.push((path.display().to_string(), text));
+        let relative = path.strip_prefix(root).expect("source_files lists files under the root");
+        sources.push((relative.display().to_string(), text));
     }
 
     let seed = store.map(read_seed).transpose()?;
-    Ok(compile_sources(&sources, seed.as_ref()))
+    Ok(compile_sources(root, &sources, seed.as_ref()))
 }
 
-/// Compiles `(path, text)` pairs as one program; `path` only labels diagnostics.
-pub fn compile_sources(sources: &[(String, String)], seed: Option<&FlagSeed>) -> Compiled {
+/// Compiles `(path, text)` pairs as one program, each `path` relative to the scripts `root`.
+pub fn compile_sources(root: &Path, sources: &[(String, String)], seed: Option<&FlagSeed>) -> Compiled {
     let mut files = Vec::new();
     let mut diagnostics = Vec::new();
 
-    for (path, text) in sources {
+    for (relative, text) in sources {
+        let path = root.join(relative).display().to_string();
         match parse::parse(text) {
-            Ok(items) => files.push(SourceFile { path: path.clone(), items }),
-            Err(error) => diagnostics.push(Diagnostic::from_parse_error(path, error)),
+            Ok(items) => files.push(SourceFile { module: module_name(Path::new(relative)), path, items }),
+            Err(error) => diagnostics.push(Diagnostic::from_parse_error(&path, error)),
         }
     }
 
@@ -103,6 +108,11 @@ pub fn compile_sources(sources: &[(String, String)], seed: Option<&FlagSeed>) ->
     let failed = diagnostics.iter().any(|diagnostic| diagnostic.severity == Severity::Error);
 
     Compiled { bytecode: (!failed).then(|| bytecode::encode(&files)), diagnostics }
+}
+
+fn module_name(relative: &Path) -> String {
+    let parts: Vec<_> = relative.with_extension("").iter().map(|part| part.to_string_lossy().into_owned()).collect();
+    parts.join(".")
 }
 
 fn read_seed(path: &Path) -> Result<FlagSeed, String> {

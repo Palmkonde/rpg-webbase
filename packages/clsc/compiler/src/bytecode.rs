@@ -373,11 +373,12 @@ fn position<T: PartialEq>(table: &[T], value: &T) -> u8 {
 mod tests {
     use super::disasm;
     use crate::compile_sources;
+    use std::path::Path;
 
     #[test]
     fn disasm_prints_the_header_string_pool_flag_table_blocks_and_handler_index() {
         let source = "enum Expression { Neutral }\nspeaker Narrator;\nflag lit: bool = true;\n\non enter(Camp) with Narrator {\n    play(cutscene::story);\n}\n\ncutscene story with Narrator {\n    if lit {\n        Narrator: \"Hi\";\n    }\n}\n";
-        let bytecode = compile_sources(&[("main.clsc".to_owned(), source.to_owned())], None).bytecode.unwrap();
+        let bytecode = compile_sources(Path::new(""), &[("main.clsc".to_owned(), source.to_owned())], None).bytecode.unwrap();
 
         assert_eq!(
             disasm(&bytecode).unwrap(),
@@ -413,7 +414,7 @@ handlers
 
     #[test]
     fn disasm_refuses_a_flag_default_that_is_not_0_or_1() {
-        let mut bytecode = compile_sources(&[("main.clsc".to_owned(), "flag lit: bool = true;".to_owned())], None).bytecode.unwrap();
+        let mut bytecode = compile_sources(Path::new(""), &[("main.clsc".to_owned(), "flag lit: bool = true;".to_owned())], None).bytecode.unwrap();
 
         // Magic, version, the pool holding "lit", the Flag count, its name and its type come first.
         bytecode[4 + 2 + 4 + 4 + 3 + 4 + 4 + 1] = 2;

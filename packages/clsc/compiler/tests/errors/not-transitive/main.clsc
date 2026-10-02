@@ -1,0 +1,5 @@
+use a;
+
+on enter(Camp) {
+    play(cutscene::from_b); // error: `from_b` is declared in `b`, which this file doesn't `use`
+}

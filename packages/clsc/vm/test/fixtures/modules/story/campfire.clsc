@@ -1,0 +1,11 @@
+flag heard_story: bool = false;
+
+cutscene campfire_story with Narrator {
+    Narrator: "Once upon a time...";
+    play(cutscene::_ending);
+}
+
+cutscene _ending with Narrator {
+    Narrator: "...the end.";
+    set heard_story = true;
+}
