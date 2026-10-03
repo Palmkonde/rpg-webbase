@@ -1,5 +1,5 @@
 {
-  description = "Dev shell: Node, git/gh, the clsc Rust toolchain (docs/adr/0031) and imagemagick for sprite sheets (docs/adr/0006)";
+  description = "Dev shell: Bun (docs/adr/0033), git/gh, the clsc Rust toolchain (docs/adr/0031) and imagemagick for sprite sheets (docs/adr/0006)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -22,7 +22,7 @@
             pkgs.rust-analyzer
             pkgs.git
             pkgs.gh
-            pkgs.nodejs_22
+            pkgs.bun
             pkgs.python315
           ];
           RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";

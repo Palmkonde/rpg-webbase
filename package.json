@@ -6,10 +6,10 @@
     "apps/*"
   ],
   "scripts": {
-    "test": "npm test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "dev": "npm run dev --workspace=web",
-    "lint": "oxlint && npm run lint --workspaces --if-present",
+    "test": "bun run --filter '*' test",
+    "typecheck": "bun run --filter '*' typecheck",
+    "dev": "bun run --cwd apps/web dev",
+    "lint": "oxlint && bun run --filter '*' lint",
     "lint:fix": "oxlint --fix"
   },
   "devDependencies": {

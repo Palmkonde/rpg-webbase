@@ -36,7 +36,7 @@ fn main() -> ExitCode {
     }
 }
 
-/// In any order, since `npm run clsc -- --watch` appends `--watch` after the script's own options.
+/// In any order, since `bun run clsc --watch` appends `--watch` after the script's own options.
 fn read_build_options<'a>(options: &[&'a str]) -> Option<BuildOptions<'a>> {
     let mut build = BuildOptions { watch: false, store: None, strings: None };
     let mut options = options.iter();

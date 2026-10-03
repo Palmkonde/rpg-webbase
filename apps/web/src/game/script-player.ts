@@ -71,7 +71,7 @@ export class ScriptPlayer {
   public fetchProgram = async (): Promise<void> => {
     const response = await fetch(SCRIPTS_URL)
     if (!response.ok) {
-      throw new Error(`Script bytecode ${SCRIPTS_URL} is missing (HTTP ${response.status}): run \`npm run dev\`, or \`npm run clsc\` in apps/web`)
+      throw new Error(`Script bytecode ${SCRIPTS_URL} is missing (HTTP ${response.status}): run \`bun run dev\`, or \`bun run clsc\` in apps/web`)
     }
     this.program = loadProgram(new Uint8Array(await response.arrayBuffer()), this.commands.handlers)
   }

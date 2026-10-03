@@ -7,7 +7,7 @@
   "types": "vm/src/program.ts",
   "scripts": {
     "clsc": "cargo run --quiet --manifest-path compiler/Cargo.toml --",
-    "test": "cargo test --manifest-path compiler/Cargo.toml && for root in vm/test/fixtures/*/; do npm run --silent clsc -- build \"$root\" \"vm/test/generated/$(basename \"$root\").clscb\" --strings vm/test/fixtures/strings.json || exit 1; done && node --test 'vm/test/*.test.ts'",
+    "test": "cargo test --manifest-path compiler/Cargo.toml && for root in vm/test/fixtures/*/; do bun run --silent clsc build \"$root\" \"vm/test/generated/$(basename \"$root\").clscb\" --strings vm/test/fixtures/strings.json || exit 1; done && bun test ./vm/test",
     "typecheck": "tsc --noEmit",
     "lint": "cargo clippy --manifest-path compiler/Cargo.toml --all-targets -- -D warnings"
   },

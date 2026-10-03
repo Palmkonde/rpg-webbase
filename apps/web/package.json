@@ -5,12 +5,12 @@
   "type": "module",
   "scripts": {
     "clsc": "cargo run --quiet --manifest-path ../../packages/clsc/compiler/Cargo.toml -- build src/scripts public/generated/scripts.clscb --store src/fixtures/student-state.json --strings src/fixtures/strings.json",
-    "dev": "concurrently --names clsc,next \"npm run --silent clsc -- --watch\" \"next dev\"",
-    "prebuild": "npm run clsc",
+    "dev": "concurrently --names clsc,next \"bun run --silent clsc --watch\" \"next dev\"",
+    "prebuild": "bun run clsc",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test test/*.test.ts"
+    "test": "bun test ./test"
   },
   "dependencies": {
     "@game-engine/clsc": "*",
