@@ -1,4 +1,4 @@
-import { compiled, play } from './helpers.ts'
+import { compiled, consoleErrors, play } from './helpers.ts'
 import type { Program } from '../src/program.ts'
 import assert from 'node:assert/strict'
 import { loadProgram } from '../src/program.ts'
@@ -38,11 +38,11 @@ test('a run reads its own writes after handing each one back', async () => {
   ])
 })
 
-test('a stored Flag of the wrong type aborts the run before any output, naming it in a console.error', async (context) => {
-  const errors: unknown[][] = []
-  context.mock.method(console, 'error', (...args: unknown[]) => { errors.push(args) })
+test('a stored Flag of the wrong type aborts the run before any output, naming it in a console.error', async () => {
   const program = loadProgram(await compiled('flags'), {})
-  assert.deepEqual(play(program, { on: ['enter', 'Lit'], flags: { lit: 'yes' } }), [{ type: 'done' }])
+  const errors = consoleErrors(() => {
+    assert.deepEqual(play(program, { on: ['enter', 'Lit'], flags: { lit: 'yes' } }), [{ type: 'done' }])
+  })
   assert.deepEqual(errors, [['Flag "lit" is stored as "yes", but it is declared bool: the run is aborted']])
 })
 

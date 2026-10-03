@@ -1,4 +1,4 @@
-import { compiled, play } from './helpers.ts'
+import { compiled, consoleErrors, play } from './helpers.ts'
 import assert from 'node:assert/strict'
 import { loadProgram } from '../src/program.ts'
 import { test } from 'node:test'
@@ -28,10 +28,10 @@ test("a recruited Companion reads as its Character, and dismissing it writes the
   ])
 })
 
-test('a Companion Flag stored as true aborts the run, naming it in a console.error', async (context) => {
-  const errors: unknown[][] = []
-  context.mock.method(console, 'error', (...args: unknown[]) => { errors.push(args) })
+test('a Companion Flag stored as true aborts the run, naming it in a console.error', async () => {
   const program = loadProgram(await compiled('companion'), {})
-  assert.deepEqual(play(program, { on: ['interact', 'Guard'], flags: { 'companion:Guard': true } }), [{ type: 'done' }])
+  const errors = consoleErrors(() => {
+    assert.deepEqual(play(program, { on: ['interact', 'Guard'], flags: { 'companion:Guard': true } }), [{ type: 'done' }])
+  })
   assert.deepEqual(errors, [['Flag "companion:Guard" is stored as true, but it is declared Character?: the run is aborted']])
 })

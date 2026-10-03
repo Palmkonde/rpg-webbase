@@ -2,7 +2,7 @@ import type { Flags, Output, Program, Run, Trigger } from '../src/program.ts'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
-// A fresh copy each call, so a test can patch a compiled header rather than hand-write bytecode. `npm test` compiles each `fixtures/<name>/` scripts root into `generated/<name>.clscb`.
+// A fresh copy each call, so a test can patch a compiled header rather than hand-write bytecode. `bun run test` compiles each `fixtures/<name>/` scripts root into `generated/<name>.clscb`.
 export async function compiled(name: string): Promise<Uint8Array> {
   return new Uint8Array(await readFile(new URL(`generated/${name}.clscb`, import.meta.url)))
 }
@@ -11,6 +11,19 @@ export interface PlayOptions {
   on: [Trigger, string]
   flags?: Flags
   picks?: readonly number[]
+}
+
+// Runs `body` with console.error captured, and returns the arguments of each call. Swapped by hand rather than through a runner's mock, so it runs under both `bun test` and `node --test`; the finally matters because `bun test` shares one process across files.
+export function consoleErrors(body: () => void): unknown[][] {
+  const errors: unknown[][] = []
+  const original = console.error
+  console.error = (...args: unknown[]): void => { errors.push(args) }
+  try {
+    body()
+  } finally {
+    console.error = original
+  }
+  return errors
 }
 
 // Answers a `choices` with the next of `picks`, which it consumes, and anything else with next().
