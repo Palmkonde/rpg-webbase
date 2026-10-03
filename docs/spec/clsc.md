@@ -59,7 +59,7 @@ Scripts are written in CodeLeagues Script (`.clsc`), a statically typed language
 40. As a designer, I want a type error, an unknown name, a missing `@key` or a duplicate handler to fail the compile, so that mistakes surface before I play.
 41. As a designer, I want a `@key` missing from any Locale in the String Table to be a compile error, so that no keyed line ships untranslated by accident.
 42. As a designer, I want a Flag stored in the seed with the wrong type for its declaration to be a compile error, so that bad seed data is caught at build time.
-43. As a designer, I want `npm run dev` to recompile on save and print errors in the terminal labelled `[clsc]`, so that I see mistakes as I write.
+43. As a designer, I want `bun run dev` to recompile on save and print errors in the terminal labelled `[clsc]`, so that I see mistakes as I write.
 44. As a designer, I want the last good bytecode to stay in place when a dev compile fails, so that the game keeps running while I fix the error.
 45. As a designer, I want a recompile to be picked up on page reload, so that I don't restart the dev server.
 46. As a developer, I want `next build` to compile every Script first and fail on a compile error, so that a broken Script never ships.
@@ -103,15 +103,15 @@ Scripts are written in CodeLeagues Script (`.clsc`), a statically typed language
 75. As a language developer, I want the opcode table to live in Rust and `build.rs` to generate the TS opcode constants, so that the two sides can't disagree about opcodes.
 76. As a language developer, I want every bytecode file to start with a magic number and a format version, and the VM to refuse a version it doesn't expect with an error naming both, so that a mismatch fails loudly.
 77. As a language developer, I want to choose the bytecode's byte layout while building the compiler, so that I learn by designing it instead of following a guess written up front.
-78. As a language developer, I want `npm test` to run the compiler tests, compile the fixtures and run the VM tests, so that one command checks both halves.
-79. As a language developer, I want `npm run lint` to run `cargo clippy -- -D warnings`, so that the Rust half has the same gate as the TS half before `/code-review`.
+78. As a language developer, I want `bun run test` to run the compiler tests, compile the fixtures and run the VM tests, so that one command checks both halves.
+79. As a language developer, I want `bun run lint` to run `cargo clippy -- -D warnings`, so that the Rust half has the same gate as the TS half before `/code-review`.
 80. As a language developer, I want rust-analyzer in the dev shell, checking with clippy, so that I see warnings while I type.
 
 ## Implementation Decisions
 
 ### Package
 
-- A new package `clsc` holds both halves: a Rust crate (binary `clsc`) for the compiler and an npm workspace package (`@game-engine/clsc`) for the VM. It is separate from `engine-core`: the Engine knows nothing about Scripts (`adr/0001`), and an `engine-` prefix on a Host-side package would contradict the glossary.
+- A new package `clsc` holds both halves: a Rust crate (binary `clsc`) for the compiler and a Bun workspace package (`@game-engine/clsc`) for the VM. It is separate from `engine-core`: the Engine knows nothing about Scripts (`adr/0001`), and an `engine-` prefix on a Host-side package would contradict the glossary.
 - The compiler uses pest, with the grammar in its own file. It runs only at build time, never in the browser.
 - The Nix dev shell gains the pinned Rust toolchain and rust-analyzer. There is no prebuilt binary (`adr/0031`).
 
@@ -121,7 +121,7 @@ Scripts are written in CodeLeagues Script (`.clsc`), a statically typed language
 - **Compile unit.** Every `.clsc` file under the scripts root, with the reserved `cast.clsc` and `prelude.clsc` included without a `use` (`adr/0032`). The language package ships no prelude: the prelude is part of the Host's contract.
 - **Checks.** Name resolution and static types for Flags, cast names, enums (including Expression), String Table keys, and Cutscene and CG ids. Block-kind rules (no `move`/`follow` outside a `cutscene`). `goto` names a section in its own block, section names are unique within a block, and `break` sits inside a `loop`. `with` cast lists (used but not listed is an error, listed but unused is a warning). `_private` names. Duplicate names across `use`d files. Duplicate (trigger, id) handlers. Missing `@key`s in any Locale. Seed Flags whose type doesn't match their declaration.
 - **Errors.** Every error, parse or semantic, renders through pest's own formatting. Semantic errors are built from a span with a custom message. A duplicate handler prints two errors, one at each definition. Warnings print but don't fail the compile.
-- **Build integration.** `prebuild` runs `clsc build`, so a compile error fails `next build`. `npm run dev` runs `clsc build --watch` next to `next dev` via `concurrently`, labelled `[clsc]` and `[next]`. A failed dev compile leaves the last good bytecode in place. The output file is generated and gitignored.
+- **Build integration.** `prebuild` runs `clsc build`, so a compile error fails `next build`. `bun run dev` runs `clsc build --watch` next to `next dev` via `concurrently`, labelled `[clsc]` and `[next]`. A failed dev compile leaves the last good bytecode in place. The output file is generated and gitignored.
 
 ### Bytecode contract
 
@@ -182,7 +182,7 @@ The spec fixes what the file contains, not its byte layout. The layout is worked
 
 ### Lint
 
-- `npm run lint` also runs `cargo clippy -- -D warnings` on the compiler crate. rust-analyzer in the dev shell checks with clippy. `CODING_STANDARDS.md` applies to Rust as written. A Rust section is added only once a Rust-specific rule actually comes up.
+- `bun run lint` also runs `cargo clippy -- -D warnings` on the compiler crate. rust-analyzer in the dev shell checks with clippy. `CODING_STANDARDS.md` applies to Rust as written. A Rust section is added only once a Rust-specific rule actually comes up.
 
 ## Testing Decisions
 
@@ -195,7 +195,7 @@ The spec fixes what the file contains, not its byte layout. The layout is worked
   2. Expected-error fixtures.
   3. VM unit tests for the fiddly parts: header and version check, missing command handlers, Flag snapshot defaults and wrong types, `abort()`, a failed save or command aborting a run. They use compiled tiny sources, never hand-written bytecode.
   4. End-to-end language fixtures: one tiny `.clsc` per feature, compiled by the real compiler and run by the real VM through `play()`.
-- **Running.** The package's `test` script runs `cargo test`, then `clsc build` on the fixture sources into a gitignored directory, then `node --test`. Root `npm test` picks it up through workspaces. No bytecode is checked in. Rust writes the fixtures and TS decodes them (`adr/0031`).
+- **Running.** The package's `test` script runs `cargo test`, then `clsc build` on the fixture sources into a gitignored directory, then `bun test` (`adr/0033`). Root `bun run test` picks it up through workspaces. No bytecode is checked in. Rust writes the fixtures and TS decodes them (`adr/0031`).
 - **Real Scripts** get no output tests in v1. Their automated check is that the whole program compiles in `prebuild`. A developer adds a `play()` test for a real Script once it gets intricate enough to break unnoticed.
 - **Host wiring** (dispatch, overlay, command handlers, follower tracking, Companion re-sync, startup failure messages) is verified by manual playtest, like the overlay and Scene wiring before it. There is no e2e or browser automation (`CLAUDE.md`).
 - **Prior art.** `node:test` + `node:assert/strict` with no mocking framework, as in `engine-core`'s `tile-animation.test.ts` and the Host's `cutscene-runner.test.ts` / `flags.test.ts`. Error fixtures follow Crafting Interpreters' annotated-fixture suite.

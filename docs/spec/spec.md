@@ -550,7 +550,7 @@ Class-tagged Spawn/Entity/Portal objects can now live on any number of object la
 7. As a Host/content author, I want to catch an id reused across two different Maps, so that ticket 12+'s Script-lookup-by-`entityId` convention doesn't silently resolve two unrelated Entities to the same Script.
 8. As an Engine developer, I want the per-Map duplicate check to run in the same pass that already walks every object, so that it costs nothing extra and adds no new Engine surface.
 9. As an Engine developer, I want the Engine to stay stateless and single-Map-at-a-time (ADR-0001), so that a cross-Map check never becomes the Engine's own responsibility.
-10. As a repo maintainer, I want cross-Map duplicate detection available as a script I run on demand, so that I can validate the whole Map catalog without it slowing down routine `npm test`/`lint`.
+10. As a repo maintainer, I want cross-Map duplicate detection available as a script I run on demand, so that I can validate the whole Map catalog without it slowing down routine `bun run test`/`lint`.
 11. As a future ticket-04 implementer (Portal), I want the same any-layer, dedicated-property pattern already established, so that I'm not re-deciding authoring mechanics ticket 05 already settled.
 12. As a future maintainer reading ADR-0010, I want it clearly marked which parts a later decision superseded, so that I don't follow stale guidance.
 13. As a Map author, I want to know that snake_case (`entity_key`-style) naming isn't this project's established convention for identity properties, so that I don't invent a third inconsistent style when a future kind needs its own.
@@ -563,7 +563,7 @@ Class-tagged Spawn/Entity/Portal objects can now live on any number of object la
 - **Layer cardinality**: objects are no longer required to live on one named `objects` layer. `collectEntities` already scanned every `objectgroup`-type layer regardless of name/count before this decision; this formalizes that as the sanctioned authoring pattern rather than a guide/ADR constraint the code silently didn't enforce.
 - **Duplicate detection, shared core**: a new pure function `findDuplicates(values: string[]): string[]` in `packages/engine-core/src/util.ts` (alongside `computeCameraBounds`) returns every value appearing more than once in its input. One function, two call sites.
 - **Per-Map warning**: the Engine calls `findDuplicates` over one Map's collected `entityId`s at load time; if it returns anything, `console.warn`s naming the Map and the duplicated id(s) — a warning, not a thrown error, so the Map still loads.
-- **Cross-Map check**: a new standalone dev script (outside the `engine-core` package) reads every Map in the maps catalog, calls `collectEntities` per Map, concatenates every Map's `entityId`s, and calls `findDuplicates` over the combined list; for any duplicate, reports which Maps it spans. Run manually, not wired into `npm test`/`npm run lint`.
+- **Cross-Map check**: a new standalone dev script (outside the `engine-core` package) reads every Map in the maps catalog, calls `collectEntities` per Map, concatenates every Map's `entityId`s, and calls `findDuplicates` over the combined list; for any duplicate, reports which Maps it spans. Run manually, not wired into `bun run test`/`bun run lint`.
 - **ADR status**: ADR-0010 is superseded (not rewritten) by ADR-0012 for its single-layer and name-as-id specifics; its Custom Class tagging decision remains current and unaffected.
 
 ### Testing Decisions
@@ -578,7 +578,7 @@ Class-tagged Spawn/Entity/Portal objects can now live on any number of object la
 - Migrating the existing (dead/unused) `spawn_point` object's `spawn_key` property to this pattern, or wiring Tiled-authored Spawn data into the Engine at all — spawn position is driven entirely by `WorldConfig` today, and `spawn_key` is explicitly dead/temporary code, not revived by this decision.
 - Portal's own dedicated identity property name/shape — this decision establishes the pattern, not ticket 04's specifics.
 - Tile-Definition-level Class tagging producing an Entity with no placed object — considered and rejected (`adr/0012`): a tile layer's cells carry no per-instance identity in Tiled's data model.
-- Turning the per-Map duplicate check into a hard error, or wiring the cross-Map dev script into `npm test`/`lint` — both stay warnings/manual-run for now.
+- Turning the per-Map duplicate check into a hard error, or wiring the cross-Map dev script into `bun run test`/`lint` — both stay warnings/manual-run for now.
 - Any change to the `EngineEvent`/`InteractedEvent` contract itself — `entityId`'s *value* now comes from a different Tiled field, but its type and meaning on the Engine↔Host boundary are unchanged.
 
 ### Further Notes

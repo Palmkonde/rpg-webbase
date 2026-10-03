@@ -15,7 +15,9 @@ Unsure which skill applies next? `/ask-matt`.
 
 No e2e/browser automation exists here — when a ticket needs runtime proof, ask the user to test it manually and report the result before ticking boxes or committing.
 
-`npm run lint` must pass clean before `/code-review` — oxlint is configured strict here (`.oxlintrc.json`).
+`bun run lint` must pass clean before `/code-review` — oxlint is configured strict here (`.oxlintrc.json`).
+
+Run tests with `bun run test`, not `bun test`: the bare `bun test` is Bun's own runner and skips `cargo test` and the clsc fixture compile (`docs/adr/0033`).
 
 ## Commits
 
