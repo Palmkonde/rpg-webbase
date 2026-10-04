@@ -1,0 +1,30 @@
+{
+  "name": "clsc",
+  "displayName": "CodeLeagues Script",
+  "description": "Syntax highlighting for CodeLeagues Script (.clsc)",
+  "version": "0.0.1",
+  "private": true,
+  "engines": {
+    "vscode": "^1.140.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "clsc",
+        "aliases": ["CodeLeagues Script", "clsc"],
+        "extensions": [".clsc"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "clsc",
+        "scopeName": "source.clsc",
+        "path": "./syntaxes/clsc.tmLanguage.json"
+      }
+    ]
+  }
+}

@@ -1,0 +1,205 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "CodeLeagues Script",
+  "scopeName": "source.clsc",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#string" },
+    { "include": "#key" },
+    { "include": "#play-target" },
+    { "include": "#command-declaration" },
+    { "include": "#command-block-kinds" },
+    { "include": "#enum-declaration" },
+    { "include": "#handler-trigger" },
+    { "include": "#cast-list" },
+    { "include": "#companion" },
+    { "include": "#declaration" },
+    { "include": "#speaker-line" },
+    { "include": "#keyword" },
+    { "include": "#constant" },
+    { "include": "#command-call" },
+    { "include": "#number" },
+    { "include": "#operator" },
+    { "include": "#variable" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.double-slash.clsc",
+      "match": "//.*$"
+    },
+    "string": {
+      "name": "string.quoted.double.clsc",
+      "begin": "\"",
+      "end": "\"|$",
+      "patterns": [{ "name": "constant.character.escape.clsc", "match": "\\\\." }]
+    },
+    "key": {
+      "name": "variable.other.constant.clsc",
+      "match": "@[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)*"
+    },
+    "play-target": {
+      "match": "\\b(cutscene|cg)\\s*(::)\\s*([A-Za-z_]\\w*)",
+      "captures": {
+        "1": { "name": "storage.type.clsc" },
+        "2": { "name": "punctuation.separator.clsc" },
+        "3": { "name": "entity.name.function.clsc" }
+      }
+    },
+    "command-declaration": {
+      "begin": "\\b(command)\\s+([A-Za-z_]\\w*)\\s*(\\()",
+      "beginCaptures": {
+        "1": { "name": "storage.type.clsc" },
+        "2": { "name": "entity.name.function.clsc" }
+      },
+      "end": "\\)",
+      "patterns": [
+        { "include": "#comment" },
+        {
+          "match": "([A-Za-z_]\\w*)\\s*(:)\\s*([A-Za-z_]\\w*)",
+          "captures": {
+            "1": { "name": "variable.parameter.clsc" },
+            "3": { "name": "entity.name.type.clsc" }
+          }
+        }
+      ]
+    },
+    "command-block-kinds": {
+      "begin": "\\b(in)\\b",
+      "beginCaptures": { "1": { "name": "storage.type.clsc" } },
+      "end": "(?=;)",
+      "patterns": [
+        { "include": "#comment" },
+        { "name": "support.function.clsc", "match": "\\b(handler|cutscene)\\b" },
+        { "name": "storage.type.clsc", "match": "\\b(waits)\\b" }
+      ]
+    },
+    "enum-declaration": {
+      "begin": "\\b(enum)\\s+([A-Za-z_]\\w*)",
+      "beginCaptures": {
+        "1": { "name": "storage.type.clsc" },
+        "2": { "name": "entity.name.type.clsc" }
+      },
+      "end": "\\}",
+      "patterns": [
+        { "include": "#comment" },
+        { "name": "constant.other.enum.clsc", "match": "[A-Za-z_]\\w*" }
+      ]
+    },
+    "handler-trigger": {
+      "match": "\\b(on)\\s+(interact|enter)\\b(?:\\s*\\(\\s*([A-Za-z_]\\w*)\\s*\\))?",
+      "captures": {
+        "1": { "name": "storage.type.clsc" },
+        "2": { "name": "support.function.clsc" },
+        "3": { "name": "entity.name.type.clsc" }
+      }
+    },
+    "cast-list": {
+      "match": "\\b(with)\\s+([A-Za-z_]\\w*(?:\\s*,\\s*[A-Za-z_]\\w*)*)",
+      "captures": {
+        "1": { "name": "storage.type.clsc" },
+        "2": { "patterns": [{ "name": "entity.name.type.clsc", "match": "[A-Za-z_]\\w*" }] }
+      }
+    },
+    "companion": {
+      "match": "\\b(companion)\\s*\\[\\s*([A-Za-z_]\\w*)\\s*\\]",
+      "captures": {
+        "1": { "name": "storage.type.clsc" },
+        "2": { "name": "entity.name.type.clsc" }
+      }
+    },
+    "declaration": {
+      "patterns": [
+        {
+          "match": "\\b(cutscene|cg|section)\\s+([A-Za-z_]\\w*)",
+          "captures": {
+            "1": { "name": "storage.type.clsc" },
+            "2": { "name": "entity.name.function.clsc" }
+          }
+        },
+        {
+          "match": "\\b(goto)\\s+([A-Za-z_]\\w*)",
+          "captures": {
+            "1": { "name": "keyword.control.clsc" },
+            "2": { "name": "entity.name.function.clsc" }
+          }
+        },
+        {
+          "match": "\\b(speaker|mover|character)\\s+([A-Za-z_]\\w*)",
+          "captures": {
+            "1": { "name": "storage.type.clsc" },
+            "2": { "name": "entity.name.type.clsc" }
+          }
+        },
+        {
+          "match": "\\b(flag)\\s+([A-Za-z_]\\w*)(?:\\s*(:)\\s*([A-Za-z_]\\w*))?",
+          "captures": {
+            "1": { "name": "storage.type.clsc" },
+            "2": { "name": "variable.other.clsc" },
+            "4": { "name": "entity.name.type.clsc" }
+          }
+        },
+        {
+          "match": "\\b(use)\\s+([A-Za-z_][\\w.]*)",
+          "captures": {
+            "1": { "name": "storage.type.clsc" },
+            "2": { "name": "entity.name.namespace.clsc" }
+          }
+        }
+      ]
+    },
+    "speaker-line": {
+      "match": "^\\s*([A-Za-z_]\\w*)(?:\\s*\\(\\s*([A-Za-z_]\\w*)\\s*\\))?\\s*(?=:(?!:))",
+      "captures": {
+        "1": { "name": "entity.name.type.clsc" },
+        "2": { "name": "variable.parameter.clsc" }
+      }
+    },
+    "keyword": {
+      "patterns": [
+        { "name": "keyword.control.clsc", "match": "\\b(if|else|choose|loop|break|return|goto)\\b" },
+        {
+          "name": "storage.type.clsc",
+          "match": "\\b(use|speaker|mover|character|enum|flag|command|cutscene|cg|on|with|section|set|locked|companion|in|waits)\\b"
+        },
+        { "name": "support.function.clsc", "match": "\\b(play)\\b" }
+      ]
+    },
+    "constant": {
+      "name": "constant.language.clsc",
+      "match": "\\b(true|false|none)\\b"
+    },
+    "command-call": {
+      "begin": "\\b([A-Za-z_]\\w*)\\s*(\\()",
+      "beginCaptures": { "1": { "name": "entity.name.function.clsc" } },
+      "end": "\\)",
+      "patterns": [{ "include": "#call-argument" }]
+    },
+    "call-argument": {
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#string" },
+        { "include": "#key" },
+        { "include": "#constant" },
+        { "include": "#number" },
+        { "include": "#operator" },
+        { "begin": "\\(", "end": "\\)", "patterns": [{ "include": "#call-argument" }] },
+        { "name": "entity.name.type.clsc", "match": "\\b[A-Za-z_]\\w*\\b" }
+      ]
+    },
+    "number": {
+      "name": "constant.numeric.clsc",
+      "match": "\\b\\d+\\b"
+    },
+    "operator": {
+      "patterns": [
+        { "name": "keyword.operator.clsc", "match": "=>|==|!=" },
+        { "name": "keyword.control.logical.clsc", "match": "&&|\\|\\||!" },
+        { "name": "keyword.operator.clsc", "match": "=" }
+      ]
+    },
+    "variable": {
+      "name": "variable.other.clsc",
+      "match": "\\b[A-Za-z_]\\w*\\b"
+    }
+  }
+}
