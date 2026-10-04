@@ -1,0 +1,8 @@
+{
+  "rust-analyzer.linkedProjects": ["packages/clsc/compiler/Cargo.toml"],
+  "rust-analyzer.check.command": "clippy",
+
+  "nixEnvSelector.nixFile": "${workspaceFolder}/flake.nix",
+  "nixEnvSelector.useFlakes": true,
+  "nixEnvSelector.flakeShell": "default"
+}

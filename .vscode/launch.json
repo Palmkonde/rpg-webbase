@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run clsc extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/clsc/vscode",
+        "${workspaceFolder}/apps/web/src/scripts"
+      ]
+    }
+  ]
+}
