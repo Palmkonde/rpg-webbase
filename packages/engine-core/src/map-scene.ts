@@ -15,7 +15,7 @@ const PLAYER_LAYER = 'ground'
 const INTERACT_KEY = 'E'
 export const MAP_SCENE_KEY = 'MapScene'
 
-// Type-only export, deliberately — see the Host-side use in apps/web/src/state/cutscene.ts for why.
+// Type-only export, deliberately — see the Host-side use in apps/web/src/state/player.ts for why.
 export type PlayerCharId = typeof PLAYER_ID
 
 export interface HostScene extends CutsceneMovement {

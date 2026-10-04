@@ -42,7 +42,7 @@ export function seenFlag(id: string): string {
   return `${id}_seen`
 }
 
-// Shared "don't replay" gate for CG/Cutscene, per spec's "CG & Cutscene" section.
+// The boot CG's "don't replay" gate (see `playCgOnce`).
 export async function runOnce(
   scope: { store: FlagStore; studentId: string },
   id: string,

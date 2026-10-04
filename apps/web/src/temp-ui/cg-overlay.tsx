@@ -52,7 +52,7 @@ const SKIP_BUTTON_STYLE = {
   padding: '0.4rem 0.8rem',
 } as const
 
-// Named constant, not a JSX literal, per jsx-no-literals (see DialogueOverlay's CLOSE_LABEL).
+// A named constant: `react/jsx-no-literals` and `jsx-curly-brace-presence` disagree on a bare JSX text literal.
 const SKIP_LABEL = 'Skip'
 
 const CUE_STYLE = {
@@ -61,7 +61,6 @@ const CUE_STYLE = {
   opacity: 0.6,
 } as const
 
-// Same cue DialogueOverlay uses to hint there's more to click through.
 const MORE_FRAMES_CUE = '▼'
 
 export function CgOverlay({

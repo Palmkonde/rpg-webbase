@@ -69,12 +69,6 @@
       "rules": {
         "no-magic-numbers": "off"
       }
-    },
-    {
-      "files": ["apps/web/src/scripts/entities/**", "apps/web/src/scripts/zones/**"],
-      "rules": {
-        "unicorn/filename-case": "off"
-      }
     }
   ]
 }

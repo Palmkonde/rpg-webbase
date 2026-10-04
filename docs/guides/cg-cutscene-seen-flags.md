@@ -1,15 +1,16 @@
-# Naming a CG/Cutscene's seen-flag
+# Naming a seen-flag
 
-`runOnce` (`apps/web/src/state/flags.ts`) derives a CG/Cutscene's "already played" Flag key from its id:
+Two things outside a Script gate themselves with a Flag named after their id, `<id>_seen`:
 
-```ts
-const seenKey = `${id}_seen`
-```
+- **The boot CG.** `runOnce` (`apps/web/src/state/flags.ts`) plays `intro` only while `intro_seen` isn't
+  set, and sets it once the CG ends.
+- **A Zone.** The Host skips a Zone whose `<zoneId>_seen` is set, and sets it as the Zone's Script starts.
 
-So `playCG('intro')` reads and writes the Flag `intro_seen` — no separate registration step, and
-nothing to add to the seed fixture unless you want it pre-seeded as already seen. This matches the
-existing `tutorial_seen` convention already in `apps/web/src/fixtures/student-state.json`.
+Neither needs a registration step or a seed entry, unless you want one pre-seeded as already seen. This
+matches the existing `tutorial_seen` convention in `apps/web/src/fixtures/student-state.json`.
 
-Pick a CG/Cutscene id that won't collide with another Flag once `_seen` is appended — Flags are a
-flat, single Student-scoped store (`docs/spec/spec.md`'s "CG & Cutscene"), so an id of `intro` and
-some unrelated Flag literally named `intro_seen` would clash.
+Pick an id that won't collide with another Flag once `_seen` is appended. Flags are a flat, single
+Student-scoped store, so an id of `intro` and some unrelated Flag literally named `intro_seen` would clash.
+
+A CG or Cutscene a Script plays doesn't use this convention: it plays every time unless the Script puts a
+once-only marker after it (see [Once-only blocks](codeleagues-script.md#once-only-blocks)).

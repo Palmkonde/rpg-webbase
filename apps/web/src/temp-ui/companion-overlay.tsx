@@ -4,7 +4,7 @@ import { useCallback } from 'react'
 
 const DISMISS_LABEL = 'Dismiss'
 
-// Corner-pinned so it never overlaps the bottom-centred Dialogue/Cutscene boxes.
+// Corner-pinned so it never overlaps the bottom-centred Script overlay.
 const OVERLAY_STYLE = {
   position: 'fixed',
   top: '1rem',

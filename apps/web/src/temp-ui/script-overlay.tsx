@@ -5,7 +5,7 @@ import { ScriptChoices } from './script-choices.tsx'
 import type { ScriptPrompt } from '../game/script-player.ts'
 import { resolvePortrait } from '../state/portraits.ts'
 
-// The one overlay for every VM run (adr/0030); the TS-era Dialogue and Cutscene overlays stay only until the last TS Script is deleted.
+// The one overlay for every VM run (adr/0030).
 const OVERLAY_STYLE = {
   position: 'fixed',
   left: '50%',
@@ -18,7 +18,7 @@ const OVERLAY_STYLE = {
   borderRadius: '0.5rem',
 } as const
 
-// A real <button>, so click-to-advance is keyboard-operable (DialogueOverlay's jsx-a11y reasoning).
+// A real <button>, not a <div onClick>, so click-to-advance is keyboard-operable (jsx-a11y).
 const LINE_BUTTON_STYLE = {
   display: 'block',
   width: '100%',

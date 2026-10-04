@@ -165,9 +165,9 @@ The spec fixes what the file contains, not its byte layout. The layout is worked
 ### Host
 
 - **Startup.** The Host fetches the bytecode once, the same way it fetches Maps, then loads it into the VM with its command handlers. A missing file, a version mismatch or a missing handler fails startup with a message that says which.
-- **Dispatch.** The Script player, the Host's single entry for Interactions and Zone entries, runs its existing gates first (no talking to Companions, the Zone-seen Flag). It then calls `start` for (trigger, id). If a run comes back, the VM drives it. Otherwise the existing TS Script runs. Only one run exists at a time.
+- **Dispatch.** The Script player, the Host's single entry for Interactions and Zone entries, runs its existing gates first (no talking to Companions, the Zone-seen Flag). It then calls `start` for (trigger, id). If a run comes back, the VM drives it. Otherwise nothing happens. Only one run exists at a time.
 - **Commands.** The prelude declares `move` (waits) and `follow` (doesn't wait). Their Host handlers call the Engine's existing Movement and Follow APIs. The Host tracks the followers that `follow` started and stops them at `unfreeze`. The Follow gap is always 0 in v1.
-- **Overlay.** One overlay serves every VM run. It resolves keys with the existing String Table lookup and the current Locale, shows Portraits from Speaker and Expression, and shows dismiss only while not frozen. The TS-era Dialogue and Cutscene overlays stay only until the last TS Script is deleted.
+- **Overlay.** One overlay serves every VM run. It resolves keys with the existing String Table lookup and the current Locale, shows Portraits from Speaker and Expression, and shows dismiss only while not frozen.
 - **CG.** A `cg` output plays through the existing CG playback. Once-only gating moves from `runOnce` to the Script's own marker.
 
 ### Porting and deletion
