@@ -17,7 +17,7 @@ _Avoid_: App, backend, server
 ### World
 
 **World**:
-One course's whole bundle of game content: its Maps, Scripts, cast, and String Table, loaded together when the game is mounted. Each Student's Flags belong to one World. A World can use art from the Asset Library without owning it.
+One course's whole bundle of game content: its Maps, Scripts, cast, String Table, and the art only it uses (its own tilesets, Portraits, CG art), loaded together when the game is mounted. Each Student's Flags belong to one World. A World can use art from the Asset Library without owning it.
 _Avoid_: Campaign, game, course (a course is the platform's concept; which World a course shows is the platform's choice)
 
 **Asset Library**:

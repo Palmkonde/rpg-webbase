@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0035
+---
+
 # Resolve tileset images by anchoring on the `tilesets/` folder, not Tiled's relative path
 
 Tiled writes each tileset image path relative to wherever *its own local project* keeps the map and tileset folders — an authoring-machine detail that has no relationship to how the map is served. In practice this path changes every time a map designer re-saves the map from a Tiled project laid out differently than this repo (we hit this directly: the same map produced `../tilesets/...`, then `../../../test_map/tilesets/...`, depending on the designer's local folder layout). Trusting that path literally means the map silently breaks on every re-save from a differently-organized machine.
