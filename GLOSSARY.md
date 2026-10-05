@@ -16,9 +16,21 @@ _Avoid_: App, backend, server
 
 ### World
 
+**World**:
+One course's whole bundle of game content: its Maps, Scripts, cast, and String Table, loaded together when the game is mounted. Each Student's Flags belong to one World. A World can use art from the Asset Library without owning it.
+_Avoid_: Campaign, game, course (a course is the platform's concept; which World a course shows is the platform's choice)
+
+**Asset Library**:
+Shared art, such as tilesets and Characters, that any World can use. It belongs to no single World.
+_Avoid_: Shared assets, common pack
+
+**Publish**:
+Pushing a World's authored content, or Asset Library art, from an author's machine into the place the game loads it from. Only Published content is what Students play.
+_Avoid_: Upload, deploy, sync
+
 **Map**:
 A single Tiled-authored area the Player walks around in, typically corresponding to one course module.
-_Avoid_: Level, Scene, World (Scene is Phaser's own rendering-container concept, distinct from this domain's Map)
+_Avoid_: Level, Scene (Phaser's own rendering-container concept, distinct from this domain's Map), World (a World holds many Maps)
 
 **Player**:
 The Student's in-Engine representation: grid-bound, rendered and moved by the Engine.
@@ -69,7 +81,7 @@ _Avoid_: Door, warp point
 ### Contract
 
 **World Config**:
-The data the Host supplies to the Engine describing what to render in the live game: the active Map, and the Player's position and Character. Entities, Zones, and Portals are defined in the Map itself (in Tiled) and are always live once their Map loads, not gated by World Config (ADR-0021). This is the Engine's entire input surface — distinct from Tiled's own editor preview of a placed object, a separate design-time-only concern.
+The data the Host supplies to the Engine describing what to render in the live game: the active Map, and the Player's position and Character. Entities, Zones, and Portals are defined in the Map itself (in Tiled) and are always live once their Map loads, not gated by World Config (ADR-0021). This is the Engine's entire input surface — distinct from Tiled's own editor preview of a placed object, a separate design-time-only concern. It is the live, per-session input *into* a World, not the World itself.
 _Avoid_: Game state, props, initial state
 
 **Interaction**:
