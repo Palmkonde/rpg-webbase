@@ -14,6 +14,18 @@ _Avoid_: Game, frontend, client
 The application that embeds the Engine, owns all state and game content (which Maps exist, dialogue, quests, progression), and reacts to the Engine's Events. In production it is backed by the main platform's database.
 _Avoid_: App, backend, server
 
+**Platform**:
+The application a Student signs in to, which mounts the game and runs the game service alongside its own services. It owns sign-in, courses, and which World each Student may play, and vouches for who the Student is.
+_Avoid_: Host (the application that embeds the Engine and reacts to its Events), LMS, CMS
+
+**Student**:
+The real person playing, known to the game only by an opaque id the Platform vouches for. The game holds no account or profile of its own for them.
+_Avoid_: User, account, Player (the Student's in-Engine representation)
+
+**Author**:
+Someone who writes Worlds or Asset Library art and Publishes them. Authoring is a separate role from playing: an Author is not a Student, and is not identified by one.
+_Avoid_: Admin, creator, teacher
+
 ### World
 
 **World**:
