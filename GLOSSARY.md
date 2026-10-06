@@ -1,6 +1,6 @@
 # Game Engine
 
-A standalone module that renders a grid-based world and moves a Player through it, embedded by a Host application for RPG-style course gamification. The Engine owns rendering and movement only; all game content and progression logic belongs to the Host.
+An RPG-style game a Platform mounts to gamify its courses. The Engine renders a grid-based world and moves a Player through it; the Host around it plays a World's Scripts; the Game Service keeps Published Worlds and each Student's Flags.
 
 ## Language
 
@@ -11,12 +11,12 @@ The framework-agnostic module in this repo that renders a Map and moves the Play
 _Avoid_: Game, frontend, client
 
 **Host**:
-The application that embeds the Engine, owns all state and game content (which Maps exist, dialogue, quests, progression), and reacts to the Engine's Events. In production it is backed by the main platform's database.
-_Avoid_: App, backend, server
+The runtime that embeds the Engine for one mounted game: it reacts to the Engine's Events, plays the World's Scripts, and draws Dialogue, CG and Companion overlays. It keeps only per-session state; the World's content comes from its World Version, and Flags are read from and written to the Game Service.
+_Avoid_: App, backend, server, Platform (the application that mounts the game)
 
 **Platform**:
 The application a Student signs in to, which mounts the game and runs the game service alongside its own services. It owns sign-in, courses, and which World each Student may play, and vouches for who the Student is.
-_Avoid_: Host (the application that embeds the Engine and reacts to its Events), LMS, CMS
+_Avoid_: Host (the runtime inside the mounted game that embeds the Engine and plays Scripts), LMS, CMS
 
 **Game Service**:
 The server a Platform deploys alongside its own services. It holds the Published Worlds and the Asset Library, and each Student's Flags, and serves them to the game.
