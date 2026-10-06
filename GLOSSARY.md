@@ -44,6 +44,10 @@ _Avoid_: Shared assets, common pack
 Pushing a World's authored content, or Asset Library art, from an author's machine into the place the game loads it from. Only Published content is what Students play.
 _Avoid_: Upload, deploy, sync
 
+**World Version**:
+The frozen copy of a World that one Publish of it produces. Exactly one World Version of each World is live; Students who start playing get the live one, and keep playing the one they started on even after a newer one goes live. A Student's Flags belong to the World, not to any one World Version.
+_Avoid_: Release, build, revision
+
 **Map**:
 A single Tiled-authored area the Player walks around in, typically corresponding to one course module.
 _Avoid_: Level, Scene (Phaser's own rendering-container concept, distinct from this domain's Map), World (a World holds many Maps)

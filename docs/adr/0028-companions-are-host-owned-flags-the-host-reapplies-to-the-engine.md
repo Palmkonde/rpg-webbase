@@ -1,5 +1,5 @@
 ---
-status: accepted (amended by adr/0030: re-applied at unfreeze and after a Companion Flag write outside a freeze)
+status: accepted (amended by adr/0030: re-applied at unfreeze and after a Companion Flag write outside a freeze; amended by adr/0038: the client also dismisses a Companion whose mover or Entity is gone after a re-Publish)
 ---
 
 # Companions are Host-owned Flags that the Host re-applies to the Engine

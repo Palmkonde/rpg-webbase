@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: accepted (amended by adr/0038: Postgres also records each World Version and when it stopped being live, and `prune` deletes files no kept World Version uses)
 ---
 
 # Content is hashed files plus a manifest; Postgres holds only the live pointer and Flags
