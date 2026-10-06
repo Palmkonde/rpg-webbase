@@ -18,6 +18,10 @@ _Avoid_: App, backend, server
 The application a Student signs in to, which mounts the game and runs the game service alongside its own services. It owns sign-in, courses, and which World each Student may play, and vouches for who the Student is.
 _Avoid_: Host (the application that embeds the Engine and reacts to its Events), LMS, CMS
 
+**Game Service**:
+The server a Platform deploys alongside its own services. It holds the Published Worlds and the Asset Library, and each Student's Flags, and serves them to the game.
+_Avoid_: Backend, server, API
+
 **Student**:
 The real person playing, known to the game only by an opaque id the Platform vouches for. The game holds no account or profile of its own for them.
 _Avoid_: User, account, Player (the Student's in-Engine representation)
