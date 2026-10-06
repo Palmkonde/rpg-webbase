@@ -27,7 +27,7 @@ The real person playing, known to the game only by an opaque id the Platform vou
 _Avoid_: User, account, Player (the Student's in-Engine representation)
 
 **Author**:
-Someone who writes Worlds or Asset Library art and Publishes them. Authoring is a separate role from playing: an Author is not a Student, and is not identified by one.
+Someone who writes Worlds or Asset Library art and Publishes Worlds. Authoring is a separate role from playing: an Author is not a Student, and is not identified by one.
 _Avoid_: Admin, creator, teacher
 
 ### World
@@ -41,7 +41,7 @@ Shared art, such as tilesets and Characters, that any World can use. It belongs 
 _Avoid_: Shared assets, common pack
 
 **Publish**:
-Pushing a World's authored content, or Asset Library art, from an author's machine into the place the game loads it from. Only Published content is what Students play.
+Pushing a World's authored content, together with the Asset Library art it uses, from an author's machine into the place the game loads it from. Only Published content is what Students play. The Asset Library is never Published on its own: its art reaches Students only as part of a World that uses it.
 _Avoid_: Upload, deploy, sync
 
 **World Version**:

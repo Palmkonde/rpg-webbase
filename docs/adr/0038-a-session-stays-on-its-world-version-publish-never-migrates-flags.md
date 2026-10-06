@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: accepted (amended by adr/0040: the Asset Library has no Publish of its own, so `prune` keeps only files used by kept World Versions)
 ---
 
 # A session stays on its World Version; Publish never migrates Flags
