@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "clsc": "cargo run --quiet --manifest-path ../../packages/clsc/compiler/Cargo.toml -- build src/scripts public/generated/scripts.clscb --store src/fixtures/student-state.json --strings src/fixtures/strings.json",
-    "dev": "concurrently --names clsc,next \"bun run --silent clsc --watch\" \"next dev --port 3001\"",
+    "dev": "bun --env-file=../../dev.env run dev:watch",
+    "dev:watch": "concurrently --names clsc,next \"bun run --silent clsc --watch\" \"next dev --port 3001\"",
     "prebuild": "bun run clsc",
     "build": "next build",
     "start": "next start",
@@ -15,6 +16,7 @@
   "dependencies": {
     "@codeleagues-rpg-engine/client": "*",
     "@codeleagues-rpg-engine/engine-core": "*",
+    "jose": "^6.2.12",
     "next": "^16.3.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
