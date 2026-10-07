@@ -1,16 +1,18 @@
 import { Game } from '@/game/game'
+import { requireEnv } from '@/env'
 import worldConfig from '@/fixtures/world-config.json'
 
-function requireEnv(name: string): string {
-  // The one place the Platform reads its configuration.
-  // oxlint-disable-next-line node/no-process-env
-  const value = process.env[name]
-  if (!value) {
-    throw new Error(`${name} is not set: copy apps/web/.env.example to apps/web/.env`)
-  }
-  return value
+// Stands in for the signed-in Student, so switching it shows another Student's Flags.
+const DEFAULT_STUDENT = 'dev-student'
+
+function readStudentId(student: string | string[] | undefined): string {
+  return typeof student === 'string' && student !== '' ? student : DEFAULT_STUDENT
 }
 
-export default function Home(): React.ReactElement {
-  return <Game serviceUrl={requireEnv('GAME_SERVICE_URL')} worldConfig={worldConfig} worldId={requireEnv('WORLD_ID')} />
+export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<React.ReactElement> {
+  const { student } = await searchParams
+  const studentId = readStudentId(student)
+
+  // Keyed by the Student, so switching `?student=` remounts the game instead of carrying one Student's Flags into another's.
+  return <Game key={studentId} serviceUrl={requireEnv('GAME_SERVICE_URL')} studentId={studentId} worldConfig={worldConfig} worldId={requireEnv('WORLD_ID')} />
 }

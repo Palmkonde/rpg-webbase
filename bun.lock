@@ -31,6 +31,7 @@
       "dependencies": {
         "@codeleagues-rpg-engine/client": "*",
         "@codeleagues-rpg-engine/engine-core": "*",
+        "jose": "^6.2.12",
         "next": "^16.3.8",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
