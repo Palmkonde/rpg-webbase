@@ -1,6 +1,6 @@
-import type { CgArtRegistry } from '../src/cg-art.ts'
+import type { CgArtRegistry } from '../src/cg.ts'
 import assert from 'node:assert/strict'
-import { resolveCgArt } from '../src/cg-art.ts'
+import { resolveCgArt } from '../src/cg.ts'
 import { test } from 'node:test'
 
 const registry: CgArtRegistry = { 'intro-1': '/assets/cg/intro/1.png' }

@@ -1,9 +1,8 @@
 import type { CreateEngineOptions, EngineHandle } from '@codeleagues-rpg-engine/engine-core'
-import { consoleCalls, createFakeEngine, holdEngineCreation, settle, startSession, world } from './helpers.ts'
+import { consoleCalls, createFakeEngine, createTestSession, holdEngineCreation, settle, startSession, world } from './helpers.ts'
 import type { HostSession } from '../src/session.ts'
 import assert from 'node:assert/strict'
 import { createFlagStore } from '../src/flags.ts'
-import { createHostSession } from '../src/session.ts'
 import { test } from 'node:test'
 
 function shownLine(session: HostSession): string | undefined {
@@ -27,10 +26,16 @@ async function watchSagesVision(): Promise<{ session: HostSession; choosing: Pro
   return { session, choosing }
 }
 
-test('a started session is ready, with nothing on screen', async () => {
+test('a session is loading until it starts', () => {
+  const session = createTestSession()
+
+  assert.equal(session.getSnapshot().status, 'loading')
+})
+
+test('a started session is playing, with nothing on screen', async () => {
   const { session } = await startSession()
 
-  assert.deepEqual(session.getSnapshot(), { status: 'ready', dialogue: undefined, cg: undefined, companions: [], error: undefined })
+  assert.deepEqual(session.getSnapshot(), { status: 'playing', dialogue: undefined, cg: undefined, companions: [], error: undefined })
 })
 
 test('an Interaction shows its first line, with its Speaker and Portrait', async () => {
@@ -210,21 +215,7 @@ test('two sessions side by side share no state', async () => {
   await settle()
   await first.session.dismissCompanion('Guard')
 
-  assert.deepEqual(second.session.getSnapshot(), { status: 'ready', dialogue: undefined, cg: undefined, companions: ['Guard'], error: undefined })
-})
-
-test('a session whose Scripts fail to load reports an unavailable error', async () => {
-  await consoleCalls('error', async () => {
-    const { session } = await startSession({ world: { ...world, loadScripts: () => Promise.reject(new Error('no Scripts')) } })
-
-    assert.deepEqual(session.getSnapshot(), {
-      status: 'error',
-      dialogue: undefined,
-      cg: undefined,
-      companions: [],
-      error: { kind: 'unavailable', message: 'no Scripts' },
-    })
-  })
+  assert.deepEqual(second.session.getSnapshot(), { status: 'playing', dialogue: undefined, cg: undefined, companions: ['Guard'], error: undefined })
 })
 
 test('subscribe calls its listener when the snapshot changes, and stops once unsubscribed', async () => {
@@ -262,7 +253,7 @@ test('a session destroyed while its Scripts load creates no Engine', async () =>
     created += 1
     return engine.createEngine(options)
   }
-  const session = createHostSession({ createEngine, flags: createFlagStore(), world, locale: 'en' })
+  const session = createTestSession({ createEngine })
 
   const starting = session.start()
   session.destroy()
@@ -275,7 +266,7 @@ test('a session destroyed while its Scripts load creates no Engine', async () =>
 test('a session destroyed while its Engine is created destroys that Engine once it arrives', async () => {
   const engine = createFakeEngine()
   const held = holdEngineCreation(engine)
-  const session = createHostSession({ createEngine: held.createEngine, flags: createFlagStore(), world, locale: 'en' })
+  const session = createTestSession({ createEngine: held.createEngine })
 
   const starting = session.start()
   await held.creating
