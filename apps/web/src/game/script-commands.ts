@@ -1,5 +1,5 @@
-import type { CommandArg, CommandHandler, Tile } from '@game-engine/clsc'
-import type { EngineHandle } from '@game-engine/engine-core'
+import type { CommandArg, CommandHandler, Tile } from '@codeleagues-rpg-engine/clsc'
+import type { EngineHandle } from '@codeleagues-rpg-engine/engine-core'
 import { PLAYER_CHAR_ID } from '../state/player.ts'
 import type { RefObject } from 'react'
 

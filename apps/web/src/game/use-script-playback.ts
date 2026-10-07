@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import type { CgPlayback } from './use-cg-playback.ts'
 import type { Companions } from './use-companions.ts'
-import type { EngineHandle } from '@game-engine/engine-core'
+import type { EngineHandle } from '@codeleagues-rpg-engine/engine-core'
 import type { RefObject } from 'react'
 import { ScriptPlayer } from './script-player.ts'
 import type { ScriptPrompt } from './script-player.ts'

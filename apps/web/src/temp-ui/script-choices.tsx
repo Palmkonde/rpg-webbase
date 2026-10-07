@@ -1,7 +1,7 @@
 'use client'
 
 import { currentLocale, resolveText } from '../state/strings.ts'
-import type { ShownChoice } from '@game-engine/clsc'
+import type { ShownChoice } from '@codeleagues-rpg-engine/clsc'
 import { useCallback } from 'react'
 
 const CHOICE_STYLE = {
