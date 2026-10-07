@@ -2,7 +2,7 @@ import type { Text } from '@codeleagues-rpg-engine/clsc'
 
 export type StringTable = Record<string, Record<string, string>>
 
-const DEFAULT_LOCALE = 'en'
+export const DEFAULT_LOCALE = 'en'
 
 export function resolveLine(key: string, locale: string, table: StringTable): string {
   return table[locale]?.[key] ?? table[DEFAULT_LOCALE]?.[key] ?? `[${key}]`

@@ -123,6 +123,14 @@ test('skipCg ends a CG from its first frame, and the Dialogue goes on', async ()
   assert.equal(shownLine(session), 'Did you see it?')
 })
 
+test('setLocale shows what is on screen in the new Locale', async () => {
+  const { session } = await watchSagesVision()
+
+  session.setLocale('th')
+
+  assert.equal(session.getSnapshot().cg?.caption, 'แสงสว่าง')
+})
+
 test('a Companion Flag a Script writes shows that Companion, following the Player', async () => {
   const { session, engine } = await startSession()
   engine.emit({ type: 'interacted', entityId: 'Guard' })
