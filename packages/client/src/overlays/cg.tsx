@@ -1,5 +1,5 @@
 /** @jsxImportSource preact */
-import type { CgView } from '../session.ts'
+import type { CgView } from '../views.ts'
 import type { JSX } from 'preact'
 import { theme } from './theme.ts'
 

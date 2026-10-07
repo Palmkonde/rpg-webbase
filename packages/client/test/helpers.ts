@@ -50,10 +50,18 @@ export const world: WorldContent = {
   cgArt: { 'vision-1': '/cg/vision/1.png', 'vision-2': '/cg/vision/2.png' },
 }
 
-// Started against a fake Engine, with empty Flags unless `options` says otherwise.
+export async function getToken(): Promise<string> {
+  return 'student-token'
+}
+
+// Built against a fake Engine, with empty Flags unless `options` says otherwise.
+export function createTestSession(options: Partial<HostSessionOptions> = {}): HostSession {
+  return createHostSession({ createEngine: createFakeEngine().createEngine, getToken, flags: createFlagStore(), world, locale: 'en', ...options })
+}
+
 export async function startSession(options: Partial<HostSessionOptions> = {}): Promise<{ session: HostSession; engine: FakeEngine }> {
   const engine = createFakeEngine()
-  const session = createHostSession({ createEngine: engine.createEngine, flags: createFlagStore(), world, locale: 'en', ...options })
+  const session = createTestSession({ createEngine: engine.createEngine, ...options })
   await session.start()
   return { session, engine }
 }

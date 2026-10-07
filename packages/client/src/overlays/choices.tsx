@@ -1,6 +1,6 @@
 /** @jsxImportSource preact */
 import type { JSX, TargetedMouseEvent } from 'preact'
-import type { ChoiceView } from '../session.ts'
+import type { ChoiceView } from '../views.ts'
 import { useCallback } from 'preact/hooks'
 
 const CHOICE_STYLE = {

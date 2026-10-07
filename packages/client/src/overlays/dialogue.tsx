@@ -1,6 +1,6 @@
 /** @jsxImportSource preact */
 import { Choices } from './choices.tsx'
-import type { DialogueView } from '../session.ts'
+import type { DialogueView } from '../views.ts'
 import type { JSX } from 'preact'
 import { theme } from './theme.ts'
 

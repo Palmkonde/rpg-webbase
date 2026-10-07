@@ -6,4 +6,5 @@ export const theme = {
   panelBackground: 'var(--rpg-panel-bg, rgba(20, 20, 20, 0.9))',
   panelRadius: 'var(--rpg-panel-radius, 0.5rem)',
   cgBackground: 'var(--rpg-cg-bg, black)',
+  screenBackground: 'var(--rpg-screen-bg, black)',
 } as const

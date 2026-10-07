@@ -1,18 +1,19 @@
-import type { CgFrame, CgRegistry } from './cg.ts'
+import type { CgArtRegistry, CgFrame, CgRegistry } from './cg.ts'
 import type { CgHandle, CgStep } from './play-cg.ts'
+import type { CgView, DialogueView, HostSnapshot } from './views.ts'
 import type { ContentCatalogs, CreateEngineOptions, EngineEvent, EngineHandle, WorldConfig } from '@codeleagues-rpg-engine/engine-core'
 import { activeCompanionIds, companionFlag, syncCompanions } from './companions.ts'
+import { resolveCg, resolveCgArt } from './cg.ts'
 import { resolveLine, resolveText } from './strings.ts'
-import type { CgArtRegistry } from './cg-art.ts'
 import type { FlagStore } from './flags.ts'
+import type { GameError } from './game-error.ts'
 import type { PortraitRegistry } from './portraits.ts'
 import { ScriptPlayer } from './script-player.ts'
 import type { ScriptPrompt } from './script-player.ts'
 import type { StringTable } from './strings.ts'
 import { playCG } from './play-cg.ts'
-import { resolveCg } from './cg.ts'
-import { resolveCgArt } from './cg-art.ts'
 import { resolvePortrait } from './portraits.ts'
+import { toGameError } from './game-error.ts'
 
 // The Engine's `createEngine`, bound to the element the game is mounted in.
 export type EngineFactory = (options: CreateEngineOptions) => Promise<EngineHandle>
@@ -29,40 +30,11 @@ export interface WorldContent {
 
 export interface HostSessionOptions {
   createEngine: EngineFactory
+  getToken: () => Promise<string>
+  onError?: (error: GameError) => void
   flags: FlagStore
   world: WorldContent
   locale: string
-}
-
-export interface ChoiceView {
-  text: string
-  locked: string | undefined
-}
-
-// `canDismiss` is false while a Cutscene or CG has control of the Player (adr/0030).
-export type DialogueView =
-  | { type: 'line'; speaker: string; text: string; portrait: string | undefined; canDismiss: boolean }
-  | { type: 'choices'; choices: ChoiceView[]; canDismiss: boolean }
-
-export interface CgView {
-  art: string | undefined
-  caption: string
-  hasMore: boolean
-}
-
-export interface HostError {
-  kind: 'unavailable'
-  message: string
-}
-
-export interface HostSnapshot {
-  status: 'loading' | 'ready' | 'error'
-  dialogue: DialogueView | undefined
-  cg: CgView | undefined
-
-  // Empty while the Engine is paused, so a dismiss can't cut off a Cutscene's Movement step (adr/0028).
-  companions: readonly string[]
-  error: HostError | undefined
 }
 
 // One mounted game's Host: every piece of its state lives here, so two sessions never share any.
@@ -85,10 +57,6 @@ export interface HostSession {
   setLocale: (locale: string) => void
 }
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
-
 class Session implements HostSession {
   private readonly options: HostSessionOptions
   private readonly player: ScriptPlayer
@@ -96,7 +64,7 @@ class Session implements HostSession {
 
   private snapshot: HostSnapshot = { status: 'loading', dialogue: undefined, cg: undefined, companions: [], error: undefined }
   private status: HostSnapshot['status'] = 'loading'
-  private error: HostError | undefined
+  private error: GameError | undefined
   private engine: EngineHandle | undefined
   private destroyed = false
   private prompt: ScriptPrompt | undefined
@@ -126,10 +94,12 @@ class Session implements HostSession {
 
   public start = async (): Promise<void> => {
     try {
+      await this.requestToken()
       const engine = await this.loadEngine()
       if (!engine) {return}
       this.engine = engine
-      this.status = 'ready'
+      this.status = 'playing'
+      this.publish()
       await this.syncCompanions()
     } catch (error: unknown) {
       this.fail(error)
@@ -179,6 +149,15 @@ class Session implements HostSession {
 
   private readonly isDestroyed = (): boolean => this.destroyed
 
+  // Asked for at mount (adr/0036), so a Student the Platform can't vouch for loads nothing.
+  private async requestToken(): Promise<void> {
+    try {
+      await this.options.getToken()
+    } catch (error: unknown) {
+      throw toGameError(error, 'token')
+    }
+  }
+
   // Undefined once the session is destroyed meanwhile: no Engine is created after that, and one already coming is destroyed.
   private async loadEngine(): Promise<EngineHandle | undefined> {
     const { world, createEngine } = this.options
@@ -197,9 +176,11 @@ class Session implements HostSession {
   private fail(error: unknown): void {
     if (this.destroyed) {return}
     console.error('Failed to start the game:', error)
+    const gameError = toGameError(error)
     this.status = 'error'
-    this.error = { kind: 'unavailable', message: errorMessage(error) }
+    this.error = gameError
     this.publish()
+    this.options.onError?.(gameError)
   }
 
   private async handleEvent(event: EngineEvent): Promise<void> {

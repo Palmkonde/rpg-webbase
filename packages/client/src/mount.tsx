@@ -2,6 +2,7 @@
 import type { EngineFactory, HostSession, WorldContent } from './session.ts'
 import { DEFAULT_LOCALE } from './strings.ts'
 import type { Flags } from './flags.ts'
+import type { GameError } from './game-error.ts'
 import { Overlays } from './overlays/overlays.tsx'
 import { createFlagStore } from './flags.ts'
 import { createHostSession } from './session.ts'
@@ -13,6 +14,9 @@ export interface MountOptions {
 
   // Called for a Student token (adr/0036); it should reject once the Student is signed out.
   getToken: () => Promise<string>
+
+  // Called on every error, whether or not the built-in ErrorScreen shows it (adr/0039).
+  onError?: (error: GameError) => void
   locale?: string
 
   // Stand-ins for the World Version and the Student's Flags, until the Game Service serves them.
@@ -55,9 +59,13 @@ function appendMountPoints(element: HTMLElement): { wrapper: HTMLElement; engine
 
 // The built-ins get their own Preact root, so they never touch the Platform's UI.
 function renderOverlays(session: HostSession, root: HTMLElement): () => void {
-  const unsubscribe = session.subscribe(() => {
+  function draw(): void {
     render(<Overlays session={session} snapshot={session.getSnapshot()} />, root)
-  })
+  }
+
+  // Drawn once up front, so the Loading screen shows before the session first publishes.
+  draw()
+  const unsubscribe = session.subscribe(draw)
   return (): void => {
     unsubscribe()
 
@@ -75,6 +83,8 @@ export function mount(element: HTMLElement, options: MountOptions): GameInstance
   const { wrapper, engineElement, overlayRoot } = appendMountPoints(element)
   const session = createHostSession({
     createEngine: engineFactoryFor(engineElement),
+    getToken: options.getToken,
+    onError: options.onError,
     flags: createFlagStore(options.flags),
     world: options.world,
     locale: options.locale ?? DEFAULT_LOCALE,
