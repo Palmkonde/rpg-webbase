@@ -2,6 +2,7 @@
   "name": "web",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "clsc": "cargo run --quiet --manifest-path ../../packages/clsc/compiler/Cargo.toml -- build src/scripts public/generated/scripts.clscb --store src/fixtures/student-state.json --strings src/fixtures/strings.json",

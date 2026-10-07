@@ -4,6 +4,7 @@
   "description": "Syntax highlighting for CodeLeagues Script (.clsc)",
   "version": "0.0.1",
   "private": true,
+  "license": "MIT",
   "engines": {
     "vscode": "^1.140.0"
   },
