@@ -1,5 +1,6 @@
 version: 2
 updates:
+  # Actions are pinned by major tag only (`checkout@v7`), so ignoring majors here would stop every update.
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -9,7 +10,14 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Majors are upgrades we start on purpose, not weekly PRs.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: cargo
     directory: /packages/clsc/compiler
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
