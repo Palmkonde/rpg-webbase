@@ -21,7 +21,7 @@ Tickets for this repo live as GitHub issues on `origin` (`Palmkonde/rpg-webbase`
 - **Read a ticket**: `gh issue view <number> --comments`.
 - **List tickets**: `gh issue list --state open --label ready-for-agent --json number,title,body,labels,comments`, adjusting filters as needed. Swap the label to `blocked` to see what's waiting on something else.
 - **Comment on a ticket**: `gh issue comment <number> --body "..."`.
-- **Complete a ticket**: include `Closes #<number>` in the implementing commit's message — this repo commits straight to `main`, so GitHub auto-closes the issue when that commit lands. No separate "update ticket status" commit, and no live-ticking of acceptance-criteria checkboxes as work progresses — the checklist in the issue body is the definition of done, verified before the closing commit; the issue's open/closed state is the only "is this finished" signal.
+- **Complete a ticket**: work on a branch named `<issue>-<slug>`, push it, and open a PR to `main` (`gh pr create`, body written with the `/pr` skill) with `Closes #<number>` in its body or a commit message. `main` only accepts PRs that pass the `lint`, `typecheck` and `test` checks, merged by rebase so atomic commits survive; GitHub auto-closes the issue when the PR merges and deletes the branch. No separate "update ticket status" commit, and no live-ticking of acceptance-criteria checkboxes as work progresses — the checklist in the issue body is the definition of done, verified before the PR merges; the issue's open/closed state is the only "is this finished" signal.
 
 ## Wayfinding operations
 
