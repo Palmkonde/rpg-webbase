@@ -1,8 +1,7 @@
 import type { CreateEngineOptions, EngineHandle } from '@codeleagues-rpg-engine/engine-core'
-import { consoleCalls, createFakeEngine, createTestSession, holdEngineCreation, settle, startSession, world } from './helpers.ts'
+import { consoleCalls, createFakeEngine, createFakeService, createTestSession, holdEngineCreation, settle, startSession, world } from './helpers.ts'
 import type { HostSession } from '../src/session.ts'
 import assert from 'node:assert/strict'
-import { createFlagStore } from '../src/flags.ts'
 import { test } from 'node:test'
 
 function shownLine(session: HostSession): string | undefined {
@@ -148,13 +147,13 @@ test('a Companion Flag a Script writes shows that Companion, following the Playe
 })
 
 test('a Companion already in the Flags shows once the session starts', async () => {
-  const { session } = await startSession({ flags: createFlagStore({ 'companion:Guard': 'fluffy' }) })
+  const { session } = await startSession({ service: createFakeService({ 'companion:Guard': 'fluffy' }).service })
 
   assert.deepEqual(session.getSnapshot().companions, ['Guard'])
 })
 
 test('dismissCompanion clears the Companion and stops it following', async () => {
-  const { session, engine } = await startSession({ flags: createFlagStore({ 'companion:Guard': 'fluffy' }) })
+  const { session, engine } = await startSession({ service: createFakeService({ 'companion:Guard': 'fluffy' }).service })
 
   await session.dismissCompanion('Guard')
 
@@ -163,7 +162,7 @@ test('dismissCompanion clears the Companion and stops it following', async () =>
 })
 
 test('while a Cutscene has control, its Dialogue can\'t be dismissed and Companions are hidden', async () => {
-  const { session, engine } = await startSession({ flags: createFlagStore({ 'companion:Guard': 'fluffy' }) })
+  const { session, engine } = await startSession({ service: createFakeService({ 'companion:Guard': 'fluffy' }).service })
 
   engine.emit({ type: 'interacted', entityId: 'Statue' })
   await settle()
@@ -174,7 +173,7 @@ test('while a Cutscene has control, its Dialogue can\'t be dismissed and Compani
 })
 
 test('a Cutscene ending unpauses the Engine and shows Companions again', async () => {
-  const { session, engine } = await startSession({ flags: createFlagStore({ 'companion:Guard': 'fluffy' }) })
+  const { session, engine } = await startSession({ service: createFakeService({ 'companion:Guard': 'fluffy' }).service })
   engine.emit({ type: 'interacted', entityId: 'Statue' })
   await settle()
 
@@ -208,8 +207,8 @@ test('destroy mid-Cutscene unpauses the Engine before destroying it', async () =
 
 test('two sessions side by side share no state', async () => {
   const flags = { 'companion:Guard': 'fluffy' }
-  const first = await startSession({ flags: createFlagStore(flags) })
-  const second = await startSession({ flags: createFlagStore(flags) })
+  const first = await startSession({ service: createFakeService(flags).service })
+  const second = await startSession({ service: createFakeService(flags).service })
 
   first.engine.emit({ type: 'interacted', entityId: 'Statue' })
   await settle()

@@ -1,17 +1,20 @@
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import type { InlineConfig } from 'tsdown'
 import assert from 'node:assert/strict'
 import { build } from 'tsdown'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { test } from 'node:test'
-import { tmpdir } from 'node:os'
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url))
 
+// Inside the repo, so the build's runtime dependencies resolve from it as they would in a Platform's install.
+const buildCache = fileURLToPath(new URL('../../../node_modules/.cache/', import.meta.url))
+
 // A fresh directory for `body` to build into, removed afterwards.
 async function withOutDir(body: (outDir: string) => Promise<void>): Promise<void> {
-  const outDir = await mkdtemp(path.join(tmpdir(), 'client-build-'))
+  await mkdir(buildCache, { recursive: true })
+  const outDir = await mkdtemp(path.join(buildCache, 'client-build-'))
   try {
     await body(outDir)
   } finally {

@@ -6,7 +6,6 @@ import type { GameError } from '@codeleagues-rpg-engine/client'
 import { Game as GameView } from '@codeleagues-rpg-engine/client/react'
 import type { SlotComponents } from '@codeleagues-rpg-engine/client/react'
 import type { WorldConfig } from '@codeleagues-rpg-engine/engine-core'
-import studentState from '../fixtures/student-state.json' with { type: 'json' }
 import { useMemo } from 'react'
 
 const GAME_STYLE = { width: '100vw', height: '100vh' }
@@ -35,7 +34,6 @@ export function Game({ serviceUrl, worldId, worldConfig }: { serviceUrl: string;
       <div style={GAME_STYLE}>
         <GameView
           components={COMPONENTS}
-          flags={studentState.flags}
           getToken={getToken}
           locale={locale}
           onError={onError}

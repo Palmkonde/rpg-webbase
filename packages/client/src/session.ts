@@ -2,10 +2,11 @@ import type { CgArtRegistry, CgFrame, CgRegistry } from './cg.ts'
 import type { CgHandle, CgStep } from './play-cg.ts'
 import type { CgView, DialogueView, HostSnapshot } from './views.ts'
 import type { ContentCatalogs, CreateEngineOptions, EngineEvent, EngineHandle, WorldConfig } from '@codeleagues-rpg-engine/engine-core'
+import type { GameService, SavedFlagStore, Wait } from './game-service.ts'
+import { ServiceCalls, createSavedFlagStore, waitFor } from './game-service.ts'
 import { activeCompanionIds, companionFlag, syncCompanions } from './companions.ts'
 import { resolveCg, resolveCgArt } from './cg.ts'
 import { resolveLine, resolveText } from './strings.ts'
-import type { FlagStore } from './flags.ts'
 import type { GameError } from './game-error.ts'
 import type { PortraitRegistry } from './portraits.ts'
 import { ScriptPlayer } from './script-player.ts'
@@ -30,11 +31,14 @@ export interface WorldContent {
 
 export interface HostSessionOptions {
   createEngine: EngineFactory
+  service: GameService
   getToken: () => Promise<string>
   onError?: (error: GameError) => void
-  flags: FlagStore
   world: WorldContent
   locale: string
+
+  // The backoff's timer, which tests replace so a retry takes no real time.
+  wait?: Wait
 }
 
 // One mounted game's Host: every piece of its state lives here, so two sessions never share any.
@@ -60,6 +64,8 @@ export interface HostSession {
 class Session implements HostSession {
   private readonly options: HostSessionOptions
   private readonly player: ScriptPlayer
+  private readonly calls: ServiceCalls
+  private readonly flags: SavedFlagStore
   private readonly listeners = new Set<() => void>()
 
   private snapshot: HostSnapshot = { status: 'loading', dialogue: undefined, cg: undefined, companions: [], error: undefined }
@@ -78,7 +84,12 @@ class Session implements HostSession {
   public constructor(options: HostSessionOptions) {
     this.options = options
     this.locale = options.locale
-    this.player = new ScriptPlayer(() => this.engine, options.flags, {
+    this.calls = new ServiceCalls({ service: options.service, getToken: options.getToken, wait: options.wait ?? waitFor })
+    this.flags = createSavedFlagStore({
+      save: this.calls.patchFlags,
+      onSaveFailed: (error): void => { this.fail(error) },
+    })
+    this.player = new ScriptPlayer(() => this.engine, this.flags, {
       setScriptPrompt: (prompt): void => {
         this.prompt = prompt
         this.publish()
@@ -94,7 +105,7 @@ class Session implements HostSession {
 
   public start = async (): Promise<void> => {
     try {
-      await this.requestToken()
+      await this.loadFlags()
       const engine = await this.loadEngine()
       if (!engine) {return}
       this.engine = engine
@@ -108,12 +119,7 @@ class Session implements HostSession {
 
   public destroy = (): void => {
     this.destroyed = true
-    this.skipCg()
-
-    // Before the Engine goes, so a run aborted while frozen unpauses the Engine it paused.
-    this.player.endRun()
-    this.engine?.destroy()
-    this.engine = undefined
+    this.stop()
   }
 
   public getSnapshot = (): HostSnapshot => this.snapshot
@@ -135,7 +141,7 @@ class Session implements HostSession {
 
   public dismissCompanion = async (entityId: string): Promise<void> => {
     try {
-      await this.options.flags.setFlags({ [companionFlag(entityId)]: false })
+      await this.flags.setFlags({ [companionFlag(entityId)]: false })
       await this.syncCompanions()
     } catch (error: unknown) {
       console.error('Failed to dismiss Companion:', error)
@@ -149,13 +155,10 @@ class Session implements HostSession {
 
   private readonly isDestroyed = (): boolean => this.destroyed
 
-  // Asked for at mount (adr/0036), so a Student the Platform can't vouch for loads nothing.
-  private async requestToken(): Promise<void> {
-    try {
-      await this.options.getToken()
-    } catch (error: unknown) {
-      throw toGameError(error, 'token')
-    }
+  // The token is asked for first (adr/0036), so a Student the Platform can't vouch for loads nothing.
+  private async loadFlags(): Promise<void> {
+    await this.calls.requestToken()
+    this.flags.load(await this.calls.readFlags())
   }
 
   // Undefined once the session is destroyed meanwhile: no Engine is created after that, and one already coming is destroyed.
@@ -173,9 +176,20 @@ class Session implements HostSession {
     return undefined
   }
 
+  private stop(): void {
+    this.skipCg()
+
+    // Before the Engine goes, so a run aborted while frozen unpauses the Engine it paused.
+    this.player.endRun()
+    this.engine?.destroy()
+    this.engine = undefined
+  }
+
+  // Stops the game too, so a Student never plays on progress that won't be saved. Only the first failure is reported.
   private fail(error: unknown): void {
-    if (this.destroyed) {return}
-    console.error('Failed to start the game:', error)
+    if (this.destroyed || this.status === 'error') {return}
+    console.error('The game stopped:', error)
+    this.stop()
     const gameError = toGameError(error)
     this.status = 'error'
     this.error = gameError
@@ -197,7 +211,7 @@ class Session implements HostSession {
   }
 
   private readonly syncCompanions = async (): Promise<void> => {
-    const flags = await this.options.flags.getFlags()
+    const flags = await this.flags.getFlags()
 
     // Read after the await: the Engine may have been torn down meanwhile.
     const { engine } = this
