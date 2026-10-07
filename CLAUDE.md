@@ -21,9 +21,11 @@ Run tests with `bun run test`, not `bun test`: the bare `bun test` is Bun's own 
 
 ## Commits
 
+Changes reach `main` only by PR: branch `<issue>-<slug>` → PR (`Closes #N` in its body) → rebase merge once CI passes, so each atomic commit lands on `main` as-is. Never commit on `main` itself. Details in `docs/agents/issue-tracker.md`.
+
 After `/code-review`, let the user review the diff too — wait for their go-ahead before running `git commit`.
 
-Atomic: group by logical concern (a new package, a new app, a ticket-status update are separate commits), not one commit per session. 
+Atomic: group by logical concern (a new package, a new app, a docs change are separate commits), not one commit per session.
 
 ## Coding standards
 
@@ -33,7 +35,7 @@ Atomic: group by logical concern (a new package, a new app, a ticket-status upda
 
 - Hard-to-reverse architectural decisions → `docs/adr/`, sequentially numbered
 - Domain vocabulary → `GLOSSARY.md`, kept a pure glossary — no implementation detail
-- Ticket completion → close the GitHub issue (`Closes #NN` in the implementing commit); no separate ticket-status commit, and acceptance-criteria checkboxes aren't ticked live — the issue's open/closed state is the "is this finished" signal
+- Ticket completion → the GitHub issue closes when its PR merges (`Closes #NN` in the PR body or a commit message); no separate ticket-status commit, and acceptance-criteria checkboxes aren't ticked live — the issue's open/closed state is the "is this finished" signal
 - Human-facing how-to reference (e.g. "what shape should this asset be") → `docs/guides/`, one topic per file — this is *how*, not *why* (that's an ADR) or *what's confirmed* (that's the spec)
 
 ## Assets
