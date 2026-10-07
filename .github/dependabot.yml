@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  # `bun`, not `npm`: only the bun updater rewrites `bun.lock`, which CI installs with --frozen-lockfile.
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: cargo
+    directory: /packages/clsc/compiler
+    schedule:
+      interval: weekly
