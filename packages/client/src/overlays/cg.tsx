@@ -1,6 +1,6 @@
 /** @jsxImportSource preact */
-import type { CgView } from '../views.ts'
 import type { JSX } from 'preact'
+import type { SlotProps } from '../slots.ts'
 import { theme } from './theme.ts'
 
 const OVERLAY_STYLE = {
@@ -64,21 +64,13 @@ const CUE_STYLE = {
 
 const MORE_FRAMES_CUE = '▼'
 
-export function CgOverlay({
-  cg: { art, caption, hasMore },
-  onAdvance,
-  onSkip,
-}: {
-  cg: CgView
-  onAdvance: () => void
-  onSkip: () => void
-}): JSX.Element {
+export function CgOverlay({ cg: { art, caption, hasMore }, advanceCg, skipCg }: SlotProps['CG']): JSX.Element {
   return (
     <div style={OVERLAY_STYLE}>
-      <button onClick={onSkip} style={SKIP_BUTTON_STYLE} type="button">
+      <button onClick={skipCg} style={SKIP_BUTTON_STYLE} type="button">
         {SKIP_LABEL}
       </button>
-      <button onClick={onAdvance} style={FRAME_BUTTON_STYLE} type="button">
+      <button onClick={advanceCg} style={FRAME_BUTTON_STYLE} type="button">
         {/* Not a Next app, so there's no `next/image` to use. */}
         {/* oxlint-disable-next-line next/no-img-element */}
         {art !== undefined && <img alt="" src={art} style={ART_STYLE} />}

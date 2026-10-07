@@ -1,7 +1,9 @@
 /** @jsxImportSource preact */
 import { Choices } from './choices.tsx'
-import type { DialogueView } from '../views.ts'
 import type { JSX } from 'preact'
+import { Portrait } from './portrait.tsx'
+import { Slot } from './slot.tsx'
+import type { SlotProps } from '../slots.ts'
 import { theme } from './theme.ts'
 
 // The one overlay for every VM run (adr/0030).
@@ -31,18 +33,6 @@ const LINE_BUTTON_STYLE = {
   textAlign: 'left',
 } as const
 
-const PORTRAIT_SIZE = 96
-
-// `float`, not a flex wrapper `<div>`, to stay phrasing content inside the `<button>`.
-const PORTRAIT_STYLE = {
-  float: 'left',
-  width: `${PORTRAIT_SIZE}px`,
-  height: `${PORTRAIT_SIZE}px`,
-  marginRight: '0.75rem',
-  borderRadius: '0.25rem',
-  objectFit: 'cover',
-} as const
-
 const SPEAKER_LABEL_STYLE = {
   display: 'block',
   margin: '0 0 0.15rem',
@@ -59,32 +49,20 @@ const CLOSE_BUTTON_STYLE = { font: 'inherit' } as const
 // A named constant: `react/jsx-no-literals` and `jsx-curly-brace-presence` disagree on a bare JSX text literal.
 const CLOSE_LABEL = 'Close'
 
-export function DialogueOverlay({
-  dialogue,
-  onAdvance,
-  onChoose,
-  onDismiss,
-}: {
-  dialogue: DialogueView
-  onAdvance: () => void
-  onChoose: (index: number) => void
-  onDismiss: () => void
-}): JSX.Element {
+export function DialogueOverlay({ dialogue, advance, choose, dismissDialogue }: SlotProps['Dialogue']): JSX.Element {
   return (
     <div style={OVERLAY_STYLE}>
       {dialogue.type === 'line'
         ? (
-          <button onClick={onAdvance} style={LINE_BUTTON_STYLE} type="button">
-            {/* Not a Next app, so there's no `next/image` to use. */}
-            {/* oxlint-disable-next-line next/no-img-element */}
-            {dialogue.portrait !== undefined && <img alt="" height={PORTRAIT_SIZE} src={dialogue.portrait} style={PORTRAIT_STYLE} width={PORTRAIT_SIZE} />}
+          <button onClick={advance} style={LINE_BUTTON_STYLE} type="button">
+            {dialogue.portrait !== undefined && <Slot builtIn={Portrait} name="Dialogue.Portrait" speaker={dialogue.speaker} src={dialogue.portrait} />}
             <span style={SPEAKER_LABEL_STYLE}>{dialogue.speaker}</span>
             <span style={LINE_TEXT_STYLE}>{dialogue.text}</span>
           </button>
         )
-        : <Choices choices={dialogue.choices} onChoose={onChoose} />}
+        : <Slot builtIn={Choices} choices={dialogue.choices} choose={choose} name="Choices" />}
       {dialogue.canDismiss && (
-        <button onClick={onDismiss} style={CLOSE_BUTTON_STYLE} type="button">
+        <button onClick={dismissDialogue} style={CLOSE_BUTTON_STYLE} type="button">
           {CLOSE_LABEL}
         </button>
       )}
