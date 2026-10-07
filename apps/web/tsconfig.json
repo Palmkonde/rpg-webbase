@@ -30,6 +30,9 @@
       ],
       "@codeleagues-rpg-engine/client": [
         "../../packages/client/src/index.ts"
+      ],
+      "@codeleagues-rpg-engine/client/react": [
+        "../../packages/client/src/react.tsx"
       ]
     }
   },
