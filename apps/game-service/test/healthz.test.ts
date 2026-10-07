@@ -1,13 +1,13 @@
 import { services, skipWithoutServices } from './services.ts'
 import assert from 'node:assert/strict'
-import { createApp } from '../src/app.ts'
 import { createDatabase } from '../src/database.ts'
+import { createTestApp } from './app.ts'
 import { test } from 'node:test'
 
 async function getHealthz(databaseUrl: string): Promise<Response> {
   const db = createDatabase(databaseUrl)
   try {
-    return await createApp({ db }).handle(new Request('http://localhost/healthz'))
+    return await createTestApp(db).handle(new Request('http://localhost/healthz'))
   } finally {
     await db.$client.close()
   }
