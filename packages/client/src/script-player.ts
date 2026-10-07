@@ -1,10 +1,7 @@
 import type { Output, Program, Run } from '@codeleagues-rpg-engine/clsc'
-import { currentStudentId, flagStore, seenFlag } from '../state/flags.ts'
-import { isActiveCompanion, isCompanionFlag } from '../state/companions.ts'
-import type { CgPlayback } from './use-cg-playback.ts'
-import type { Companions } from './use-companions.ts'
+import { isActiveCompanion, isCompanionFlag } from './companions.ts'
 import type { EngineHandle } from '@codeleagues-rpg-engine/engine-core'
-import type { RefObject } from 'react'
+import type { FlagStore } from './flags.ts'
 import { ScriptCommands } from './script-commands.ts'
 import { loadProgram } from '@codeleagues-rpg-engine/clsc'
 
@@ -16,10 +13,15 @@ export interface ScriptPlayerUi {
   setEnginePaused: (paused: boolean) => void
 
   // Re-applies Companion Flags to the Engine and refreshes the dismiss buttons.
-  syncCompanions: Companions['syncCompanions']
+  syncCompanions: () => Promise<void>
+
+  // Resolves once the CG ends, whether it played through or was skipped.
+  playCg: (id: string) => Promise<void>
 }
 
-const SCRIPTS_URL = '/generated/scripts.clscb'
+function zoneSeenFlag(zoneId: string): string {
+  return `${zoneId}_seen`
+}
 
 // Turns a VM run into what the Player sees; owns the compiled Scripts and the run in flight.
 export class ScriptPlayer {
@@ -36,24 +38,20 @@ export class ScriptPlayer {
 
   // The VM only checks its handlers exist; the Host calls them for each `command` output.
   private readonly commands: ScriptCommands
-  private readonly engineRef: RefObject<EngineHandle | undefined>
-  private readonly playCgById: CgPlayback['playCgById']
+  private readonly mountedEngine: () => EngineHandle | undefined
+  private readonly flags: FlagStore
   private readonly ui: ScriptPlayerUi
 
-  public constructor(engineRef: RefObject<EngineHandle | undefined>, playCgById: CgPlayback['playCgById'], ui: ScriptPlayerUi) {
-    this.engineRef = engineRef
-    this.commands = new ScriptCommands(engineRef)
-    this.playCgById = playCgById
+  public constructor(mountedEngine: () => EngineHandle | undefined, flags: FlagStore, ui: ScriptPlayerUi) {
+    this.mountedEngine = mountedEngine
+    this.commands = new ScriptCommands(mountedEngine)
+    this.flags = flags
     this.ui = ui
   }
 
-  // Called once at startup, the same way Maps are fetched (adr/0032); a missing or stale file throws, failing startup.
-  public fetchProgram = async (): Promise<void> => {
-    const response = await fetch(SCRIPTS_URL)
-    if (!response.ok) {
-      throw new Error(`Script bytecode ${SCRIPTS_URL} is missing (HTTP ${response.status}): run \`bun run dev\`, or \`bun run clsc\` in apps/web`)
-    }
-    this.program = loadProgram(new Uint8Array(await response.arrayBuffer()), this.commands.handlers)
+  // A stale or corrupt file throws, failing startup.
+  public load(bytecode: Uint8Array): void {
+    this.program = loadProgram(bytecode, this.commands.handlers)
   }
 
   public advanceLine = (): Promise<void> => this.answer('line', (run) => run.next())
@@ -72,11 +70,11 @@ export class ScriptPlayer {
     if (this.frozen) {await this.unfreeze()}
   }
 
-  // Guards against the async Flags read outliving the Map/effect that fired it (e.g. a worldConfig transition mid-flight).
+  // Guards against the async Flags read outliving the session that fired it.
   // Ending the run first is safe: the Engine drops Interactions and Zone entries while paused, so only a waiting Dialogue run is ended (adr/0030).
   public runInteraction = async (entityId: string, isStale: () => boolean): Promise<void> => {
     await this.endRun()
-    const flags = await flagStore.getFlags(currentStudentId)
+    const flags = await this.flags.getFlags()
 
     // A Companion can't be talked to (spec's "Companion").
     if (isActiveCompanion(flags, entityId) || isStale()) {return}
@@ -87,15 +85,15 @@ export class ScriptPlayer {
   // The Zone-seen gate is the Host's, so it runs before dispatch (adr/0018 as amended by adr/0030).
   public runZoneEntered = async (zoneId: string, isStale: () => boolean): Promise<void> => {
     await this.endRun()
-    const flags = await flagStore.getFlags(currentStudentId)
-    if (flags[seenFlag(zoneId)] === true || isStale()) {return}
+    const flags = await this.flags.getFlags()
+    if (flags[zoneSeenFlag(zoneId)] === true || isStale()) {return}
     const run = this.program?.start('enter', zoneId, flags)
     if (run) {await this.startZoneRun(zoneId, run)}
   }
 
   // A Zone counts as seen when its run starts (adr/0030); the caller's stale check is the last one, so a stale entry never burns the Flag.
   private async startZoneRun(zoneId: string, run: Run): Promise<void> {
-    await flagStore.setFlags(currentStudentId, { [seenFlag(zoneId)]: true })
+    await this.flags.setFlags({ [zoneSeenFlag(zoneId)]: true })
     await this.startRun(run)
   }
 
@@ -162,14 +160,14 @@ export class ScriptPlayer {
       await this.saveFlag(output)
     } else {
 
-      // The Script's own once-only marker decides whether it plays, not runOnce (adr/0030).
-      await this.playCgById(output.id, () => false)
+      // The Script's own once-only marker decides whether it plays (adr/0030).
+      await this.ui.playCg(output.id)
     }
   }
 
   private setFrozen(frozen: boolean): void {
     this.frozen = frozen
-    const engine = this.engineRef.current
+    const engine = this.mountedEngine()
     if (!engine) {return}
     engine.setPaused(frozen)
     this.ui.setEnginePaused(frozen)
@@ -177,11 +175,11 @@ export class ScriptPlayer {
 
   // Saved before the run goes on, so it never gets ahead of the store; a failed save throws, aborting it (adr/0030).
   private async saveFlag({ name, value }: Extract<Output, { type: 'flag' }>): Promise<void> {
-    await flagStore.setFlags(currentStudentId, { [name]: value })
+    await this.flags.setFlags({ [name]: value })
     if (isCompanionFlag(name) && !this.frozen) {await this.ui.syncCompanions()}
   }
 
-  // Synchronous up to the re-sync: game-canvas's cleanup destroys the Engine straight after calling endRun.
+  // Synchronous up to the re-sync: a session's destroy tears the Engine down straight after calling endRun.
   private async unfreeze(): Promise<void> {
     this.commands.stopFollowers()
     this.setFrozen(false)

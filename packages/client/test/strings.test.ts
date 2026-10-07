@@ -1,4 +1,4 @@
-import { currentLocale, resolveLine, resolveText } from '../src/state/strings.ts'
+import { resolveLine, resolveText } from '../src/strings.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
@@ -28,15 +28,10 @@ test('resolveLine returns a visible placeholder when the key is missing everywhe
   assert.equal(result, '[does-not-exist]')
 })
 
-test('the default string table is wired to the real fixture, via the fixture-stubbed currentLocale', () => {
-  const result = resolveLine('campfire.greeting', currentLocale)
-  assert.equal(result, 'Howdy! am campfire!')
-})
-
 test('resolveText shows inline text as written, in any locale', () => {
-  assert.equal(resolveText({ text: 'Hi there' }, 'th'), 'Hi there')
+  assert.equal(resolveText({ text: 'Hi there' }, 'th', table), 'Hi there')
 })
 
 test('resolveText resolves a key against the String Table in the requested locale', () => {
-  assert.equal(resolveText({ key: 'campfire.greeting' }, 'th'), 'สวัสดี! ฉันคือกองไฟ!')
+  assert.equal(resolveText({ key: 'greeting' }, 'th', table), 'สวัสดี')
 })

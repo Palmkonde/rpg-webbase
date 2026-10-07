@@ -1,6 +1,5 @@
-import type { CgSlideshowStep } from '../state/cg-slideshow.ts'
-import { resolveCg } from '../state/cg.ts'
-import { stepCgSlideshow } from '../state/cg-slideshow.ts'
+import type { CgSlideshowStep } from './cg-slideshow.ts'
+import { stepCgSlideshow } from './cg-slideshow.ts'
 
 export interface CgStep {
   frameIndex: number
@@ -57,15 +56,13 @@ function applyCgStep(loop: CgLoop, step: CgSlideshowStep): void {
   }
 }
 
-// Self-contained so a future call site needs no extra wiring (spec's "CG trigger").
-export function playCG(id: string, onStep: (step: CgStep) => void): CgHandle {
-  const frames = resolveCg(id)
-  if (!frames || frames.length === 0) {
+export function playCG(frameCount: number, onStep: (step: CgStep) => void): CgHandle {
+  if (frameCount === 0) {
     return { done: Promise.resolve(), advance: noop, skip: noop }
   }
 
   const { promise, resolve } = createCgDeferred()
-  const loop: CgLoop = { frameIndex: 0, frameCount: frames.length, finished: false, onStep, resolve }
+  const loop: CgLoop = { frameIndex: 0, frameCount, finished: false, onStep, resolve }
   emitStep(loop, { frameIndex: 0, done: false })
 
   return {

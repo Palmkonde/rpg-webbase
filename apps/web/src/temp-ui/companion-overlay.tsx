@@ -14,12 +14,11 @@ const OVERLAY_STYLE = {
   gap: '0.5rem',
 } as const
 
-// Game-canvas hides this while the Engine is paused, so a dismiss can't cut off a Cutscene's Movement step (adr/0028).
 export function CompanionOverlay({
   companionIds,
   onDismiss,
 }: {
-  companionIds: string[]
+  companionIds: readonly string[]
   onDismiss: (entityId: string) => void
 }): React.ReactElement {
   const handleClick = useCallback((event: React.MouseEvent<HTMLButtonElement>): void => {

@@ -1,6 +1,6 @@
-import type { CgSlideshowState } from '../src/state/cg-slideshow.ts'
+import type { CgSlideshowState } from '../src/cg-slideshow.ts'
 import assert from 'node:assert/strict'
-import { stepCgSlideshow } from '../src/state/cg-slideshow.ts'
+import { stepCgSlideshow } from '../src/cg-slideshow.ts'
 import { test } from 'node:test'
 
 const FRAME_COUNT = 3

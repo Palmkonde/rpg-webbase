@@ -1,7 +1,6 @@
 'use client'
 
-import { currentLocale, resolveText } from '../state/strings.ts'
-import type { ShownChoice } from '@codeleagues-rpg-engine/clsc'
+import type { ChoiceView } from '@codeleagues-rpg-engine/client'
 import { useCallback } from 'react'
 
 const CHOICE_STYLE = {
@@ -14,7 +13,7 @@ const LOCKED_REASON_STYLE = {
   opacity: 0.7,
 } as const
 
-export function ScriptChoices({ choices, onChoose }: { choices: ShownChoice[]; onChoose: (index: number) => void }): React.ReactElement {
+export function ScriptChoices({ choices, onChoose }: { choices: ChoiceView[]; onChoose: (index: number) => void }): React.ReactElement {
   const handleClick = useCallback((event: React.MouseEvent<HTMLButtonElement>): void => {
     onChoose(Number(event.currentTarget.dataset.index))
   }, [onChoose])
@@ -26,9 +25,9 @@ export function ScriptChoices({ choices, onChoose }: { choices: ShownChoice[]; o
         // oxlint-disable-next-line react/no-array-index-key
         <span key={index} style={CHOICE_STYLE}>
           <button data-index={index} disabled={choice.locked !== undefined} onClick={handleClick} type="button">
-            {resolveText(choice, currentLocale)}
+            {choice.text}
           </button>
-          {choice.locked && <span style={LOCKED_REASON_STYLE}>{resolveText(choice.locked, currentLocale)}</span>}
+          {choice.locked !== undefined && <span style={LOCKED_REASON_STYLE}>{choice.locked}</span>}
         </span>
       ))}
     </>
