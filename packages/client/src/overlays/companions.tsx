@@ -1,5 +1,6 @@
 /** @jsxImportSource preact */
 import type { JSX, TargetedMouseEvent } from 'preact'
+import type { SlotProps } from '../slots.ts'
 import { theme } from './theme.ts'
 import { useCallback } from 'preact/hooks'
 
@@ -18,21 +19,15 @@ const OVERLAY_STYLE = {
 
 const BUTTON_STYLE = { font: 'inherit' } as const
 
-export function CompanionOverlay({
-  companionIds,
-  onDismiss,
-}: {
-  companionIds: readonly string[]
-  onDismiss: (entityId: string) => void
-}): JSX.Element {
+export function CompanionOverlay({ companions, dismissCompanion }: SlotProps['Companions']): JSX.Element {
   const handleClick = useCallback((event: TargetedMouseEvent<HTMLButtonElement>): void => {
     const { entityId } = event.currentTarget.dataset
-    if (entityId) {onDismiss(entityId)}
-  }, [onDismiss])
+    if (entityId) {dismissCompanion(entityId)}
+  }, [dismissCompanion])
 
   return (
     <div style={OVERLAY_STYLE}>
-      {companionIds.map((entityId) => (
+      {companions.map((entityId) => (
         <button data-entity-id={entityId} key={entityId} onClick={handleClick} style={BUTTON_STYLE} type="button">
           {`${DISMISS_LABEL} ${entityId}`}
         </button>

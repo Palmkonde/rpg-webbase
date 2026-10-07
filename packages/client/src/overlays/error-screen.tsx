@@ -2,6 +2,7 @@
 import { SCREEN_MESSAGE_STYLE, SCREEN_STYLE } from './screen-style.ts'
 import type { GameErrorKind } from '../game-error.ts'
 import type { JSX } from 'preact'
+import type { SlotProps } from '../slots.ts'
 
 // The Student sees what to do next; the error's own message is for the Platform's `onError`.
 const ERROR_MESSAGES: Record<GameErrorKind, string> = {
@@ -12,10 +13,10 @@ const ERROR_MESSAGES: Record<GameErrorKind, string> = {
   unavailable: 'The game is unavailable right now. Try again later.',
 }
 
-export function ErrorScreen({ kind }: { kind: GameErrorKind }): JSX.Element {
+export function ErrorScreen({ error }: SlotProps['ErrorScreen']): JSX.Element {
   return (
     <div role="alert" style={SCREEN_STYLE}>
-      <p style={SCREEN_MESSAGE_STYLE}>{ERROR_MESSAGES[kind]}</p>
+      <p style={SCREEN_MESSAGE_STYLE}>{ERROR_MESSAGES[error.kind]}</p>
     </div>
   )
 }
