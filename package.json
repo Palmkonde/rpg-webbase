@@ -9,11 +9,13 @@
   "scripts": {
     "test": "bun run --filter '*' test",
     "typecheck": "bun run --filter '*' typecheck",
-    "dev": "bun run --cwd apps/web dev",
+    "migrate": "bun run --cwd apps/game-service migrate",
+    "dev": "docker compose -f compose.dev.yaml up -d --wait && concurrently --names game-service,web \"bun run --cwd apps/game-service dev\" \"bun run --cwd apps/web dev\"",
     "lint": "oxlint && bun run --filter '*' lint",
     "lint:fix": "oxlint --fix"
   },
   "devDependencies": {
+    "concurrently": "^10.0.5",
     "oxlint": "^1.86.0"
   },
   "overrides": {

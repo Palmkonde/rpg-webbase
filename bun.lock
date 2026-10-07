@@ -5,6 +5,7 @@
     "": {
       "name": "@codeleagues-rpg-engine/root",
       "devDependencies": {
+        "concurrently": "^10.0.5",
         "oxlint": "^1.86.0",
       },
     },
