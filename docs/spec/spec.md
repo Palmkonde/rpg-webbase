@@ -1039,9 +1039,11 @@ Three installable pieces, plus a reference Platform and guides that prove them e
 
 **Game Service HTTP contract**
 
+Every route but `/healthz` is served under `/api/v1`, so a later incompatible API can live beside it as `/api/v2`.
+
 Every Student route is token-checked (`adr/0036`): the `:world` in the path must equal the token's `world` claim, and the Student is the token's `sub`.
 
-- `GET /worlds/:world/versions/live` and `GET /worlds/:world/versions/:id` both return `{ id, assetBaseUrl, manifest }`. The client asks for `live` once at mount and uses `id` from then on. A World never Published returns 404. A pruned World Version returns 404.
+- `GET /api/v1/worlds/:world/versions/live` and `GET /api/v1/worlds/:world/versions/:id` both return `{ id, assetBaseUrl, manifest }`. The client asks for `live` once at mount and uses `id` from then on. A World never Published returns 404. A pruned World Version returns 404.
 - **Manifest shape** (stored as JSON in Postgres with its World Version, served inline):
 
   ```ts
@@ -1060,11 +1062,11 @@ Every Student route is token-checked (`adr/0036`): the `:world` in the path must
 
   `start` is inline rather than a blob because the client needs it before loading anything else.
 - **Pre-Publish summary** (declared Flags, once-only Flags, Companion movers, Zones, Entities) is stored with the World Version. It's read by the CLI with the Publish key, never sent to Students.
-- `GET /worlds/:world/flags` returns the Student's Flags document, or `{}`.
-- `PATCH /worlds/:world/flags` takes `{ [key]: boolean | string }` and merges shallowly on the server (`jsonb ||`), so concurrent writers never lose each other's keys. There's no delete: a dismissed Companion is `false`. Limits: 200 keys, keys up to 128 characters, the whole document up to 64 KB. A malformed body is 400; one over a limit is 413. The API checks shape only, never the World Version's declarations (`adr/0038`).
-- `GET /blobs/:key`: no token. `stat()` first, then stream from the private bucket, with `Cache-Control: public, max-age=31536000, immutable`, `ETag`, and `Content-Length`. A missing key is 404. `ASSET_BASE_URL` defaults to this route (`adr/0042`).
-- **Publish routes** are those in `adr/0040`: ask which hashes are missing, `PUT /blobs/<sha256>` with the hash verified while streaming, read the live summary, and commit a manifest with `expectedLive` in one transaction that checks every key exists, inserts the World Version, and moves the live pointer by compare-and-swap. All use the Publish key.
-- `GET /healthz` returns 200 when Postgres answers.
+- `GET /api/v1/worlds/:world/flags` returns the Student's Flags document, or `{}`.
+- `PATCH /api/v1/worlds/:world/flags` takes `{ [key]: boolean | string }` and merges shallowly on the server (`jsonb ||`), so concurrent writers never lose each other's keys. There's no delete: a dismissed Companion is `false`. Limits: 200 keys, keys up to 128 characters, the whole document up to 64 KB. A malformed body is 400; one over a limit is 413. The API checks shape only, never the World Version's declarations (`adr/0038`).
+- `GET /api/v1/blobs/:key`: no token. `stat()` first, then stream from the private bucket, with `Cache-Control: public, max-age=31536000, immutable`, `ETag`, and `Content-Length`. A missing key is 404. `ASSET_BASE_URL` defaults to this route (`adr/0042`).
+- **Publish routes** are those in `adr/0040`: ask which hashes are missing, `PUT /api/v1/blobs/<sha256>` with the hash verified while streaming, read the live summary, and commit a manifest with `expectedLive` in one transaction that checks every key exists, inserts the World Version, and moves the live pointer by compare-and-swap. All use the Publish key.
+- `GET /healthz` returns 200 when Postgres answers. It stays outside `/api/v1`, so container health checks and load balancers never follow an API version.
 - **Status codes → client error kinds**: `getToken()` rejecting → `token`; 401 after the one retry → `unauthorized`; 403 → `forbidden`; 404 on a World Version or a blob mid-session → `worldUpdated`; 404 on `live` (never Published), 5xx, or a network failure → `unavailable`.
 - **Flags type**: `boolean | string` everywhere (the client's store narrows from today's `boolean | number | string`).
 
