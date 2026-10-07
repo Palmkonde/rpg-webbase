@@ -1,12 +1,12 @@
-import type { Output, Program, Run } from '@game-engine/clsc'
+import type { Output, Program, Run } from '@codeleagues-rpg-engine/clsc'
 import { currentStudentId, flagStore, seenFlag } from '../state/flags.ts'
 import { isActiveCompanion, isCompanionFlag } from '../state/companions.ts'
 import type { CgPlayback } from './use-cg-playback.ts'
 import type { Companions } from './use-companions.ts'
-import type { EngineHandle } from '@game-engine/engine-core'
+import type { EngineHandle } from '@codeleagues-rpg-engine/engine-core'
 import type { RefObject } from 'react'
 import { ScriptCommands } from './script-commands.ts'
-import { loadProgram } from '@game-engine/clsc'
+import { loadProgram } from '@codeleagues-rpg-engine/clsc'
 
 // What the overlay shows while a run waits for the Player.
 export type ScriptPrompt = Extract<Output, { type: 'line' | 'choices' }>

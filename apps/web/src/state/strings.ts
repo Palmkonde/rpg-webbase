@@ -1,4 +1,4 @@
-import type { Text } from '@game-engine/clsc'
+import type { Text } from '@codeleagues-rpg-engine/clsc'
 import seed from '../fixtures/strings.json' with { type: 'json' }
 
 export type StringTable = Record<string, Record<string, string>>

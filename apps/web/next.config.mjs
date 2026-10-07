@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['@game-engine/clsc', '@game-engine/engine-core'],
+  transpilePackages: ['@codeleagues-rpg-engine/clsc', '@codeleagues-rpg-engine/engine-core'],
 }
 
 export default nextConfig

@@ -3,17 +3,17 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "game-engine",
+      "name": "@codeleagues-rpg-engine/root",
       "devDependencies": {
         "oxlint": "^1.86.0",
       },
     },
     "apps/web": {
-      "name": "web",
+      "name": "@codeleagues-rpg-engine/web",
       "version": "0.0.0",
       "dependencies": {
-        "@game-engine/clsc": "*",
-        "@game-engine/engine-core": "*",
+        "@codeleagues-rpg-engine/clsc": "*",
+        "@codeleagues-rpg-engine/engine-core": "*",
         "next": "^16.3.8",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
@@ -27,14 +27,14 @@
       },
     },
     "packages/clsc": {
-      "name": "@game-engine/clsc",
+      "name": "@codeleagues-rpg-engine/clsc",
       "version": "0.0.0",
       "devDependencies": {
         "typescript": "^7.0.2",
       },
     },
     "packages/engine-core": {
-      "name": "@game-engine/engine-core",
+      "name": "@codeleagues-rpg-engine/engine-core",
       "version": "0.0.0",
       "dependencies": {
         "grid-engine": "^2.52.1",
@@ -49,11 +49,13 @@
     "phaser": "^4.2.1",
   },
   "packages": {
+    "@codeleagues-rpg-engine/clsc": ["@codeleagues-rpg-engine/clsc@workspace:packages/clsc"],
+
+    "@codeleagues-rpg-engine/engine-core": ["@codeleagues-rpg-engine/engine-core@workspace:packages/engine-core"],
+
+    "@codeleagues-rpg-engine/web": ["@codeleagues-rpg-engine/web@workspace:apps/web"],
+
     "@emnapi/runtime": ["@emnapi/runtime@1.11.3", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA=="],
-
-    "@game-engine/clsc": ["@game-engine/clsc@workspace:packages/clsc"],
-
-    "@game-engine/engine-core": ["@game-engine/engine-core@workspace:packages/engine-core"],
 
     "@img/colour": ["@img/colour@1.1.0", "", {}, "sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ=="],
 
@@ -300,8 +302,6 @@
     "typescript": ["typescript@7.0.2", "", { "optionalDependencies": { "@typescript/typescript-aix-ppc64": "7.0.2", "@typescript/typescript-darwin-arm64": "7.0.2", "@typescript/typescript-darwin-x64": "7.0.2", "@typescript/typescript-freebsd-arm64": "7.0.2", "@typescript/typescript-freebsd-x64": "7.0.2", "@typescript/typescript-linux-arm": "7.0.2", "@typescript/typescript-linux-arm64": "7.0.2", "@typescript/typescript-linux-loong64": "7.0.2", "@typescript/typescript-linux-mips64el": "7.0.2", "@typescript/typescript-linux-ppc64": "7.0.2", "@typescript/typescript-linux-riscv64": "7.0.2", "@typescript/typescript-linux-s390x": "7.0.2", "@typescript/typescript-linux-x64": "7.0.2", "@typescript/typescript-netbsd-arm64": "7.0.2", "@typescript/typescript-netbsd-x64": "7.0.2", "@typescript/typescript-openbsd-arm64": "7.0.2", "@typescript/typescript-openbsd-x64": "7.0.2", "@typescript/typescript-sunos-x64": "7.0.2", "@typescript/typescript-win32-arm64": "7.0.2", "@typescript/typescript-win32-x64": "7.0.2" }, "bin": { "tsc": "bin/tsc" } }, "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA=="],
 
     "undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
-
-    "web": ["web@workspace:apps/web"],
 
     "wrap-ansi": ["wrap-ansi@9.0.2", "", { "dependencies": { "ansi-styles": "^6.2.1", "string-width": "^7.0.0", "strip-ansi": "^7.1.0" } }, "sha512-42AtmgqjV+X1VpdOfyTGOYRi0/zsoLqtXQckTmqTeybT+BDIbM/Guxo7x3pE2vtpr1ok6xRqM9OpBe+Jyoqyww=="],
 

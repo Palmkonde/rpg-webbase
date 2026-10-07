@@ -1,4 +1,4 @@
-import type { EngineHandle } from '@game-engine/engine-core'
+import type { EngineHandle } from '@codeleagues-rpg-engine/engine-core'
 import type { Flags } from './flags.ts'
 import { PLAYER_CHAR_ID } from './player.ts'
 
