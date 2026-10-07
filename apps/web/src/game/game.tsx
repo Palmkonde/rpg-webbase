@@ -1,42 +1,49 @@
 'use client'
 
+import { PlatformErrorScreen, PlatformNameContext } from './platform-error-screen.tsx'
 import { locale, worldContent } from './world-content.ts'
-import { useEffect, useRef } from 'react'
 import type { GameError } from '@codeleagues-rpg-engine/client'
+import { Game as GameView } from '@codeleagues-rpg-engine/client/react'
+import type { SlotComponents } from '@codeleagues-rpg-engine/client/react'
 import type { WorldConfig } from '@codeleagues-rpg-engine/engine-core'
-import { mount } from '@codeleagues-rpg-engine/client'
 import studentState from '../fixtures/student-state.json' with { type: 'json' }
+import { useMemo } from 'react'
 
 const GAME_STYLE = { width: '100vw', height: '100vh' }
+
+const PLATFORM_NAME = 'The Reference Platform'
+
+// One override, so this Platform shows slot overrides working.
+const COMPONENTS: SlotComponents = { ErrorScreen: PlatformErrorScreen }
 
 // A placeholder until this Platform signs Student tokens; nothing checks it before the Game Service does.
 async function getToken(): Promise<string> {
   return 'dev-token'
 }
 
-// Where a real Platform would log or react to each kind; the built-in ErrorScreen already shows the Student a message.
+// Where a real Platform would log or react to each kind; the ErrorScreen override already shows the Student a message.
 function onError(error: GameError): void {
   console.error(`[game] ${error.kind}:`, error)
 }
 
+// A client component: a Server Component can't hand `getToken`, `onError` or the overrides down as props.
 export function Game({ serviceUrl, worldId, worldConfig }: { serviceUrl: string; worldId: string; worldConfig: WorldConfig }): React.ReactElement {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const world = useMemo(() => ({ ...worldContent, worldConfig }), [worldConfig])
 
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) {return}
-
-    const game = mount(container, {
-      serviceUrl,
-      worldId,
-      getToken,
-      onError,
-      locale,
-      world: { ...worldContent, worldConfig },
-      flags: studentState.flags,
-    })
-    return game.unmount
-  }, [serviceUrl, worldId, worldConfig])
-
-  return <div ref={containerRef} style={GAME_STYLE} />
+  return (
+    <PlatformNameContext value={PLATFORM_NAME}>
+      <div style={GAME_STYLE}>
+        <GameView
+          components={COMPONENTS}
+          flags={studentState.flags}
+          getToken={getToken}
+          locale={locale}
+          onError={onError}
+          serviceUrl={serviceUrl}
+          world={world}
+          worldId={worldId}
+        />
+      </div>
+    </PlatformNameContext>
+  )
 }
