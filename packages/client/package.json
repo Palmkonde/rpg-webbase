@@ -7,6 +7,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
     }
   },
   "files": ["dist"],
@@ -19,10 +23,26 @@
     "grid-engine": "^2.52.1",
     "phaser": "^4.2.1"
   },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@codeleagues-rpg-engine/clsc": "*",
     "@codeleagues-rpg-engine/engine-core": "*",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "preact": "^11.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "tsdown": "^0.23.0",
     "typescript": "^7.0.2"
   }

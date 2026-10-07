@@ -1,5 +1,6 @@
 // Checked by `tsc`, never run: each `@ts-expect-error` fails the typecheck if its line stops being an error.
 import type { SlotHandle, SlotOverrides, SlotProps } from '../src/index.ts'
+import type { SlotComponents } from '../src/react.tsx'
 
 function portrait(element: HTMLElement, { src }: SlotProps['Dialogue.Portrait']): SlotHandle<SlotProps['Dialogue.Portrait']> {
   element.textContent = src
@@ -20,4 +21,11 @@ export const misspeltNestedSlot: SlotOverrides = { 'Dialogue.portrait': portrait
 export const wrongRendererProps: SlotOverrides = {
   // @ts-expect-error ErrorScreen's props carry no `src`.
   ErrorScreen: portrait,
+}
+
+export const reactOverride: SlotComponents = { ErrorScreen: ({ error }) => error.kind }
+
+export const wrongComponentProps: SlotComponents = {
+  // @ts-expect-error Choices.Button's props carry no `src`.
+  'Choices.Button': ({ src }: { src: string }) => src,
 }

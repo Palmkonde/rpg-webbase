@@ -27,7 +27,7 @@ function checkPublicTypeSources({ chunks }: { chunks: RolldownChunk[] }): void {
 }
 
 export default defineConfig({
-  entry: 'src/index.ts',
+  entry: ['src/index.ts', 'src/react.tsx'],
   format: 'esm',
   platform: 'browser',
 
@@ -37,7 +37,7 @@ export default defineConfig({
     onlyBundle: ['preact'],
 
     // Checked in the `.d.ts` too: an import of the Game Service or a private workspace package would point a stranger's install at a package that's never published (adr/0037).
-    onlyImport: Object.keys(pkg.dependencies),
+    onlyImport: [...Object.keys(pkg.dependencies), ...Object.keys(pkg.peerDependencies)],
   },
 
   // Otherwise the `.d.ts` keeps a bare `import "phaser"` left over from the inlined engine-core types.

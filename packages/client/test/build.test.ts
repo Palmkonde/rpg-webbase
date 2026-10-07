@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import type { InlineConfig } from 'tsdown'
 import assert from 'node:assert/strict'
 import { build } from 'tsdown'
@@ -31,6 +31,21 @@ test('the built package imports outside a browser, loading no Phaser', async () 
     const client = await import(path.join(outDir, 'index.js'))
 
     assert.equal(typeof client.mount, 'function')
+  })
+})
+
+const REACT_IMPORT = /from\s*["']react(?:-dom)?(?:\/[\w-]+)?["']/u
+
+// React is an optional peer of `./react` only (adr/0039), so the core must load in a Platform without it.
+test('only the react entry imports React', async () => {
+  await withOutDir(async (outDir) => {
+    await buildPackage(outDir)
+
+    const outFiles = await readdir(outDir)
+    const files = outFiles.filter((file) => file.endsWith('.js'))
+    const importingReact = await Promise.all(files.map(async (file) => REACT_IMPORT.test(await readFile(path.join(outDir, file), 'utf8')) && file))
+
+    assert.deepEqual(importingReact.filter(Boolean), ['react.js'])
   })
 })
 
