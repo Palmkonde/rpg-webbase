@@ -1,4 +1,4 @@
-import type { EngineEvent, EngineHandle } from '@codeleagues-rpg-engine/engine-core'
+import type { CreateEngineOptions, EngineEvent, EngineHandle } from '@codeleagues-rpg-engine/engine-core'
 import type { EngineFactory, HostSession, HostSessionOptions, WorldContent } from '../src/session.ts'
 import assert from 'node:assert/strict'
 import { createFlagStore } from '../src/flags.ts'
@@ -75,4 +75,24 @@ export async function consoleCalls(method: 'error' | 'warn', body: () => Promise
     console[method] = original
   }
   return calls
+}
+
+// A promise and the function that resolves it, for holding a fake partway through a call.
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let release!: () => void
+  // oxlint-disable-next-line promise/avoid-new
+  const promise = new Promise<void>((resolve) => { release = resolve })
+  return { promise, resolve: release }
+}
+
+// Every Engine it creates waits for `release`; `creating` resolves once one is asked for.
+export function holdEngineCreation(engine: FakeEngine): { createEngine: EngineFactory; creating: Promise<void>; release: () => void } {
+  const creating = deferred()
+  const released = deferred()
+  async function createEngine(options: CreateEngineOptions): Promise<EngineHandle> {
+    creating.resolve()
+    await released.promise
+    return engine.createEngine(options)
+  }
+  return { createEngine, creating: creating.promise, release: released.resolve }
 }

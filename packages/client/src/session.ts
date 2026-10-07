@@ -123,12 +123,8 @@ class Session implements HostSession {
 
   public start = async (): Promise<void> => {
     try {
-      this.player.load(await this.options.world.loadScripts())
-      const engine = await this.createEngine()
-      if (this.destroyed) {
-        engine.destroy()
-        return
-      }
+      const engine = await this.loadEngine()
+      if (!engine) {return}
       this.engine = engine
       this.status = 'ready'
       await this.syncCompanions()
@@ -175,13 +171,19 @@ class Session implements HostSession {
 
   private readonly isDestroyed = (): boolean => this.destroyed
 
-  private createEngine(): Promise<EngineHandle> {
+  // Undefined once the session is destroyed meanwhile: no Engine is created after that, and one already coming is destroyed.
+  private async loadEngine(): Promise<EngineHandle | undefined> {
     const { world, createEngine } = this.options
-    return createEngine({
+    this.player.load(await world.loadScripts())
+    if (this.destroyed) {return undefined}
+    const engine = await createEngine({
       worldConfig: world.worldConfig,
       catalogs: world.catalogs,
       onEvent: (event) => { this.handleEvent(event) },
     })
+    if (!this.destroyed) {return engine}
+    engine.destroy()
+    return undefined
   }
 
   private fail(error: unknown): void {

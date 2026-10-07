@@ -1,4 +1,5 @@
-import { consoleCalls, createFakeEngine, settle, startSession, world } from './helpers.ts'
+import type { CreateEngineOptions, EngineHandle } from '@codeleagues-rpg-engine/engine-core'
+import { consoleCalls, createFakeEngine, holdEngineCreation, settle, startSession, world } from './helpers.ts'
 import type { HostSession } from '../src/session.ts'
 import assert from 'node:assert/strict'
 import { createFlagStore } from '../src/flags.ts'
@@ -246,12 +247,32 @@ test('a CG with no frames is skipped with a warning, and the Dialogue goes on', 
   assert.ok(warnings.some(([message]) => String(message).includes('CG "vision"')))
 })
 
-test('a session destroyed while starting destroys the Engine it goes on to create', async () => {
+test('a session destroyed while its Scripts load creates no Engine', async () => {
   const engine = createFakeEngine()
-  const session = createHostSession({ createEngine: engine.createEngine, flags: createFlagStore(), world, locale: 'en' })
+  let created = 0
+  function createEngine(options: CreateEngineOptions): Promise<EngineHandle> {
+    created += 1
+    return engine.createEngine(options)
+  }
+  const session = createHostSession({ createEngine, flags: createFlagStore(), world, locale: 'en' })
 
   const starting = session.start()
   session.destroy()
+  await starting
+
+  assert.equal(created, 0)
+  assert.equal(session.getSnapshot().status, 'loading')
+})
+
+test('a session destroyed while its Engine is created destroys that Engine once it arrives', async () => {
+  const engine = createFakeEngine()
+  const held = holdEngineCreation(engine)
+  const session = createHostSession({ createEngine: held.createEngine, flags: createFlagStore(), world, locale: 'en' })
+
+  const starting = session.start()
+  await held.creating
+  session.destroy()
+  held.release()
   await starting
 
   assert.deepEqual(engine.calls, ['destroy'])
