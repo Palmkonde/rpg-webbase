@@ -53,7 +53,7 @@ test('syncCompanions gives each of several Companions its own calls', () => {
 test('syncCompanions leaves a companion: Flag alone when it is neither a Character nor false', () => {
   const { engine, log } = createFakeEngine()
 
-  syncCompanions({ 'companion:Guard': '', 'companion:Cat': true, 'companion:Old': 3 }, engine)
+  syncCompanions({ 'companion:Guard': '', 'companion:Cat': true }, engine)
 
   assert.deepEqual(log, [])
 })

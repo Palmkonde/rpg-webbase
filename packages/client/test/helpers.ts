@@ -1,7 +1,8 @@
 import type { CreateEngineOptions, EngineEvent, EngineHandle } from '@codeleagues-rpg-engine/engine-core'
 import type { EngineFactory, HostSession, HostSessionOptions, WorldContent } from '../src/session.ts'
+import type { GameService, ServiceResponse } from '../src/game-service.ts'
+import type { Flags } from '../src/flags.ts'
 import assert from 'node:assert/strict'
-import { createFlagStore } from '../src/flags.ts'
 import { createHostSession } from '../src/session.ts'
 import { readFile } from 'node:fs/promises'
 
@@ -54,9 +55,72 @@ export async function getToken(): Promise<string> {
   return 'student-token'
 }
 
-// Built against a fake Engine, with empty Flags unless `options` says otherwise.
+const OK = 200
+
+type Route = keyof GameService
+
+// The status a call answers, 200 to succeed; a promise holds the call until it settles.
+type Answer = number | Promise<number>
+
+export interface FakeService {
+  service: GameService
+
+  // What the service holds for the Student, shallow-merged by each successful PATCH as the real one does.
+  stored: Flags
+
+  // Every call the session made, in order, as `<route> <token>`.
+  calls: string[]
+
+  // Every PATCH body, in the order the session sent them, whether or not it was answered yet.
+  patches: Flags[]
+
+  // Queues answers for the next calls to `route`; once they run out, every call succeeds.
+  answerNext: (route: Route, ...answers: Answer[]) => void
+}
+
+export function createFakeService(initial: Flags = {}): FakeService {
+  const stored = { ...initial }
+  const calls: string[] = []
+  const patches: Flags[] = []
+  const queued: Record<Route, Answer[]> = { readFlags: [], patchFlags: [] }
+
+  function answerNext(route: Route, ...answers: Answer[]): void {
+    queued[route].push(...answers)
+  }
+
+  async function answer<Data>(route: Route, token: string, data: () => Data): Promise<ServiceResponse<Data>> {
+    calls.push(`${route} ${token}`)
+    const status = await (queued[route].shift() ?? OK)
+    return status === OK ? { ok: true, data: data() } : { ok: false, status }
+  }
+
+  const service: GameService = {
+    readFlags: (token) => answer('readFlags', token, () => ({ ...stored })),
+    patchFlags: (token, patch) => {
+      patches.push(patch)
+      return answer('patchFlags', token, () => { Object.assign(stored, patch) })
+    },
+  }
+  return { service, stored, calls, patches, answerNext }
+}
+
+// Every backoff resolves at once; `waits` lists how long each would have been.
+export function createInstantWait(): { wait: (milliseconds: number) => Promise<void>; waits: number[] } {
+  const waits: number[] = []
+  return { waits, wait: async (milliseconds) => { waits.push(milliseconds) } }
+}
+
+// Built against a fake Engine and a fake service holding no Flags, unless `options` says otherwise.
 export function createTestSession(options: Partial<HostSessionOptions> = {}): HostSession {
-  return createHostSession({ createEngine: createFakeEngine().createEngine, getToken, flags: createFlagStore(), world, locale: 'en', ...options })
+  return createHostSession({
+    createEngine: createFakeEngine().createEngine,
+    service: createFakeService().service,
+    getToken,
+    world,
+    locale: 'en',
+    wait: createInstantWait().wait,
+    ...options,
+  })
 }
 
 export async function startSession(options: Partial<HostSessionOptions> = {}): Promise<{ session: HostSession; engine: FakeEngine }> {
@@ -86,10 +150,10 @@ export async function consoleCalls(method: 'error' | 'warn', body: () => Promise
 }
 
 // A promise and the function that resolves it, for holding a fake partway through a call.
-function deferred(): { promise: Promise<void>; resolve: () => void } {
-  let release!: () => void
+export function deferred<Value = void>(): { promise: Promise<Value>; resolve: (value: Value) => void } {
+  let release!: (value: Value) => void
   // oxlint-disable-next-line promise/avoid-new
-  const promise = new Promise<void>((resolve) => { release = resolve })
+  const promise = new Promise<Value>((resolve) => { release = resolve })
   return { promise, resolve: release }
 }
 

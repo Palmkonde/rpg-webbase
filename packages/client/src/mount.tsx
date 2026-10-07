@@ -1,12 +1,11 @@
 /** @jsxImportSource preact */
 import type { EngineFactory, HostSession, WorldContent } from './session.ts'
 import { DEFAULT_LOCALE } from './strings.ts'
-import type { Flags } from './flags.ts'
 import type { GameError } from './game-error.ts'
 import { Overlays } from './overlays/overlays.tsx'
 import type { SlotOverrides } from './slots.ts'
 import { SlotOverridesContext } from './overlays/slot.tsx'
-import { createFlagStore } from './flags.ts'
+import { createGameService } from './game-service.ts'
 import { createHostSession } from './session.ts'
 import { render } from 'preact'
 
@@ -21,9 +20,8 @@ export interface GameOptions {
   onError?: (error: GameError) => void
   locale?: string
 
-  // Stand-ins for the World Version and the Student's Flags, until the Game Service serves them.
+  // A stand-in for the World Version, until the Game Service serves it.
   world: WorldContent
-  flags?: Flags
 }
 
 export interface MountOptions extends GameOptions {
@@ -102,9 +100,9 @@ function mountGame(element: HTMLElement, options: GameOptions, drawOverlays?: Dr
   const { wrapper, engineElement } = appendMountPoints(element)
   const session = createHostSession({
     createEngine: engineFactoryFor(engineElement),
+    service: createGameService(options.serviceUrl, options.worldId),
     getToken: options.getToken,
     onError: options.onError,
-    flags: createFlagStore(options.flags),
     world: options.world,
     locale: options.locale ?? DEFAULT_LOCALE,
   })
