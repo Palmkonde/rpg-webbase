@@ -1,0 +1,35 @@
+'use client'
+
+import { locale, worldContent } from './world-content.ts'
+import { useEffect, useRef } from 'react'
+import type { WorldConfig } from '@codeleagues-rpg-engine/engine-core'
+import { mount } from '@codeleagues-rpg-engine/client'
+import studentState from '../fixtures/student-state.json' with { type: 'json' }
+
+const GAME_STYLE = { width: '100vw', height: '100vh' }
+
+// A placeholder: the game asks for no token until it loads its World from the Game Service.
+async function getToken(): Promise<string> {
+  return 'dev-token'
+}
+
+export function Game({ serviceUrl, worldId, worldConfig }: { serviceUrl: string; worldId: string; worldConfig: WorldConfig }): React.ReactElement {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) {return}
+
+    const game = mount(container, {
+      serviceUrl,
+      worldId,
+      getToken,
+      locale,
+      world: { ...worldContent, worldConfig },
+      flags: studentState.flags,
+    })
+    return game.unmount
+  }, [serviceUrl, worldId, worldConfig])
+
+  return <div ref={containerRef} style={GAME_STYLE} />
+}
