@@ -15,7 +15,7 @@ This note gathers facts and runs small experiments. It does not decide anything.
 **Repo state at the time of writing:**
 
 - **`engine-core`** (`packages/engine-core/package.json`) is `private: true` and ships TS source (`main`/`types: src/index.ts`). Its relative imports use `.ts` extensions under `allowImportingTsExtensions`. It depends on `phaser ~4.0.0` and `grid-engine ^2.52.1`.
-- **`@game-engine/clsc`** is `private: true`. Its `main` is `vm/src/program.ts`, and the package also contains `compiler/` (Rust) and `vscode/`.
+- **`clsc`** (`packages/clsc/package.json`) is `private: true`. Its `main` is `vm/src/program.ts`, and the package also contains `compiler/` (Rust) and `vscode/`.
 - **`apps/web`** depends on both packages as `"*"`, not `workspace:*`. It lists them in `transpilePackages` (`apps/web/next.config.mjs`).
 - **Tool versions:** next 16.3.5 (Turbopack), bun 1.4.2, npm 10.9.8, tsc 5.9.3. phaser 4.0.0 and grid-engine 2.52.1 are installed.
 - **The repo** is public on GitHub, with **no LICENSE file**.
@@ -31,7 +31,7 @@ This note gathers facts and runs small experiments. It does not decide anything.
   - Node refuses `.ts` files under `node_modules` and says so in order to discourage publishing TS.
   - A Bun.build of engine-core and the clsc VM gives one 32 KB ESM file whose only bare imports are `phaser` and `grid-engine`.
   - `tsc --emitDeclarationOnly` works with the existing `.ts`-extension imports (§4).
-- **Internal packages must be bundled in, never listed as dependencies.** `@game-engine/engine-core` and `@game-engine/clsc` are unpublished and resolve as `"*"`. Today both names return 404 on npm. If the published manifest listed them, a stranger's install would fail, or would fetch whatever someone else later publishes under that scope (§4.3).
+- **Internal packages must be bundled in, never listed as dependencies.** engine-core and clsc are unpublished and resolve as `"*"`. Under their `@game-engine` names at the time, both returned 404 on npm. If the published manifest listed them, a stranger's install would fail, or would fetch whatever someone else later publishes under that scope (§4.3). `adr/0043` has since moved them to a scope we own.
 - **Phaser twice.** Phaser's ESM build sets no global, and grid-engine imports only `Tilemaps` (for the `Orientation` constants) from it. So two copies don't break at runtime. What a second copy does cost:
   - about 1.3 MB of minified Phaser, shipped twice;
   - TypeScript type-identity mismatches, because the public `.d.ts` reaches into Phaser's types.
@@ -74,7 +74,7 @@ The scripts are in the appendix.
 
 ### 4.3 Workspace packages: bundle them in, don't depend on them
 
-`apps/web` refers to the internal packages as `"*"`. `bun publish` "strips catalog and workspace protocols … resolving versions if necessary" ([bun publish](https://bun.com/docs/pm/cli/publish)), but a bare `"*"` is not a workspace protocol. So a published client whose `dependencies` included `@game-engine/engine-core: "*"` would send installers to the public registry for it. `npm view @game-engine/engine-core` and `npm view @game-engine/clsc` both returned **404** on 2026-10-05: the install fails today, and could fetch someone else's code if the scope is ever claimed.
+`apps/web` refers to the internal packages as `"*"`. `bun publish` "strips catalog and workspace protocols … resolving versions if necessary" ([bun publish](https://bun.com/docs/pm/cli/publish)), but a bare `"*"` is not a workspace protocol. So a published client whose `dependencies` included engine-core as `"*"` would send installers to the public registry for it. `npm view` on engine-core and clsc under their `@game-engine` names at the time both returned **404** on 2026-10-05: the install failed, and could have fetched someone else's code had that scope been claimed. `adr/0043` closes the second risk by moving them to a scope we own.
 
 **Leaning:** publish **one** package. engine-core and the VM are bundled into `dist/` and listed under `devDependencies` (or not listed at all), with only third-party runtime deps under `dependencies`/`peerDependencies`. Publishing engine-core and clsc as separate packages would triple the release surface, for consumers who only ever mount the game.
 
@@ -114,7 +114,7 @@ The scripts are in the appendix.
 - The unminified bundle's source-path comments list every input: 8 distinct `packages/engine-core/src/*` modules and 3 `packages/clsc/vm/src/*` modules. Bun repeats a path comment whenever hoisting switches module, and `index.ts`/`types.ts` add no runtime code. There are none from `packages/clsc/compiler` (Rust) or `packages/clsc/vscode`.
 - The bundler only follows imports. Since nothing in the VM imports the compiler, `cargo` never runs and no Rust artefact can enter `dist/`.
 - The `.clscb` bytecode files are content produced by the compiler at Publish time (#73). They are not part of the package.
-- **One trap.** The clsc package's `main` points into `vm/src`, but the package directory also holds `compiler/` and `vscode/`. So the client package should not *depend on* `@game-engine/clsc` as a published package. It should bundle the VM in (§4.3).
+- **One trap.** The clsc package's `main` points into `vm/src`, but the package directory also holds `compiler/` and `vscode/`. So the client package should not *depend on* `@codeleagues-rpg-engine/clsc` as a published package. It should bundle the VM in (§4.3).
 
 ## 7. Guardrails against shipping licensed art
 
@@ -143,12 +143,12 @@ Both `bun pm pack --dry-run` (bun 1.4.2) and `npm pack --dry-run` (npm 10.9.8) l
 1. **`files: ["dist"]`** in the client package's `package.json`.
 2. **A pack check in CI.** Run `npm pack --dry-run --json` (or `bun pm pack --dry-run`) and fail on any path outside `dist/`, or with an art/map extension (`.png`, `.tmj`, `.tsj`, `.json` under `assets`, …).
 3. **An input check.** Fail if any bundle input (the `// path` comments in an unminified build, or Bun.build's metafile) is under `assets/` or `apps/`, or anything other than `packages/engine-core/src` and `packages/clsc/vm/src`.
-4. **A manifest check.** Fail if the packed `package.json` lists any `@game-engine/*` in `dependencies`/`peerDependencies` (§4.3).
+4. **A manifest check.** Fail if the packed `package.json` lists any private workspace package (`@codeleagues-rpg-engine/engine-core`, `@codeleagues-rpg-engine/clsc`, …) in `dependencies`/`peerDependencies` (§4.3).
 
 ## 8. Open questions this surfaced
 
 - **License.** The repo has no LICENSE. npm will publish without one, but strangers then have no right to use the code. Picking a license is a prerequisite for "installable by strangers". It also matters for the bundled engine-core and VM code.
-- **Package name and scope.** Publishing `@x/...` on npm requires owning the npm user or org `x`. GitHub Packages forces `@palmkonde`. Whether `@game-engine` can be registered on npm is unknown: both package names are 404s, and the org page returned 403 to an anonymous check. The name is hard to change once strangers depend on it, so it's ADR material.
+- **Package name and scope.** Publishing `@x/...` on npm requires owning the npm user or org `x`. GitHub Packages forces `@palmkonde`. Whether `@game-engine` can be registered on npm is unknown: both package names are 404s, and the org page returned 403 to an anonymous check. The name is hard to change once strangers depend on it, so it's ADR material. (Settled by `adr/0043`: `@codeleagues-rpg-engine`.)
 - **Release mechanics** (who bumps versions, CI publish, provenance) are untouched here. They can be settled in the build tickets.
 
 ## Appendix A: bundle script

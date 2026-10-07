@@ -111,7 +111,7 @@ Scripts are written in CodeLeagues Script (`.clsc`), a statically typed language
 
 ### Package
 
-- A new package `clsc` holds both halves: a Rust crate (binary `clsc`) for the compiler and a Bun workspace package (`@game-engine/clsc`) for the VM. It is separate from `engine-core`: the Engine knows nothing about Scripts (`adr/0001`), and an `engine-` prefix on a Host-side package would contradict the glossary.
+- A new package `clsc` holds both halves: a Rust crate (binary `clsc`) for the compiler and a Bun workspace package (`@codeleagues-rpg-engine/clsc`) for the VM. It is separate from `engine-core`: the Engine knows nothing about Scripts (`adr/0001`), and an `engine-` prefix on a Host-side package would contradict the glossary.
 - The compiler uses pest, with the grammar in its own file. It runs only at build time, never in the browser.
 - The Nix dev shell gains the pinned Rust toolchain and rust-analyzer. There is no prebuilt binary (`adr/0031`).
 
