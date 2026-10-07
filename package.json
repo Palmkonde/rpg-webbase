@@ -14,5 +14,8 @@
   },
   "devDependencies": {
     "oxlint": "^1.86.0"
+  },
+  "overrides": {
+    "phaser": "^4.2.1"
   }
 }
