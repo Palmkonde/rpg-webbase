@@ -10,11 +10,10 @@
     "prebuild": "bun run clsc",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit",
-    "test": "bun test ./test"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@codeleagues-rpg-engine/clsc": "*",
+    "@codeleagues-rpg-engine/client": "*",
     "@codeleagues-rpg-engine/engine-core": "*",
     "next": "^16.3.8",
     "react": "^19.0.0",

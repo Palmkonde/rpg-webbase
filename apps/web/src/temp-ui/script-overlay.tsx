@@ -1,9 +1,7 @@
 'use client'
 
-import { currentLocale, resolveText } from '../state/strings.ts'
+import type { DialogueView } from '@codeleagues-rpg-engine/client'
 import { ScriptChoices } from './script-choices.tsx'
-import type { ScriptPrompt } from '../game/script-player.ts'
-import { resolvePortrait } from '../state/portraits.ts'
 
 // The one overlay for every VM run (adr/0030).
 const OVERLAY_STYLE = {
@@ -57,36 +55,31 @@ const LINE_TEXT_STYLE = {
 // A named constant: `react/jsx-no-literals` and `jsx-curly-brace-presence` disagree on a bare JSX text literal.
 const CLOSE_LABEL = 'Close'
 
-// Dismiss shows only while not frozen: a Cutscene or CG has control of the Player until it unfreezes (adr/0030).
 export function ScriptOverlay({
-  prompt,
-  frozen,
+  dialogue,
   onAdvance,
   onChoose,
   onDismiss,
 }: {
-  prompt: ScriptPrompt
-  frozen: boolean
+  dialogue: DialogueView
   onAdvance: () => void
   onChoose: (index: number) => void
   onDismiss: () => void
 }): React.ReactElement {
-  const portrait = prompt.type === 'line' ? resolvePortrait(prompt.speaker, prompt.expression) : undefined
-
   return (
     <div style={OVERLAY_STYLE}>
-      {prompt.type === 'line'
+      {dialogue.type === 'line'
         ? (
           <button onClick={onAdvance} style={LINE_BUTTON_STYLE} type="button">
             {/* Plain `<img>`, not `next/image`: `react/forbid-component-props` forbids passing `style` to `Image`. */}
             {/* oxlint-disable-next-line next/no-img-element */}
-            {portrait !== undefined && <img alt="" height={PORTRAIT_SIZE} src={portrait} style={PORTRAIT_STYLE} width={PORTRAIT_SIZE} />}
-            <span style={SPEAKER_LABEL_STYLE}>{prompt.speaker}</span>
-            <span style={LINE_TEXT_STYLE}>{resolveText(prompt, currentLocale)}</span>
+            {dialogue.portrait !== undefined && <img alt="" height={PORTRAIT_SIZE} src={dialogue.portrait} style={PORTRAIT_STYLE} width={PORTRAIT_SIZE} />}
+            <span style={SPEAKER_LABEL_STYLE}>{dialogue.speaker}</span>
+            <span style={LINE_TEXT_STYLE}>{dialogue.text}</span>
           </button>
         )
-        : <ScriptChoices choices={prompt.choices} onChoose={onChoose} />}
-      {!frozen && (
+        : <ScriptChoices choices={dialogue.choices} onChoose={onChoose} />}
+      {dialogue.canDismiss && (
         <button onClick={onDismiss} type="button">
           {CLOSE_LABEL}
         </button>

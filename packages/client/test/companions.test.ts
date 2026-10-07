@@ -1,5 +1,5 @@
-import { activeCompanionIds, isCompanionFlag, syncCompanions } from '../src/state/companions.ts'
-import type { CompanionEngine } from '../src/state/companions.ts'
+import { activeCompanionIds, isCompanionFlag, syncCompanions } from '../src/companions.ts'
+import type { CompanionEngine } from '../src/companions.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 

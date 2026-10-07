@@ -1,0 +1,33 @@
+flag has_key: bool = false;
+
+cg vision;
+
+on interact(Sage) with Sage {
+    Sage(Happy): "Hello there.";
+    choose {
+        "Show me a vision" => {
+            play(cg::vision);
+            Sage: "Did you see it?";
+        }
+        "Open the door" if has_key else locked("You need a key.");
+        "Bye";
+    }
+    Sage: "Farewell.";
+}
+
+on interact(Guard) with Guard, fluffy {
+    Guard: "Take me along?";
+    set companion[Guard] = fluffy;
+}
+
+on interact(Statue) {
+    play(cutscene::statue_stares);
+}
+
+cutscene statue_stares with Narrator {
+    Narrator: "The statue stares back.";
+}
+
+on enter(Gate) with Narrator {
+    Narrator: "You pass the gate.";
+}

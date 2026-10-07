@@ -1,8 +1,6 @@
 'use client'
 
-import { currentLocale, resolveLine } from '../state/strings.ts'
-import type { CgFrame } from '../state/cg.ts'
-import { resolveCgArt } from '../state/cg-art.ts'
+import type { CgView } from '@codeleagues-rpg-engine/client'
 
 const OVERLAY_STYLE = {
   position: 'fixed',
@@ -64,19 +62,14 @@ const CUE_STYLE = {
 const MORE_FRAMES_CUE = '▼'
 
 export function CgOverlay({
-  frame,
-  hasMore,
+  cg: { art, caption, hasMore },
   onAdvance,
   onSkip,
 }: {
-  frame: CgFrame
-  hasMore: boolean
+  cg: CgView
   onAdvance: () => void
   onSkip: () => void
 }): React.ReactElement {
-  const art = resolveCgArt(frame.art)
-  const caption = resolveLine(frame.captionKey, currentLocale)
-
   return (
     <div style={OVERLAY_STYLE}>
       <button onClick={onSkip} style={SKIP_BUTTON_STYLE} type="button">

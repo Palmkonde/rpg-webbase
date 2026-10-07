@@ -1,6 +1,6 @@
-import type { PortraitRegistry } from '../src/state/portraits.ts'
+import type { PortraitRegistry } from '../src/portraits.ts'
 import assert from 'node:assert/strict'
-import { resolvePortrait } from '../src/state/portraits.ts'
+import { resolvePortrait } from '../src/portraits.ts'
 import { test } from 'node:test'
 
 const registry: PortraitRegistry = {
@@ -30,9 +30,4 @@ test('resolvePortrait returns undefined when the line has no Speaker', () => {
 test('resolvePortrait returns undefined when the line has no Expression', () => {
   const result = resolvePortrait('Campfire', undefined, registry)
   assert.equal(result, undefined)
-})
-
-test('resolvePortrait defaults to the app registry: Campfire has Neutral art', () => {
-  const result = resolvePortrait('Campfire', 'Neutral')
-  assert.equal(result, '/assets/portraits/campfire/neutral.png')
 })

@@ -1,7 +1,7 @@
-import type { CgSlideshowStep } from '../src/state/cg-slideshow.ts'
+import type { CgSlideshowStep } from '../src/cg-slideshow.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { toCgStep } from '../src/game/play-cg.ts'
+import { toCgStep } from '../src/play-cg.ts'
 
 const FRAME_COUNT = 3
 

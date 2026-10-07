@@ -12,7 +12,7 @@
       "name": "@codeleagues-rpg-engine/web",
       "version": "0.0.0",
       "dependencies": {
-        "@codeleagues-rpg-engine/clsc": "*",
+        "@codeleagues-rpg-engine/client": "*",
         "@codeleagues-rpg-engine/engine-core": "*",
         "next": "^16.3.8",
         "react": "^19.0.0",
@@ -23,6 +23,17 @@
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
         "concurrently": "^10.0.5",
+        "typescript": "^7.0.2",
+      },
+    },
+    "packages/client": {
+      "name": "@codeleagues-rpg-engine/client",
+      "version": "0.0.0",
+      "dependencies": {
+        "@codeleagues-rpg-engine/clsc": "*",
+        "@codeleagues-rpg-engine/engine-core": "*",
+      },
+      "devDependencies": {
         "typescript": "^7.0.2",
       },
     },
@@ -49,6 +60,8 @@
     "phaser": "^4.2.1",
   },
   "packages": {
+    "@codeleagues-rpg-engine/client": ["@codeleagues-rpg-engine/client@workspace:packages/client"],
+
     "@codeleagues-rpg-engine/clsc": ["@codeleagues-rpg-engine/clsc@workspace:packages/clsc"],
 
     "@codeleagues-rpg-engine/engine-core": ["@codeleagues-rpg-engine/engine-core@workspace:packages/engine-core"],
