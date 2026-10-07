@@ -1,21 +1,29 @@
 {
   "name": "@codeleagues-rpg-engine/client",
   "version": "0.0.0",
-  "private": true,
   "license": "MIT",
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
   "scripts": {
+    "build": "tsdown",
     "test": "cargo run --quiet --manifest-path ../clsc/compiler/Cargo.toml -- build test/fixtures/scripts test/generated/scripts.clscb && bun test ./test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@codeleagues-rpg-engine/clsc": "*",
-    "@codeleagues-rpg-engine/engine-core": "*",
-    "preact": "^11.0.0"
+    "grid-engine": "^2.52.1",
+    "phaser": "^4.2.1"
   },
   "devDependencies": {
+    "@codeleagues-rpg-engine/clsc": "*",
+    "@codeleagues-rpg-engine/engine-core": "*",
+    "preact": "^11.0.0",
+    "tsdown": "^0.23.0",
     "typescript": "^7.0.2"
   }
 }
