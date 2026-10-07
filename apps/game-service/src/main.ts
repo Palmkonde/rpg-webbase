@@ -7,7 +7,8 @@ async function run(command: string, env: Env): Promise<void> {
   switch (command) {
     case 'serve': {
       const config = readConfig(env)
-      createApp({ db: createDatabase(config.databaseUrl) }).listen(config.port)
+      const { databaseUrl, jwtSecret, corsOrigins, port } = config
+      createApp({ db: createDatabase(databaseUrl), jwtSecret, corsOrigins }).listen(port)
       return
     }
     case 'migrate': {

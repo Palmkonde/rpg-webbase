@@ -20,6 +20,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@elysiajs/eden": "^1.4.9",
     "grid-engine": "^2.52.1",
     "phaser": "^4.2.1"
   },
@@ -38,6 +39,7 @@
   "devDependencies": {
     "@codeleagues-rpg-engine/clsc": "*",
     "@codeleagues-rpg-engine/engine-core": "*",
+    "@codeleagues-rpg-engine/game-service": "*",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "preact": "^11.0.0",

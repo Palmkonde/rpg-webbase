@@ -173,7 +173,7 @@ export class ScriptPlayer {
     this.ui.setEnginePaused(frozen)
   }
 
-  // Saved before the run goes on, so it never gets ahead of the store; a failed save throws, aborting it (adr/0030).
+  // Written before the run goes on, so it never gets ahead of the store; the store sees to saving it.
   private async saveFlag({ name, value }: Extract<Output, { type: 'flag' }>): Promise<void> {
     await this.flags.setFlags({ [name]: value })
     if (isCompanionFlag(name) && !this.frozen) {await this.ui.syncCompanions()}
