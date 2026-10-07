@@ -82,6 +82,7 @@ export interface HostSession {
   advanceCg: () => void
   skipCg: () => void
   dismissCompanion: (entityId: string) => Promise<void>
+  setLocale: (locale: string) => void
 }
 
 function errorMessage(error: unknown): string {
@@ -104,9 +105,11 @@ class Session implements HostSession {
   private cgFrames: CgFrame[] | undefined
   private cgStep: CgStep | undefined
   private cgHandle: CgHandle | undefined
+  private locale: string
 
   public constructor(options: HostSessionOptions) {
     this.options = options
+    this.locale = options.locale
     this.player = new ScriptPlayer(() => this.engine, options.flags, {
       setScriptPrompt: (prompt): void => {
         this.prompt = prompt
@@ -167,6 +170,11 @@ class Session implements HostSession {
     } catch (error: unknown) {
       console.error('Failed to dismiss Companion:', error)
     }
+  }
+
+  public setLocale = (locale: string): void => {
+    this.locale = locale
+    this.publish()
   }
 
   private readonly isDestroyed = (): boolean => this.destroyed
@@ -256,7 +264,7 @@ class Session implements HostSession {
   }
 
   private dialogueView(prompt: ScriptPrompt): DialogueView {
-    const { locale, world: { strings, portraits } } = this.options
+    const { locale, options: { world: { strings, portraits } } } = this
     const canDismiss = !this.enginePaused
     if (prompt.type === 'choices') {
       const choices = prompt.choices.map((choice) => ({
@@ -277,7 +285,7 @@ class Session implements HostSession {
   private cgView(): CgView | undefined {
     const { cgFrames, cgStep } = this
     if (!cgFrames || !cgStep) {return undefined}
-    const { locale, world: { strings, cgArt } } = this.options
+    const { locale, options: { world: { strings, cgArt } } } = this
     const frame = cgFrames[cgStep.frameIndex]
     return {
       art: resolveCgArt(frame.art, cgArt),

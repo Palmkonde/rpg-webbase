@@ -44,7 +44,7 @@ export const world: WorldContent = {
   worldConfig: { mapId: 'test', player: { spawn: { x: 0, y: 0 }, characterId: 'fluffy' } },
   catalogs: { maps: [], characters: [] },
   loadScripts: async () => new Uint8Array(await readFile(new URL('generated/scripts.clscb', import.meta.url))),
-  strings: { en: { 'cg.vision.1': 'A light.', 'cg.vision.2': 'A door.' } },
+  strings: { en: { 'cg.vision.1': 'A light.', 'cg.vision.2': 'A door.' }, th: { 'cg.vision.1': 'แสงสว่าง' } },
   portraits: { Sage: { Happy: '/portraits/sage/happy.png' } },
   cgs: { vision: [{ art: 'vision-1', captionKey: 'cg.vision.1' }, { art: 'vision-2', captionKey: 'cg.vision.2' }] },
   cgArt: { 'vision-1': '/cg/vision/1.png', 'vision-2': '/cg/vision/2.png' },

@@ -1,3 +1,6 @@
+export { mount } from './mount.tsx'
+export type { GameInstance, MountOptions } from './mount.tsx'
+
 export { createHostSession } from './session.ts'
 export type {
   CgView,

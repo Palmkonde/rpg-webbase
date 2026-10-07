@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@codeleagues-rpg-engine/clsc": "*",
-    "@codeleagues-rpg-engine/engine-core": "*"
+    "@codeleagues-rpg-engine/engine-core": "*",
+    "preact": "^11.0.0"
   },
   "devDependencies": {
     "typescript": "^7.0.2"
