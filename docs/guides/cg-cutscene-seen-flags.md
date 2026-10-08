@@ -3,8 +3,7 @@
 A Zone gates itself with a Flag named after its id, `<zoneId>_seen`: the Host skips a Zone whose
 `<zoneId>_seen` is set, and sets it as the Zone's Script starts.
 
-It needs no registration step or seed entry, unless you want a Zone pre-seeded as already seen. This
-matches the existing `tutorial_seen` convention in `apps/web/src/fixtures/student-state.json`.
+It needs no registration step: the Flag is stored the first time the Zone's Script starts.
 
 Pick a Zone id that won't collide with another Flag once `_seen` is appended. Flags are a flat, single
 Student-scoped store, so a Zone `gate` and some unrelated Flag literally named `gate_seen` would clash.

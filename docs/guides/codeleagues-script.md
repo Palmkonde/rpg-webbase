@@ -12,7 +12,7 @@ This guide covers every feature of v1 CodeLeagues Script (`.clsc`), with an exam
   - [Keyed lines: `@key`](#keyed-lines-key)
 - [Comments](#comments)
 - [Flags](#flags)
-  - [The Flag store and its seed](#the-flag-store-and-its-seed)
+  - [Where Flags are stored](#where-flags-are-stored)
   - [Conditions and `if`](#conditions-and-if)
 - [Choices: `choose`](#choices-choose)
 - [Cutscenes and CGs](#cutscenes-and-cgs)
@@ -31,7 +31,7 @@ This guide covers every feature of v1 CodeLeagues Script (`.clsc`), with an exam
 
 ## Where Scripts live
 
-Scripts live under the scripts root, `apps/web/src/scripts/`. Every `.clsc` file in it, including files in subfolders, is compiled together as one program. You can arrange files however suits the story.
+Scripts live under the scripts root of a World in the content folder, `worlds/<world>/scripts/`. Every `.clsc` file in it, including files in subfolders, is compiled together as one program. You can arrange files however suits the story.
 
 Two file names are reserved, and every other file sees them without a `use`:
 
@@ -87,7 +87,7 @@ The kind keyword decides what the name can do in a Script:
 |---|---|---|---|---|---|
 | `speaker` | Someone with lines and no walking, such as a narrator or a Prop Entity | Nothing in Tiled, but it's the key for its Portraits (see [`dialogue-portrait-assets.md`](dialogue-portrait-assets.md)) | yes | no | no |
 | `mover` | A Character Entity | The Entity's `entityId` in Tiled (see [`tiled-object-authoring.md`](tiled-object-authoring.md)), which is also its Portrait key if it speaks | yes | yes | yes |
-| `character` | A Character, the appearance a Companion walks with | A Character `id` in `apps/web/src/game/catalogs.ts` | no | no | no |
+| `character` | A Character, the appearance a Companion walks with | A Character `id` in the content folder's `library/characters/` | no | no | no |
 
 `Player` is built in, and you never declare it. The Player is a Mover that never speaks.
 
@@ -129,7 +129,7 @@ on interact(Well) with Campfire, Narrator {
 
 ### Keyed lines: `@key`
 
-To take text from the String Table (`apps/web/src/fixtures/strings.json`) instead of writing it inline, use `@key` in place of the quoted text:
+To take text from the String Table (the World's `strings.json`) instead of writing it inline, use `@key` in place of the quoted text:
 
 ```clsc
 on interact(Signpost) with Campfire {
@@ -200,27 +200,13 @@ on interact(Sage) with Narrator {
 
 A written Flag stays written, even if the Dialogue is cut short afterwards.
 
-### The Flag store and its seed
+### Where Flags are stored
 
-The Host keeps each Student's Flags in a store, keyed by Flag name. The store starts out holding the Flag seed, `apps/web/src/fixtures/student-state.json`. The store is held in memory, so whatever a Script writes is lost when the page reloads.
+The Game Service keeps each Student's Flags, keyed by Flag name, so they survive a reload, a new tab and a new device. A Script run reads them when the game loads and every write is saved as it happens. There is no way to start a Student with a Flag already set: to test a later branch, play to it.
 
-To start the game with a Flag already set, for example to test a later branch, add it to the seed:
-
-```json
-{
-  "studentId": "test-student",
-  "flags": {
-    "met_sage": true,
-    "seen_first_sunrise": true,
-    "companion:Guard": "fluffy"
-  }
-}
-```
-
-- **Your Flags.** A Flag you declare is stored under its own name, as `true` or `false`. A once-only marker's Flag is stored the same way. A declared Flag the seed leaves out reads as its default.
+- **Your Flags.** A Flag you declare is stored under its own name, as `true` or `false`. A once-only marker's Flag is stored the same way. A declared Flag the Student has no stored value for reads as its default.
 - **Companion Flags.** `companion[Guard]` is stored as `"companion:Guard"`, holding the Character's id while Guard is a Companion and `false` once it's dismissed.
-- **Type checks.** The compiler checks the seed against your declarations. A value of the wrong type, such as `"met_sage": "yes"` or `"companion:Guard": true`, fails the compile.
-- **Ignored entries.** Entries no Script declares, such as `tutorial_seen`, belong to the Host, and Scripts can't see them.
+- **Ignored entries.** Entries no Script declares belong to the Host, and Scripts can't see them. A stored Companion that no Script declares, or whose Entity is on no Map, is dismissed when the game loads.
 
 ### Conditions and `if`
 
@@ -507,17 +493,7 @@ on interact(OldWell) with Campfire {
 
 ## Compiling and reading errors
 
-You don't need to run the compiler yourself while the dev server is up:
-
-- **On save.** `bun run dev` recompiles every time you save a `.clsc` file, the String Table or the Flag seed.
-- **Where output goes.** Compiler output prints in the dev server's terminal, on lines labelled `[clsc]`. A successful compile prints `clsc: wrote public/generated/scripts.clscb`.
-- **Seeing changes.** Reload the page to pick up a successful recompile.
-- **After a failed compile.** The game keeps running the last Scripts that compiled.
-
-There are two other ways to compile:
-
-- `bun run --cwd apps/web clsc` compiles once.
-- `bun run --cwd apps/web build` compiles before it builds the app, and fails if any Script has an error.
+`crpg publish <world> --dry-run` compiles every Script of the World and prints the errors without uploading anything. A real Publish runs the same compile and stops on the first error.
 
 Every error shows the file, line and column, then the source line, a caret under the problem, and a message:
 
@@ -533,7 +509,6 @@ clsc: compile failed
 
 - **Duplicate handlers.** A duplicate handler prints one error at each of the two handlers.
 - **Warnings.** A warning's message starts with `warning:`. Warnings don't fail the compile.
-- **Seed errors.** The compiler also checks the Flag seed (`apps/web/src/fixtures/student-state.json`). A stored Flag whose value doesn't match its declared type fails the compile, and the error points at the Flag's declaration.
 - **Fix parse errors first.** These three kinds of error are parse errors:
   - a syntax error, whose message starts with `expected …` and is often a missing `;` or `}`
   - an unknown escape

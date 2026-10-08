@@ -10,7 +10,7 @@ Symlink it into VS Code's extensions folder once, from the repo root, then run `
 ln -s "$PWD/packages/clsc/vscode" ~/.vscode/extensions/local.clsc-0.0.1
 ```
 
-Every window then highlights `.clsc`. Grammar edits apply on the next reload, since the folder is linked, not copied. To try a change without touching your main window, press F5 (`Run clsc extension`) instead: a second window opens on `apps/web/src/scripts` with the working copy loaded.
+Every window then highlights `.clsc`. Grammar edits apply on the next reload, since the folder is linked, not copied. To try a change without touching your main window, press F5 (`Run clsc extension`) instead: a second window opens on `assets/worlds` (your local content folder) with the working copy loaded.
 
 ## Keep the keywords in sync
 

@@ -40,7 +40,7 @@ Atomic: group by logical concern (a new package, a new app, a docs change are se
 
 ## Assets
 
-`assets/` (Tiled maps + tileset images) is gitignored — licensed third-party content. `apps/web/public/assets/{maps,tilesets}` are symlinks into it, not copies, so Tiled edits show up without a manual re-sync.
+`assets/` (the maintainer's content folder: `library/` + `worlds/<id>/`) is gitignored — licensed third-party content. It reaches the game only through `crpg publish` to the Game Service; `apps/web` holds no copy of it.
 
 ## Agent skills
 

@@ -35,7 +35,7 @@ An Entity with a non-blank `characterId` renders as an animated character (an NP
 
 Open `View → Custom Types Editor`:
 
-1. Add an **Enum** `CharacterId` (storage type **String**, "Values as flags" off) with one value per `characterId` in `apps/web/src/game/catalogs.ts` (e.g. `fluffy`, `temmie`). Add a value here by hand whenever a new character is added to the catalog — it isn't synced automatically.
+1. Add an **Enum** `CharacterId` (storage type **String**, "Values as flags" off) with one value per Character in the content folder's `library/characters/` (e.g. `fluffy`, `temmie`). Add a value here by hand whenever a new Character is added — it isn't synced automatically.
 2. Add an **Enum** `Facing` (String, not flags) with the values `down`, `left`, `right`, `up`.
 3. Select the `Entity` class and add three members:
    - `entityId` — **string**, no default.
