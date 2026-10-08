@@ -1,15 +1,19 @@
 pub mod bytecode;
 mod check;
+mod facts;
 pub mod opcodes;
 mod parse;
 mod seed;
 mod strings;
+#[cfg(target_arch = "wasm32")]
+mod wasm;
 
 use parse::{Item, ParseError};
 use pest::error::{ErrorVariant, LineColLocation};
 use pest::Span;
 use std::path::{Path, PathBuf};
 
+pub use facts::Facts;
 pub use seed::FlagSeed;
 pub use strings::StringTable;
 
@@ -70,6 +74,10 @@ pub struct Compiled {
 
     // Sorted by path, then line.
     pub diagnostics: Vec<Diagnostic>,
+
+    // False when a file didn't parse, which leaves `facts` empty.
+    pub parsed: bool,
+    pub facts: Facts,
 }
 
 struct SourceFile<'s> {
@@ -112,14 +120,16 @@ pub fn compile_sources(root: &Path, sources: &[(String, String)], host: &HostDat
     }
 
     // Names can't be resolved against a file that didn't parse.
-    if diagnostics.is_empty() {
+    let parsed = diagnostics.is_empty();
+    if parsed {
         diagnostics = check::check(&files, host);
     }
+    let facts = if parsed { Facts::collect(&files) } else { Facts::default() };
 
     diagnostics.sort_by(|a, b| (&a.path, a.line).cmp(&(&b.path, b.line)));
     let failed = diagnostics.iter().any(|diagnostic| diagnostic.severity == Severity::Error);
 
-    Compiled { bytecode: (!failed).then(|| bytecode::encode(&files)), diagnostics }
+    Compiled { bytecode: (!failed).then(|| bytecode::encode(&files)), diagnostics, parsed, facts }
 }
 
 fn module_name(relative: &Path) -> String {
