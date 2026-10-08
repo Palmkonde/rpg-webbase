@@ -1,4 +1,1 @@
-enum Expression { Neutral, Happy, Sad, Angry, Surprised }
-
-command move(who: Mover, to: Tile) in cutscene waits;
-command follow(follower: Mover, leader: Mover) in cutscene;
+../../../../packages/clsc/prelude.clsc
