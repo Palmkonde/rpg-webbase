@@ -9,6 +9,9 @@ interface Mention {
 
 export interface ScriptFacts {
   speakers: string[]
+  movers: string[]
+  flags: string[]
+  onceFlags: string[]
   characters: Mention[]
   cgs: Mention[]
   portraits: { speaker: string; expression: string; path: string; line: number }[]

@@ -8,6 +8,9 @@ use serde_json::{json, Value};
 pub struct Facts {
     // Every Speaker and every Mover, since a Mover can speak.
     speakers: Vec<String>,
+    movers: Vec<String>,
+    flags: Vec<String>,
+    once_flags: Vec<String>,
     characters: Vec<Mention>,
     cgs: Vec<Mention>,
     portraits: Vec<PortraitUse>,
@@ -49,9 +52,17 @@ impl Facts {
         for file in files {
             for item in &file.items {
                 match item {
-                    Item::Cast { kind: CastKind::Speaker | CastKind::Mover, name } => facts.speakers.push(name.as_str().to_owned()),
+                    Item::Cast { kind: CastKind::Speaker, name } => facts.speakers.push(name.as_str().to_owned()),
+                    Item::Cast { kind: CastKind::Mover, name } => {
+                        facts.speakers.push(name.as_str().to_owned());
+                        facts.movers.push(name.as_str().to_owned());
+                    }
+                    Item::Flag { name, .. } => facts.flags.push(name.as_str().to_owned()),
                     Item::Cast { kind: CastKind::Character, name } => facts.characters.push(mention(*name, &file.path)),
                     Item::Block(block) => {
+                        if let Some(once) = &block.once {
+                            facts.once_flags.push(once.flag.as_str().to_owned());
+                        }
                         match block.kind {
                             BlockKind::Played(Playable::Cg) => facts.cgs.push(mention(block.name, &file.path)),
                             BlockKind::Played(Playable::Cutscene) => {}
@@ -100,6 +111,9 @@ impl Facts {
         let mentions = |mentions: &[Mention]| -> Vec<Value> { mentions.iter().map(|m| json!({ "name": m.name, "path": m.path, "line": m.line })).collect() };
         json!({
             "speakers": self.speakers,
+            "movers": self.movers,
+            "flags": self.flags,
+            "onceFlags": self.once_flags,
             "characters": mentions(&self.characters),
             "cgs": mentions(&self.cgs),
             "portraits": self.portraits.iter().map(|p| json!({ "speaker": p.speaker, "expression": p.expression, "path": p.path, "line": p.line })).collect::<Vec<_>>(),

@@ -495,6 +495,8 @@ on interact(OldWell) with Campfire {
 
 `crpg publish <world> --dry-run` compiles every Script of the World and prints the errors without uploading anything. A real Publish runs the same compile and stops on the first error.
 
+With `GAME_SERVICE_URL` and `PUBLISH_KEY` set, both also list the Flags, once-only Cutscene Flags, Companion movers and Zones the Publish adds or removes against the live World Version, and the movers that no Map has an Entity for. Students' stored Flags are never migrated, so a renamed Flag, once-only Cutscene Flag or Zone starts over: it shows as one removal and one addition. A Publish that adds or removes any of them asks `Publish anyway? [y/N]` first; `--yes` skips the question.
+
 Every error shows the file, line and column, then the source line, a caret under the problem, and a message:
 
 ```text

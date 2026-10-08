@@ -97,12 +97,17 @@ export interface CrpgOptions {
 
   // Set over the test process's own environment.
   env?: Record<string, string>
+
+  // What the command reads from stdin; a prompt gets end-of-input, which answers no, when this is left out.
+  input?: string
 }
 
-export async function crpg(cwd: string, args: string[], { runtime = 'node', env = {} }: CrpgOptions = {}): Promise<Run> {
+export async function crpg(cwd: string, args: string[], { runtime = 'node', env = {}, input = '' }: CrpgOptions = {}): Promise<Run> {
   try {
     // oxlint-disable-next-line node/no-process-env -- the command reads GAME_SERVICE_URL and PUBLISH_KEY from it, so a test sets them over a copy.
-    const { stdout, stderr } = await execFileAsync(runtime, [CLI, ...args], { cwd, encoding: 'utf8', env: { ...process.env, ...env } })
+    const running = execFileAsync(runtime, [CLI, ...args], { cwd, encoding: 'utf8', env: { ...process.env, ...env } })
+    running.child.stdin?.end(input)
+    const { stdout, stderr } = await running
     return { code: 0, output: stdout + stderr }
   } catch (error) {
     const failed = error as { code?: number; stdout?: string; stderr?: string }
@@ -110,9 +115,9 @@ export async function crpg(cwd: string, args: string[], { runtime = 'node', env 
   }
 }
 
-// The baseline World with `changes`, checked with `publish demo --dry-run`.
+// The baseline World with `changes`, checked with `publish demo --dry-run` and no Game Service to compare with.
 export async function check(changes: Files = {}): Promise<Run> {
-  return crpg(await content(world(changes)), ['publish', 'demo', '--dry-run'])
+  return crpg(await content(world(changes)), ['publish', 'demo', '--dry-run'], { env: { GAME_SERVICE_URL: '', PUBLISH_KEY: '' } })
 }
 
 // Every check is an error: the exit code is 1 and the output names the file and the reason.
