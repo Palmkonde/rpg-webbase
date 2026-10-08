@@ -1,12 +1,10 @@
 'use client'
 
 import { PlatformErrorScreen, PlatformNameContext } from './platform-error-screen.tsx'
-import { locale, worldContent } from './world-content.ts'
-import { useCallback, useMemo } from 'react'
 import type { GameError } from '@codeleagues-rpg-engine/client'
 import { Game as GameView } from '@codeleagues-rpg-engine/client/react'
 import type { SlotComponents } from '@codeleagues-rpg-engine/client/react'
-import type { WorldConfig } from '@codeleagues-rpg-engine/engine-core'
+import { useCallback } from 'react'
 
 const GAME_STYLE = { width: '100vw', height: '100vh' }
 
@@ -35,8 +33,7 @@ function onError(error: GameError): void {
 }
 
 // A client component: a Server Component can't hand `getToken`, `onError` or the overrides down as props.
-export function Game({ serviceUrl, worldId, studentId, worldConfig }: { serviceUrl: string; worldId: string; studentId: string; worldConfig: WorldConfig }): React.ReactElement {
-  const world = useMemo(() => ({ ...worldContent, worldConfig }), [worldConfig])
+export function Game({ serviceUrl, worldId, studentId }: { serviceUrl: string; worldId: string; studentId: string }): React.ReactElement {
   const getToken = useCallback(() => requestToken(studentId), [studentId])
 
   return (
@@ -45,10 +42,8 @@ export function Game({ serviceUrl, worldId, studentId, worldConfig }: { serviceU
         <GameView
           components={COMPONENTS}
           getToken={getToken}
-          locale={locale}
           onError={onError}
           serviceUrl={serviceUrl}
-          world={world}
           worldId={worldId}
         />
       </div>

@@ -30,7 +30,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@codeleagues-rpg-engine/client": "*",
-        "@codeleagues-rpg-engine/engine-core": "*",
         "jose": "^6.2.12",
         "next": "^16.3.8",
         "react": "^19.0.0",
@@ -40,7 +39,6 @@
         "@types/node": "^26.6.4",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
-        "concurrently": "^10.0.5",
         "typescript": "^7.0.2",
       },
     },
