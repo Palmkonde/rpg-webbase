@@ -36,6 +36,7 @@ Atomic: group by logical concern (a new package, a new app, a docs change are se
 - Hard-to-reverse architectural decisions → `docs/adr/`, sequentially numbered
 - Domain vocabulary → `GLOSSARY.md`, kept a pure glossary — no implementation detail
 - Ticket completion → the GitHub issue closes when its PR merges (`Closes #NN` in the PR body or a commit message); no separate ticket-status commit, and acceptance-criteria checkboxes aren't ticked live — the issue's open/closed state is the "is this finished" signal
+- Architecture, flow and domain diagrams → `docs/mermaid/`, one fenced `mermaid` block per file. These are derived views: on any conflict the ADRs, `GLOSSARY.md`, `docs/spec/spec.md` and `apps/game-service/src/schema.ts` win, so update the matching diagram when one of them changes
 - Human-facing how-to reference (e.g. "what shape should this asset be") → `docs/guides/`, one topic per file — this is *how*, not *why* (that's an ADR) or *what's confirmed* (that's the spec)
 
 ## Assets
