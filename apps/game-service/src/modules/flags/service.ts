@@ -1,8 +1,8 @@
 import { TransactionRollbackError, and, eq, sql } from 'drizzle-orm'
 import type { Database } from '../../database.ts'
 import type { Flags } from './model.ts'
-import type { SQL } from 'drizzle-orm'
 import { flags } from '../../schema.ts'
+import { toJsonb } from '../../jsonb.ts'
 
 const MAX_KEYS = 200
 const MAX_KEY_LENGTH = 128
@@ -22,11 +22,6 @@ function isOverLimit(document: Flags): boolean {
   return keys.length > MAX_KEYS
     || keys.some((key) => key.length > MAX_KEY_LENGTH)
     || new TextEncoder().encode(JSON.stringify(document)).byteLength > MAX_DOCUMENT_BYTES
-}
-
-// Bound as text first: Bun JSON-encodes a string bound straight into a jsonb slot, storing a JSON string that `||` would append to as an array.
-function toJsonb(document: Flags): SQL {
-  return sql`${JSON.stringify(document)}::text::jsonb`
 }
 
 export async function readFlags(db: Database, { worldId, studentId }: StudentInWorld): Promise<Flags> {

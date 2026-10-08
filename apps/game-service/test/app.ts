@@ -1,8 +1,12 @@
 import type { Database } from '../src/database.ts'
+import { S3Client } from 'bun'
 import { SignJWT } from 'jose'
 import { createApp } from '../src/app.ts'
+import { services } from './services.ts'
 
 export const JWT_SECRET = 'test-jwt-secret'
+
+export const PUBLISH_KEY = 'test-publish-key'
 
 export const PLATFORM_ORIGIN = 'http://platform.test'
 
@@ -11,8 +15,11 @@ export const NO_DATABASE_URL = 'postgres://game:game@127.0.0.1:1/game'
 
 const AUDIENCE = 'game-service'
 
+// Where the bucket is not needed (no services), an unreachable one stands in.
+const UNREACHABLE_BUCKET = { endpoint: 'http://127.0.0.1:1', bucket: 'game', accessKeyId: 'x', secretAccessKey: 'x', region: 'us-east-1' }
+
 export function createTestApp(db: Database): ReturnType<typeof createApp> {
-  return createApp({ db, jwtSecret: JWT_SECRET, corsOrigins: [PLATFORM_ORIGIN] })
+  return createApp({ db, jwtSecret: JWT_SECRET, corsOrigins: [PLATFORM_ORIGIN], publishKey: PUBLISH_KEY, bucket: new S3Client(services?.s3 ?? UNREACHABLE_BUCKET), blobPrefix: `test-${crypto.randomUUID()}/` })
 }
 
 export interface TokenClaims {

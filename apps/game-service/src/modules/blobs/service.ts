@@ -1,0 +1,43 @@
+import { CryptoHasher } from 'bun'
+import type { S3Client } from 'bun'
+
+// 64 MiB. A file is held in memory until its hash is known, so this is also the most a request can cost.
+// Buffered, because the S3 subset every provider shares can't retract a streamed upload; stage under a temporary key if World art outgrows the limit.
+const MAX_BLOB_BYTES = 67_108_864
+
+// Where files live in the bucket: `blobs/` (adr/0034), or another prefix when tests share one bucket.
+export interface BlobStore {
+  bucket: S3Client
+  prefix: string
+}
+
+export const DEFAULT_PREFIX = 'blobs/'
+
+export async function missingKeys({ bucket, prefix }: BlobStore, keys: string[]): Promise<string[]> {
+  const unique = [...new Set(keys)]
+  const present = await Promise.all(unique.map((key) => bucket.exists(`${prefix}${key}`)))
+  return unique.filter((_, index) => !present[index])
+}
+
+// The bytes of `body` once their hash is known; `undefined` when they are over the limit.
+async function readHashed(body: ReadableStream<Uint8Array> | null): Promise<{ bytes: Buffer; sha256: string } | undefined> {
+  const hasher = new CryptoHasher('sha256')
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for await (const chunk of body ?? []) {
+    size += chunk.byteLength
+    if (size > MAX_BLOB_BYTES) {return undefined}
+    hasher.update(chunk)
+    chunks.push(chunk)
+  }
+  return { bytes: Buffer.concat(chunks), sha256: hasher.digest('hex') }
+}
+
+// A mismatch is refused before anything is written, so a key in the bucket always holds the bytes that hash to it.
+export async function storeBlob({ bucket, prefix }: BlobStore, key: string, body: ReadableStream<Uint8Array> | null): Promise<'stored' | 'hashMismatch' | 'tooLarge'> {
+  const received = await readHashed(body)
+  if (received === undefined) {return 'tooLarge'}
+  if (received.sha256 !== key.slice(0, key.indexOf('.'))) {return 'hashMismatch'}
+  await bucket.write(`${prefix}${key}`, received.bytes)
+  return 'stored'
+}
