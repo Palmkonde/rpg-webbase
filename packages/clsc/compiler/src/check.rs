@@ -1,7 +1,6 @@
-use crate::bytecode::{companion_flag, DEFAULT_EXPRESSION, PARAM_TYPES};
+use crate::bytecode::{DEFAULT_EXPRESSION, PARAM_TYPES};
 use crate::parse::{Argument, BinaryOp, Block, BlockKind, CastKind, Command, Expr, ExprKind, Item, Once, Playable, Statement, Text};
-use crate::seed::Stored;
-use crate::{Diagnostic, FlagSeed, HostData, SourceFile, StringTable};
+use crate::{Diagnostic, HostData, SourceFile, StringTable};
 use pest::Span;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -92,9 +91,6 @@ pub fn check(files: &[SourceFile<'_>], host: &HostData) -> Vec<Diagnostic> {
                 Item::Cast { .. } | Item::Enum { .. } => {}
             }
         }
-    }
-    if let Some(seed) = &host.seed {
-        check_seed(files, seed, &mut diagnostics);
     }
     diagnostics
 }
@@ -198,25 +194,6 @@ fn check_command_declaration(scope: &Scope<'_>, command: &Command<'_>, diagnosti
         if !PARAM_TYPES.contains(&param.ty.as_str()) {
             let message = format!("unknown parameter type `{}` (expected {})", param.ty.as_str(), PARAM_TYPES.join(" | "));
             diagnostics.push(Diagnostic::error(scope.path, param.ty, message));
-        }
-    }
-}
-
-/// The seed is the Flags a Student starts with, so a wrong type there would abort every run at `start()`.
-/// A Companion Flag holds a Character, or the Host's `false` for `none` (`adr/0028`).
-fn check_seed(files: &[SourceFile<'_>], seed: &FlagSeed, diagnostics: &mut Vec<Diagnostic>) {
-    for file in files {
-        for item in &file.items {
-            let (flag, ty, span) = match item {
-                Item::Flag { name, .. } | Item::Block(Block { once: Some(Once { flag: name, .. }), .. }) => (name.as_str().to_owned(), Type::Bool, *name),
-                Item::Cast { kind: CastKind::Mover, name } => (companion_flag(name.as_str()), Type::Character, *name),
-                _ => continue,
-            };
-            let Some(stored) = seed.get(&flag) else { continue };
-            if !matches!((ty, stored), (Type::Bool, Stored::Bool(_)) | (Type::Character, Stored::String | Stored::Bool(false))) {
-                let message = format!("the Flag seed stores `{flag}` as {}, but it's declared `{}`", stored.describe(), ty.name());
-                diagnostics.push(Diagnostic::error(&file.path, span, message));
-            }
         }
     }
 }

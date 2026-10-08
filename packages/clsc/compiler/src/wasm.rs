@@ -76,7 +76,7 @@ fn compile_request(request: &[u8]) -> Result<(Value, Vec<u8>), String> {
         None => None,
     };
 
-    let compiled = compile_sources(Path::new(root), &sources, &HostData { seed: None, strings });
+    let compiled = compile_sources(Path::new(root), &sources, &HostData { strings });
     let diagnostics: Vec<Value> = compiled
         .diagnostics
         .iter()

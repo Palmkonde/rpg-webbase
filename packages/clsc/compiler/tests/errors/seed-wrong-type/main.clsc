@@ -1,3 +1,0 @@
-flag talked: bool = false; // error: the Flag seed stores `talked` as a string, but it's declared `bool`
-flag lit: bool = false;
-cutscene story {} set seen_story = true; // error: the Flag seed stores `seen_story` as a string, but it's declared `bool`
