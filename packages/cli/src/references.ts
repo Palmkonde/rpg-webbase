@@ -1,10 +1,10 @@
 import type { Context, Problem } from './problem.ts'
 import { errorAt, warningAt } from './problem.ts'
-import { extensionOf, filesUnder, isFile, isRaw } from './files.ts'
+import { extensionOf, filesUnder, isFile, isRaw, readJsonObject } from './files.ts'
 import type { Maps } from './maps.ts'
 import type { ScriptFacts } from './clsc.ts'
 
-const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif'])
+export const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif'])
 
 export interface CharacterRef {
   id: string
@@ -15,14 +15,46 @@ export interface CharacterRef {
   who: string
 }
 
+// The frame size and vertical offset of a Character's sheet, from `character.json` beside it.
+export interface CharacterSheet {
+  frameWidth: number
+  frameHeight: number
+  offsetY: number
+}
+
+function isWholeNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0
+}
+
+export async function readCharacterSheet(root: string, id: string): Promise<{ sheet: CharacterSheet } | { reason: string }> {
+  const read = await readJsonObject<Partial<Record<keyof CharacterSheet, unknown>>>(`${root}/library/characters/${id}/character.json`)
+  if ('reason' in read) {
+    return read
+  }
+  const { frameWidth, frameHeight, offsetY = 0 } = read.value
+  if (!isWholeNumber(frameWidth) || !isWholeNumber(frameHeight)) {
+    return { reason: 'needs a whole-number "frameWidth" and "frameHeight" in pixels' }
+  }
+  return typeof offsetY === 'number' && Number.isFinite(offsetY) ? { sheet: { frameWidth, frameHeight, offsetY } } : { reason: '"offsetY" must be a number' }
+}
+
+async function hasSheet(context: Context, id: string): Promise<boolean> {
+  return /^[a-z0-9_-]+$/u.test(id) && (await isFile(`${context.root}/library/characters/${id}/${id}.png`))
+}
+
+async function sheetProblem(context: Context, id: string): Promise<Problem[]> {
+  const sheet = await readCharacterSheet(context.root, id)
+  return 'reason' in sheet ? [errorAt(`library/characters/${id}/character.json`, sheet.reason)] : []
+}
+
 export async function characterProblems(context: Context, refs: CharacterRef[]): Promise<Problem[]> {
-  const checked = await Promise.all(
-    refs.map(async ({ id, file, line, who }) => {
-      const found = /^[a-z0-9_-]+$/u.test(id) && (await isFile(`${context.root}/library/characters/${id}/${id}.png`))
-      return found ? [] : [errorAt(file, `${who} Character "${id}", but library/characters/${id}/${id}.png does not exist`, line)]
-    }),
-  )
-  return checked.flat()
+  const found = await Promise.all(refs.map(async (ref) => ({ ref, found: await hasSheet(context, ref.id) })))
+  const missing = found
+    .filter(({ found: isFound }) => !isFound)
+    .map(({ ref: { id, file, line, who } }) => errorAt(file, `${who} Character "${id}", but library/characters/${id}/${id}.png does not exist`, line))
+  const present = [...new Set(found.filter(({ found: isFound }) => isFound).map(({ ref }) => ref.id))]
+  const unreadable = await Promise.all(present.map((id) => sheetProblem(context, id)))
+  return [...missing, ...unreadable.flat()]
 }
 
 // A declared CG is a CG the World needs, so it must hold at least one frame.

@@ -30,3 +30,29 @@ test('a CG a Script declares that has no frames is refused', async () => {
 test('a raw.* file is not a CG frame', async () => {
   expectError(await check({ 'worlds/demo/cg/intro/1.png': undefined, 'worlds/demo/cg/intro/raw.png': X }), 'cg/intro')
 })
+
+const HERO_JSON = 'library/characters/hero/character.json'
+
+test('a Character with no character.json is refused', async () => {
+  expectError(await check({ [HERO_JSON]: undefined }), HERO_JSON, 'does not exist')
+})
+
+test('a character.json without a frame height is refused', async () => {
+  expectError(await check({ [HERO_JSON]: JSON.stringify({ frameWidth: 16 }) }), HERO_JSON, 'frameHeight')
+})
+
+test('a character.json with a fractional frame width is refused', async () => {
+  expectError(await check({ [HERO_JSON]: JSON.stringify({ frameWidth: 1.5, frameHeight: 20 }) }), HERO_JSON, 'frameWidth')
+})
+
+test('a character.json with an offsetY that is not a number is refused', async () => {
+  expectError(await check({ [HERO_JSON]: JSON.stringify({ frameWidth: 16, frameHeight: 20, offsetY: 'up' }) }), HERO_JSON, 'offsetY')
+})
+
+test('a character.json that is not JSON is refused', async () => {
+  expectError(await check({ [HERO_JSON]: 'nope' }), HERO_JSON, 'not valid JSON')
+})
+
+test('a character.json may leave offsetY out', async () => {
+  expectPass(await check({ [HERO_JSON]: JSON.stringify({ frameWidth: 16, frameHeight: 20 }) }))
+})

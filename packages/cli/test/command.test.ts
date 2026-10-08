@@ -11,7 +11,7 @@ test('a valid World passes and says nothing was uploaded', async () => {
 
 test('the command runs on Bun as well as Node', async () => {
   const root = await content(world())
-  expectPass(await crpg(root, ['publish', 'demo', '--dry-run'], 'bun'))
+  expectPass(await crpg(root, ['publish', 'demo', '--dry-run'], { runtime: 'bun' }))
 })
 
 test('running outside a content root is refused', async () => {
@@ -24,13 +24,6 @@ test('running outside a content root is refused', async () => {
 test('a World with no folder is refused', async () => {
   const root = await content(world())
   expectError(await crpg(root, ['publish', 'missing', '--dry-run']), 'worlds/missing')
-})
-
-test('publishing without --dry-run is refused', async () => {
-  const root = await content(world())
-  const run = await crpg(root, ['publish', 'demo'])
-  assert.notEqual(run.code, 0)
-  assert.match(run.output, /--dry-run/u)
 })
 
 test('files the layout does not recognise are ignored', async () => {

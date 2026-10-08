@@ -28,13 +28,22 @@ function fatalProblem(fatal: string, stringsFile: string, scripts: string): Prob
   return fatal.startsWith(prefix) ? errorAt(stringsFile, fatal.slice(prefix.length)) : errorAt(scripts, fatal)
 }
 
-async function scriptChecks(context: Context, maps: Maps): Promise<{ problems: Problem[]; characters: CharacterRef[] }> {
+interface ScriptChecks {
+  problems: Problem[]
+  characters: CharacterRef[]
+
+  // The CGs the Scripts declare, and the bytecode of every Script, for Publish.
+  cgs: string[]
+  bytecode: Uint8Array | undefined
+}
+
+async function scriptChecks(context: Context, maps: Maps): Promise<ScriptChecks> {
   const scripts = `worlds/${context.worldId}/scripts`
   const stringsFile = `worlds/${context.worldId}/strings.json`
   const { sources, problems } = await readSources(context, scripts)
   const compiled = await compileScripts(scripts, sources, await readStrings(context, stringsFile))
   if ('fatal' in compiled) {
-    return { problems: [...problems, fatalProblem(compiled.fatal, stringsFile, scripts)], characters: [] }
+    return { problems: [...problems, fatalProblem(compiled.fatal, stringsFile, scripts)], characters: [], cgs: [], bytecode: undefined }
   }
 
   const facts = compiled.parsed ? compiled.facts : undefined
@@ -42,13 +51,25 @@ async function scriptChecks(context: Context, maps: Maps): Promise<{ problems: P
   return {
     problems: [...problems, ...compiled.problems, ...references, ...(await portraitProblems(context, facts))],
     characters: (facts?.characters ?? []).map(({ name, path, line }) => ({ id: name, file: path, line, who: 'declares' })),
+    cgs: [...new Set((facts?.cgs ?? []).map(({ name }) => name))],
+    bytecode: compiled.bytecode,
   }
 }
 
-export async function checkWorld(root: string, worldId: string): Promise<Problem[]> {
+// What the checks learned about a World besides its problems: what Publish needs to bundle it.
+export interface Checked {
+  problems: Problem[]
+  maps: Maps
+  characterIds: string[]
+  cgs: string[]
+  bytecode: Uint8Array | undefined
+}
+
+
+export async function checkWorld(root: string, worldId: string): Promise<Checked> {
   const context = { root, worldId }
   if (!/^[a-z0-9_-]+$/u.test(worldId) || !(await isDirectory(`${root}/worlds/${worldId}`))) {
-    return [errorAt(`worlds/${worldId}`, 'is not a World folder (ids are lower-case a-z, 0-9, - and _)')]
+    return { problems: [errorAt(`worlds/${worldId}`, 'is not a World folder (ids are lower-case a-z, 0-9, - and _)')], maps: { byId: new Map(), complete: false }, characterIds: [], cgs: [], bytecode: undefined }
   }
 
   const { maps, problems: mapProblems } = await checkMaps(context)
@@ -57,6 +78,13 @@ export async function checkWorld(root: string, worldId: string): Promise<Problem
   const onMaps = [...maps.byId.values()].flatMap((map) =>
     map.characters.map((id) => ({ id, file: `worlds/${worldId}/maps/${map.id}.tmj`, who: `Map "${map.id}" has an Entity of` })),
   )
-  const characters = await characterProblems(context, [...onMaps, ...worldJson.characters, ...scripts.characters])
-  return [...mapProblems, ...worldJson.problems, ...scripts.problems, ...characters]
+  const refs = [...onMaps, ...worldJson.characters, ...scripts.characters]
+  const characters = await characterProblems(context, refs)
+  return {
+    problems: [...mapProblems, ...worldJson.problems, ...scripts.problems, ...characters],
+    maps,
+    characterIds: [...new Set(refs.map(({ id }) => id))],
+    cgs: scripts.cgs,
+    bytecode: scripts.bytecode,
+  }
 }

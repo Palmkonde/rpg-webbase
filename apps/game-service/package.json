@@ -5,7 +5,8 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    "./app": "./src/app.ts"
+    "./app": "./src/app.ts",
+    "./database": "./src/database.ts"
   },
   "scripts": {
     "dev": "bun --env-file=../../dev.env --watch src/main.ts serve",

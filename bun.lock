@@ -50,7 +50,11 @@
       "bin": {
         "crpg": "./dist/cli.js",
       },
+      "dependencies": {
+        "@elysiajs/eden": "^1.4.9",
+      },
       "devDependencies": {
+        "@codeleagues-rpg-engine/game-service": "*",
         "@types/node": "^26.6.4",
         "tsdown": "^0.23.0",
         "typescript": "^7.0.2",

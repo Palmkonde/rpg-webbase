@@ -20,13 +20,13 @@ interface TiledLayer {
   objects?: TiledObject[]
 }
 
-interface TiledTileset {
+export interface TiledTileset {
   source?: string
   image?: string
   tiles?: { image?: string }[]
 }
 
-interface TiledMap {
+export interface TiledMap {
   width: number
   height: number
   tilewidth: number
@@ -100,7 +100,7 @@ function after(segments: string[], anchor: string[]): string | undefined {
  * Where a tileset image path points inside the content root, by anchor (adr/0035): `library/tilesets/` is the Asset Library, any other
  * `tilesets/` is the World's own. Everything before the anchor is ignored.
  */
-function resolveTilesetImage(image: string, worldId: string): string | undefined {
+export function resolveTilesetImage(image: string, worldId: string): string | undefined {
   const segments = image.replaceAll('\\', '/').split('/')
   const library = after(segments, ['library', 'tilesets'])
   if (library !== undefined) {
