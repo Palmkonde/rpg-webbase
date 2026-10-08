@@ -10,9 +10,9 @@ import { tmpdir } from 'node:os'
 const CLI = fileURLToPath(new URL('../dist/cli.js', import.meta.url))
 
 // A 1x1 transparent PNG: the content checks look at which files exist, never at pixels.
-const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
+export const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
 
-type Files = Record<string, string | Buffer | undefined>
+export type Files = Record<string, string | Buffer | undefined>
 
 // `undefined` removes a file of the baseline, so a test states only what it changes.
 export function world(changes: Files = {}): Files {
@@ -51,6 +51,7 @@ on enter(Gate) with Narrator {
 `
   return {
     'library/characters/hero/hero.png': PNG,
+    'library/characters/hero/character.json': JSON.stringify({ frameWidth: 16, frameHeight: 20, offsetY: -8 }),
     'library/tilesets/grass.png': PNG,
     'worlds/demo/world.json': JSON.stringify({ startMap: 'start', spawn: { x: 1, y: 1 }, player: 'hero' }),
     'worlds/demo/maps/start.tmj': JSON.stringify(map),
@@ -91,9 +92,17 @@ export interface Run {
 
 const execFileAsync = promisify(execFile)
 
-export async function crpg(cwd: string, args: string[], runtime: 'node' | 'bun' = 'node'): Promise<Run> {
+export interface CrpgOptions {
+  runtime?: 'node' | 'bun'
+
+  // Set over the test process's own environment.
+  env?: Record<string, string>
+}
+
+export async function crpg(cwd: string, args: string[], { runtime = 'node', env = {} }: CrpgOptions = {}): Promise<Run> {
   try {
-    const { stdout, stderr } = await execFileAsync(runtime, [CLI, ...args], { cwd, encoding: 'utf8' })
+    // oxlint-disable-next-line node/no-process-env -- the command reads GAME_SERVICE_URL and PUBLISH_KEY from it, so a test sets them over a copy.
+    const { stdout, stderr } = await execFileAsync(runtime, [CLI, ...args], { cwd, encoding: 'utf8', env: { ...process.env, ...env } })
     return { code: 0, output: stdout + stderr }
   } catch (error) {
     const failed = error as { code?: number; stdout?: string; stderr?: string }

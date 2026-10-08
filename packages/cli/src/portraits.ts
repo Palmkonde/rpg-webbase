@@ -6,13 +6,13 @@ import { errorAt } from './problem.ts'
 // The prelude's `enum Expression`, as the lower-case file names Portraits use (the prelude is bundled in the compiler, so the CLI can't read it).
 const EXPRESSIONS = new Set(['neutral', 'happy', 'sad', 'angry', 'surprised'])
 
-interface PortraitFile {
+export interface PortraitFile {
   speaker: string
   fileName: string
 }
 
 // Every `portraits/<Speaker>/<name>.png`; `raw.*` and other file types are not Portraits.
-async function portraitFiles(context: Context): Promise<PortraitFile[]> {
+export async function portraitFiles(context: Context): Promise<PortraitFile[]> {
   const folders = await entries(`${context.root}/worlds/${context.worldId}/portraits`)
   const speakers = folders.filter((entry) => entry.isDirectory())
   const found = await Promise.all(
