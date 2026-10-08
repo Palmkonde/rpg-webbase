@@ -1,0 +1,23 @@
+{
+  "name": "@codeleagues-rpg-engine/cli",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "crpg": "./dist/cli.js"
+  },
+  "files": ["dist"],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "cargo build --quiet --release --lib --target wasm32-unknown-unknown --manifest-path ../clsc/compiler/Cargo.toml && tsdown",
+    "test": "bun run build && bun test ./test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "tsdown": "^0.23.0",
+    "typescript": "^7.0.2"
+  }
+}
