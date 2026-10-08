@@ -18,8 +18,8 @@ const AUDIENCE = 'game-service'
 // Where the bucket is not needed (no services), an unreachable one stands in.
 const UNREACHABLE_BUCKET = { endpoint: 'http://127.0.0.1:1', bucket: 'game', accessKeyId: 'x', secretAccessKey: 'x', region: 'us-east-1' }
 
-export function createTestApp(db: Database): ReturnType<typeof createApp> {
-  return createApp({ db, jwtSecret: JWT_SECRET, corsOrigins: [PLATFORM_ORIGIN], publishKey: PUBLISH_KEY, bucket: new S3Client(services?.s3 ?? UNREACHABLE_BUCKET), blobPrefix: `test-${crypto.randomUUID()}/` })
+export function createTestApp(db: Database, assetBaseUrl?: string): ReturnType<typeof createApp> {
+  return createApp({ db, jwtSecret: JWT_SECRET, corsOrigins: [PLATFORM_ORIGIN], publishKey: PUBLISH_KEY, bucket: new S3Client(services?.s3 ?? UNREACHABLE_BUCKET), assetBaseUrl, blobPrefix: `test-${crypto.randomUUID()}/` })
 }
 
 export interface TokenClaims {

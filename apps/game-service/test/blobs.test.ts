@@ -1,4 +1,4 @@
-import { missing, newFile, upload } from './publish.ts'
+import { blob, missing, newFile, upload } from './publish.ts'
 import assert from 'node:assert/strict'
 import { skipWithoutServices } from './services.ts'
 import { test } from 'node:test'
@@ -7,6 +7,7 @@ const OK = 200
 const NO_CONTENT = 204
 const BAD_REQUEST = 400
 const UNAUTHORIZED = 401
+const NOT_FOUND = 404
 const UNPROCESSABLE = 422
 
 async function missingOf(keys: string[]): Promise<string[]> {
@@ -67,3 +68,22 @@ for (const [name, key] of [['no Publish key', false], ['the wrong Publish key', 
     assert.equal(response.status, UNAUTHORIZED)
   })
 }
+
+test('a file is streamed as a 200 with no token, cached forever, with its ETag and length', { skip: skipWithoutServices }, async () => {
+  const file = newFile()
+  await upload(file.key, file.body)
+
+  const response = await blob(file.key)
+
+  assert.equal(response.status, OK)
+  assert.equal(response.headers.get('cache-control'), 'public, max-age=31536000, immutable')
+  assert.equal(response.headers.get('content-length'), String(file.body.byteLength))
+  assert.ok(response.headers.get('etag'))
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), file.body)
+})
+
+test('a key the bucket does not hold is 404', { skip: skipWithoutServices }, async () => {
+  const response = await blob(newFile().key)
+
+  assert.equal(response.status, NOT_FOUND)
+})
