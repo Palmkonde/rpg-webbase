@@ -1,5 +1,6 @@
 import type { App } from '@codeleagues-rpg-engine/game-service/app'
 import type { Manifest } from './bundle.ts'
+import type { Summary } from './summary.ts'
 import { treaty } from '@elysiajs/eden'
 
 const UNAUTHORIZED = 401
@@ -16,11 +17,16 @@ export class PublishError extends Error {
 
 // The Game Service routes Publish calls, each with the shared Publish key (adr/0036); tests run the real service behind it.
 export interface PublishService {
-  // The id of the World Version live for `world`, or `undefined` for a World never Published.
-  liveVersion: (world: string) => Promise<string | undefined>
+  // The World Version live for `world` with the summary stored with it, or `undefined` for a World never Published.
+  live: (world: string) => Promise<LiveVersion | undefined>
   missing: (keys: string[]) => Promise<string[]>
   upload: (key: string, bytes: Buffer) => Promise<void>
-  commit: (world: string, manifest: Manifest, expectedLive: string | undefined) => Promise<string>
+  commit: (world: string, version: { manifest: Manifest; summary: Summary }, expectedLive: string | undefined) => Promise<string>
+}
+
+export interface LiveVersion {
+  id: string
+  summary: unknown
 }
 
 interface Reply {
@@ -57,9 +63,9 @@ export function connect(serviceUrl: string, publishKey: string): PublishService 
     return reply.data as Data
   }
   return {
-    async liveVersion(world) {
+    async live(world) {
       const reply = await api.worlds({ world }).versions.live.summary.get({ headers })
-      return reply.error?.status === NOT_FOUND ? undefined : expectData<{ id: string }>(reply, 'the live World Version').id
+      return reply.error?.status === NOT_FOUND ? undefined : expectData<LiveVersion>(reply, 'the live World Version')
     },
     async missing(keys) {
       const reply = await api.blobs.missing.post({ keys }, { headers })
@@ -68,8 +74,8 @@ export function connect(serviceUrl: string, publishKey: string): PublishService 
     async upload(key, bytes) {
       expectData(await putFile(serviceUrl, headers, { key, bytes }), key)
     },
-    async commit(world, manifest, expectedLive) {
-      const reply = await api.worlds({ world }).versions.post({ manifest, summary: {}, expectedLive }, { headers })
+    async commit(world, { manifest, summary }, expectedLive) {
+      const reply = await api.worlds({ world }).versions.post({ manifest, summary: { ...summary }, expectedLive }, { headers })
       return expectData<{ id: string }>(reply, 'the World Version').id
     },
   }

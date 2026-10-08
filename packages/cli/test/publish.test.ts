@@ -1,57 +1,20 @@
-import type { Files, Run } from './helpers.ts'
-import type { Meddling, Service } from './service.ts'
-import { PNG, content, crpg, mapWith, world } from './helpers.ts'
-import { skipWithoutServices, startService } from './service.ts'
-import type { Manifest } from '../src/bundle.ts'
+import { PNG, crpg, mapWith } from './helpers.ts'
+import { author, publish, publishNew, versionOf, withService } from './author.ts'
+import type { Meddling } from './service.ts'
+import type { Run } from './helpers.ts'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
+import { skipWithoutServices } from './service.ts'
 import { test } from 'node:test'
 import { writeFile } from 'node:fs/promises'
-
-interface Author {
-  id: string
-  root: string
-}
 
 function sha256(bytes: Buffer): string {
   return createHash('sha256').update(bytes).digest('hex')
 }
 
-// A baseline World under an id no other run has used, since World ids are permanent on a shared service.
-async function author(changes: Files = {}): Promise<Author> {
-  const id = `demo-${crypto.randomUUID()}`
-  const renamed = Object.entries(world(changes)).map(([file, body]) => [file.replace('worlds/demo/', `worlds/${id}/`), body])
-  return { id, root: await content(Object.fromEntries(renamed)) }
-}
-
-async function withService(meddling: Meddling, run: (service: Service) => Promise<void>): Promise<void> {
-  const service = await startService(meddling)
-  try {
-    await run(service)
-  } finally {
-    await service.close()
-  }
-}
-
-function publish(service: Service, { id, root }: Author, ...args: string[]): Promise<Run> {
-  return crpg(root, ['publish', id, ...args], { env: { GAME_SERVICE_URL: service.url, PUBLISH_KEY: service.publishKey } })
-}
-
 function uploadCount(run: Run): { uploaded: number; total: number } {
   const counts = /Uploaded (?<uploaded>\d+) of (?<total>\d+) files/u.exec(run.output)?.groups
   return { uploaded: Number(counts?.uploaded), total: Number(counts?.total) }
-}
-
-function versionOf(run: Run): string {
-  return /version (?<id>[0-9a-f-]{36})/u.exec(run.output)?.groups?.id ?? ''
-}
-
-// Publishes a new World and returns what the service made of it.
-async function publishNew(service: Service, changes: Files = {}): Promise<{ author: Author; run: Run; manifest: Manifest }> {
-  const who = await author(changes)
-  const run = await publish(service, who, '--new')
-  assert.equal(run.code, 0, run.output)
-  return { author: who, run, manifest: await service.manifestOf(versionOf(run)) }
 }
 
 test('a first Publish with --new puts the World Version live', { skip: skipWithoutServices }, async () => {

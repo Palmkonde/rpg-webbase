@@ -1,25 +1,29 @@
 #!/usr/bin/env node
 import { PublishError, connect } from './service.ts'
+import { publishWorld, reportAgainst } from './publish.ts'
 import type { Checked } from './world.ts'
 import type { Context } from './problem.ts'
 import type { PublishService } from './service.ts'
 import type { Published } from './publish.ts'
+import type { Report } from './summary.ts'
 import { checkWorld } from './world.ts'
+import { createInterface } from 'node:readline'
 import { formatProblem } from './problem.ts'
 import { isDirectory } from './files.ts'
-import { publishWorld } from './publish.ts'
+import { once } from 'node:events'
 
 const USAGE = `crpg: check and publish a World
 
-Usage: crpg publish <world> [--dry-run] [--new]
+Usage: crpg publish <world> [--dry-run] [--new] [--yes]
 
-  --dry-run  check the World and upload nothing
+  --dry-run  check the World, print what a Publish would change for Students, and upload nothing
   --new      create the World: a World's first Publish needs it, and no other does
+  --yes      go live without asking when the Publish adds or removes Flags, Zones or Companions
 
 Run it from the content root, the folder holding library/ and worlds/.
 Publishing reads GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its shared Publish key) from the environment.`
 
-const FLAGS = new Set(['--dry-run', '--new'])
+const FLAGS = new Set(['--dry-run', '--new', '--yes'])
 
 function fail(message: string, code = 2): number {
   process.stderr.write(`crpg: ${message}\n`)
@@ -39,12 +43,6 @@ function report(world: string, { problems }: Checked): { errors: number; summary
   return { errors, summary: `Checked World "${world}": ${plural(errors, 'error')}, ${plural(problems.length - errors, 'warning')}.` }
 }
 
-async function reportDryRun(world: string, root: string): Promise<number> {
-  const { errors, summary } = report(world, await checkWorld(root, world))
-  process.stdout.write(`${summary} Dry run: nothing was uploaded.\n`)
-  return errors === 0 ? 0 : 1
-}
-
 // The Game Service the environment names, or `undefined` while a setting is missing.
 function serviceFromEnvironment(): PublishService | undefined {
   // oxlint-disable-next-line node/no-process-env -- the one place the CLI reads its settings.
@@ -52,17 +50,27 @@ function serviceFromEnvironment(): PublishService | undefined {
   return serviceUrl && publishKey ? connect(serviceUrl, publishKey) : undefined
 }
 
-function describe(world: string, { version, uploaded, total }: Published): string {
-  return `Published World "${world}": version ${version} is live. Uploaded ${uploaded} of ${plural(total, 'file')}; the rest were already on the service.`
+// Only `y` or `yes` goes ahead: anything else, and a closed stdin, is a no.
+async function askToPublish(): Promise<boolean> {
+  process.stdout.write('Publish anyway? [y/N] ')
+  const lines = createInterface({ input: process.stdin })
+  const [answer] = await Promise.race([once(lines, 'line'), once(lines, 'close')]) as [string | undefined]
+  lines.close()
+  return /^y(?:es)?$/iu.test(answer?.trim() ?? '')
 }
 
-async function publishChecked(context: Context, isNew: boolean, checked: Checked): Promise<number> {
-  const service = serviceFromEnvironment()
-  if (service === undefined) {
-    return fail('publishing needs GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its Publish key) in the environment')
+function approver(yes: boolean): (report: Report) => Promise<boolean> {
+  return async ({ text, changed }) => {
+    process.stdout.write(`${text}\n`)
+    return !changed || yes || askToPublish()
   }
+}
+
+async function previewPublish(service: PublishService, world: string, checked: Checked): Promise<number> {
   try {
-    process.stdout.write(`${describe(context.worldId, await publishWorld(context, checked, { isNew, service }))}\n`)
+    const preview = reportAgainst(await service.live(world), checked)
+    const text = preview ? preview.text || 'The Publish changes nothing Students keep.' : 'A first Publish: nothing to compare with.'
+    process.stdout.write(`${text}\n`)
     return 0
   } catch (error) {
     if (error instanceof PublishError) {return fail(error.message, 1)}
@@ -70,7 +78,44 @@ async function publishChecked(context: Context, isNew: boolean, checked: Checked
   }
 }
 
-async function publish(world: string, root: string, isNew: boolean): Promise<number> {
+// Without service settings a dry run still checks the World, but has no live World Version to report against.
+async function reportDryRun(world: string, root: string): Promise<number> {
+  const checked = await checkWorld(root, world)
+  const { errors, summary } = report(world, checked)
+  process.stdout.write(`${summary} Dry run: nothing was uploaded.\n`)
+  const service = serviceFromEnvironment()
+  if (errors > 0) {return 1}
+  if (service === undefined) {
+    process.stdout.write('No GAME_SERVICE_URL and PUBLISH_KEY: the Pre-Publish report was skipped.\n')
+    return 0
+  }
+  return previewPublish(service, world, checked)
+}
+
+function describe(world: string, { version, uploaded, total }: Published): string {
+  return `Published World "${world}": version ${version} is live. Uploaded ${uploaded} of ${plural(total, 'file')}; the rest were already on the service.`
+}
+
+async function publishWithService(context: Context, checked: Checked, options: Parameters<typeof publishWorld>[2]): Promise<number> {
+  try {
+    const published = await publishWorld(context, checked, options)
+    process.stdout.write(`${describe(context.worldId, published)}\n`)
+    return 0
+  } catch (error) {
+    if (error instanceof PublishError) {return fail(error.message, 1)}
+    throw error
+  }
+}
+
+async function publishChecked(context: Context, options: { isNew: boolean; yes: boolean }, checked: Checked): Promise<number> {
+  const service = serviceFromEnvironment()
+  if (service === undefined) {
+    return fail('publishing needs GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its Publish key) in the environment')
+  }
+  return publishWithService(context, checked, { isNew: options.isNew, service, approve: approver(options.yes) })
+}
+
+async function publish(world: string, root: string, options: { isNew: boolean; yes: boolean }): Promise<number> {
   const checked = await checkWorld(root, world)
   const { errors, summary } = report(world, checked)
   process.stdout.write(`${summary}\n`)
@@ -78,7 +123,7 @@ async function publish(world: string, root: string, isNew: boolean): Promise<num
     process.stdout.write('Nothing was uploaded.\n')
     return 1
   }
-  return publishChecked({ root, worldId: world }, isNew, checked)
+  return publishChecked({ root, worldId: world }, options, checked)
 }
 
 async function inContentRoot(root: string): Promise<boolean> {
@@ -97,7 +142,7 @@ async function main(args: string[]): Promise<number> {
   if (!(await inContentRoot(process.cwd()))) {
     return fail(`${process.cwd()} is not a content root: run crpg in the folder that holds library/ and worlds/`)
   }
-  return flags.includes('--dry-run') ? reportDryRun(world, process.cwd()) : publish(world, process.cwd(), flags.includes('--new'))
+  return flags.includes('--dry-run') ? reportDryRun(world, process.cwd()) : publish(world, process.cwd(), { isNew: flags.includes('--new'), yes: flags.includes('--yes') })
 }
 
 // A bin script nothing `require`s, so the top-level `await` can't trip a loader.
