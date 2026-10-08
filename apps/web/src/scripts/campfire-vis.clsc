@@ -1,7 +1,0 @@
-on enter(CampFireVis) {
-    play(cutscene::campfire_story_step_into_zone);
-}
-
-cutscene campfire_story_step_into_zone with Narrator {
-    Narrator: "You step on the zone of unreturn.";
-}

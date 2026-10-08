@@ -1,16 +1,14 @@
-import type { CgArtRegistry } from '../src/cg.ts'
+import type { CgRegistry } from '../src/cg.ts'
 import assert from 'node:assert/strict'
-import { resolveCgArt } from '../src/cg.ts'
+import { resolveCg } from '../src/cg.ts'
 import { test } from 'node:test'
 
-const registry: CgArtRegistry = { 'intro-1': '/assets/cg/intro/1.png' }
+const registry: CgRegistry = { intro: [{ art: '/cg/intro/1.png', captionKey: 'cg.intro.1' }] }
 
-test('resolveCgArt returns the asset path for a registered frame id', () => {
-  const result = resolveCgArt('intro-1', registry)
-  assert.equal(result, '/assets/cg/intro/1.png')
+test('resolveCg returns the frames of a registered CG', () => {
+  assert.deepEqual(resolveCg('intro', registry), [{ art: '/cg/intro/1.png', captionKey: 'cg.intro.1' }])
 })
 
-test('resolveCgArt returns undefined for an unregistered frame id', () => {
-  const result = resolveCgArt('intro-2', registry)
-  assert.equal(result, undefined)
+test('resolveCg returns undefined for an unregistered CG', () => {
+  assert.equal(resolveCg('outro', registry), undefined)
 })

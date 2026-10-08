@@ -22,6 +22,9 @@ const REBUILD = 'rebuild it with `clsc build`'
 export type CommandHandler = (args: readonly CommandArg[]) => void | Promise<void>
 
 export interface Program {
+  // Whether the Scripts declare a Flag of that name, a Companion Flag (`companion:<id>`) included.
+  declares: (flag: string) => boolean
+
   // A run of the handler for (trigger, id), or `undefined` when there's none.
   start: (trigger: Trigger, id: string, flags: Flags) => Run | undefined
 }
@@ -164,6 +167,7 @@ export function loadProgram(bytes: Uint8Array, handlers: Readonly<Record<string,
   checkHandlers(commands, handlers)
 
   return {
+    declares: (flag) => flags.some(({ name }) => name === flag),
     start: (trigger, id, snapshot) => {
       const block = handlerIndex.get(handlerKey(trigger, id))
       return block && new Run({ strings, flags, commands, blocks }, block, snapshot)

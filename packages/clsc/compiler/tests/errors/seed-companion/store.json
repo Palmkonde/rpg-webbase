@@ -1,8 +1,0 @@
-{
-  "studentId": "test-student",
-  "flags": {
-    "companion:Guard": true,
-    "companion:Fox": "fluffy",
-    "companion:Owl": false
-  }
-}

@@ -54,6 +54,9 @@ export class ScriptPlayer {
     this.program = loadProgram(bytecode, this.commands.handlers)
   }
 
+  // Whether the loaded Scripts declare a Flag, a Companion's included.
+  public declares = (flag: string): boolean => this.program?.declares(flag) ?? false
+
   public advanceLine = (): Promise<void> => this.answer('line', (run) => run.next())
 
   // `index` is into the choices the overlay was handed, locked ones included.

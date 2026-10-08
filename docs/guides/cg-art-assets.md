@@ -1,26 +1,9 @@
 # Adding CG art
 
-```ts
-const cgArt = {
-  'intro-1': '/assets/cg/intro/1.jpg',
-  'intro-2': '/assets/cg/intro/2.jpg',
-  'intro-3': '/assets/cg/intro/3.jpg',
-} satisfies CgArtRegistry
-```
+A CG's frames are the images in `worlds/<world>/cg/<cg-id>/`, where `<cg-id>` is the name a Script declares with `cg <cg-id>;`. `crpg publish` lists them in natural filename order (`2.jpg` before `10.jpg`) and the game plays them in that order. A CG with no image fails the Publish.
 
-Art is keyed by an arbitrary per-frame id (`cgArt` in `apps/web/src/game/world-content.ts`), independent of the
-character-spritesheet pipeline (`adr/0014`) — a frame id doesn't need to match any Entity, Speaker,
-or spritesheet. The extension is whatever the registry says — match your actual uploaded file.
+A frame's caption is the String Table key `cg.<cg-id>.<n>`, with `n` counting from 1: the first frame of the CG `intro` shows the text under `cg.intro.1` in the World's `strings.json`. A frame with no such key shows the key in brackets, `[cg.intro.1]`.
 
-Drop the actual image files at `assets/cg/<cg-id>/<n>.<ext>` — repo-root `assets/`, gitignored, same
-convention as `assets/portraits/` and `assets/sprites/`. `apps/web/public/assets/cg` is a local
-symlink into it (already set up); nothing under `assets/` needs to be committed.
+Art is independent of the character-spritesheet pipeline (`adr/0014`): a frame doesn't need to match any Entity, Speaker or spritesheet.
 
-To manually test a CG, play the Campfire's vision (`campfire.clsc`), whose frames use three images at:
-
-- `assets/cg/intro/1.jpg`
-- `assets/cg/intro/2.jpg`
-- `assets/cg/intro/3.jpg`
-
-A missing file just renders a broken-image icon — timing, skip, and captions are still fully
-testable without real art.
+The content folder is gitignored (`assets/` at the repo root, for the maintainer), so nothing under it is committed.

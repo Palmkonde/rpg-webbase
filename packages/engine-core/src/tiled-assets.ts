@@ -1,4 +1,4 @@
-import { resolveTilesetAssetUrl } from './util.ts'
+import { MapFileError } from './map-file-error.ts'
 
 interface TiledTilePropertyDef {
   name: string
@@ -263,32 +263,24 @@ export function collectTileImages(raw: TiledMapJson): Map<number, string> {
   return collectByTile(raw, (tile) => tile.image)
 }
 
-// Walk every tileset/tile image reference and resolve it to a loadable URL
-function collectImages(raw: TiledMapJson, tiledMapUrl: string, origin: string): ImageToLoad[] {
-  const images: ImageToLoad[] = []
-
-  for (const tileset of raw.tilesets) {
-    if (tileset.image) {
-      images.push({ key: tileset.name, url: resolveTilesetAssetUrl(tileset.image, tiledMapUrl, origin) })
-    }
-    for (const tile of tileset.tiles ?? []) {
-      if (tile.image) {
-        images.push({ key: tile.image, url: resolveTilesetAssetUrl(tile.image, tiledMapUrl, origin) })
-      }
-    }
-  }
-
-  return images
+// Walk every tileset/tile image reference: Publish already rewrote each to a key (adr/0035), so its URL is the key under the asset base.
+export function collectImages(raw: TiledMapJson, assetBaseUrl: string): ImageToLoad[] {
+  return raw.tilesets.flatMap((tileset) => [
+    ...(tileset.image ? [{ key: tileset.name, url: assetBaseUrl + tileset.image }] : []),
+    ...(tileset.tiles ?? []).flatMap((tile) => (tile.image ? [{ key: tile.image, url: assetBaseUrl + tile.image }] : [])),
+  ])
 }
 
 // Main return and entry. To debug read this function first
-export async function collectTiledMapAssets(tiledMapUrl: string): Promise<TiledMapAssets> {
+export async function collectTiledMapAssets(tiledMapUrl: string, assetBaseUrl: string): Promise<TiledMapAssets> {
   const response = await fetch(tiledMapUrl)
+  if (!response.ok) {
+    throw new MapFileError(tiledMapUrl, response.status)
+  }
   const raw = (await response.json()) as TiledMapJson & TiledObjectsJson
-  const { origin } = globalThis.location
 
   return {
-    images: collectImages(raw, tiledMapUrl, origin),
+    images: collectImages(raw, assetBaseUrl),
     tileProperties: collectTileProperties(raw),
     tileAnimations: collectTileAnimations(raw),
     tileImages: collectTileImages(raw),

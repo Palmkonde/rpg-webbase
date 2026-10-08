@@ -19,3 +19,11 @@ function errorMessage(error: unknown): string {
 export function toGameError(error: unknown, kind: GameErrorKind = 'unavailable'): GameError {
   return error instanceof GameError ? error : new GameError(kind, errorMessage(error), { cause: error })
 }
+
+const NOT_FOUND = 404
+
+// The Engine fetches the Map itself, so a Map the server no longer holds reaches the session as an error carrying the status (adr/0038).
+export function toEngineLoadError(error: unknown): unknown {
+  const pruned = error instanceof Error && 'status' in error && error.status === NOT_FOUND
+  return pruned ? new GameError('worldUpdated', errorMessage(error), { cause: error }) : error
+}

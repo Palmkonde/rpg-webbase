@@ -1,3 +1,0 @@
-mover Guard; // error: the Flag seed stores `companion:Guard` as true, but it's declared `Character?`
-mover Fox;
-mover Owl;

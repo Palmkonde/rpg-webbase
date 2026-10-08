@@ -3,7 +3,6 @@ mod check;
 mod facts;
 pub mod opcodes;
 mod parse;
-mod seed;
 mod strings;
 #[cfg(target_arch = "wasm32")]
 mod wasm;
@@ -14,13 +13,11 @@ use pest::Span;
 use std::path::{Path, PathBuf};
 
 pub use facts::Facts;
-pub use seed::FlagSeed;
 pub use strings::StringTable;
 
 /// What the Host supplies that a compile checks Scripts against, when given.
 #[derive(Default)]
 pub struct HostData {
-    pub seed: Option<FlagSeed>,
     pub strings: Option<StringTable>,
 }
 

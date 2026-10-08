@@ -1,7 +1,8 @@
 import type { CreateEngineOptions, EngineEvent, EngineHandle } from '@codeleagues-rpg-engine/engine-core'
-import type { EngineFactory, HostSession, HostSessionOptions, WorldContent } from '../src/session.ts'
+import type { EngineFactory, HostSession, HostSessionOptions } from '../src/session.ts'
 import type { GameService, ServiceResponse } from '../src/game-service.ts'
 import type { Flags } from '../src/flags.ts'
+import type { WorldVersion } from '../src/world-version.ts'
 import assert from 'node:assert/strict'
 import { createHostSession } from '../src/session.ts'
 import { readFile } from 'node:fs/promises'
@@ -14,11 +15,15 @@ export interface FakeEngine {
 
   // Every call the session made on the Engine, in order.
   calls: string[]
+
+  // What the session last created the Engine with.
+  created: CreateEngineOptions | undefined
 }
 
 export function createFakeEngine(): FakeEngine {
   const calls: string[] = []
   let onEvent: ((event: EngineEvent) => void) | undefined
+  let created: CreateEngineOptions | undefined
   const handle: EngineHandle = {
     destroy: () => { calls.push('destroy') },
     setPaused: (paused) => { calls.push(`paused ${paused}`) },
@@ -29,8 +34,10 @@ export function createFakeEngine(): FakeEngine {
   }
   return {
     calls,
+    get created() { return created },
     createEngine: async (options) => {
       ({ onEvent } = options)
+      created = options
       return handle
     },
     emit: (event) => {
@@ -40,15 +47,35 @@ export function createFakeEngine(): FakeEngine {
   }
 }
 
+export const ASSET_BASE_URL = 'https://files.test/blobs/'
+
 // `bun run test` compiles `fixtures/scripts/` into `generated/scripts.clscb`.
-export const world: WorldContent = {
-  worldConfig: { mapId: 'test', player: { spawn: { x: 0, y: 0 }, characterId: 'fluffy' } },
-  catalogs: { maps: [], characters: [] },
-  loadScripts: async () => new Uint8Array(await readFile(new URL('generated/scripts.clscb', import.meta.url))),
-  strings: { en: { 'cg.vision.1': 'A light.', 'cg.vision.2': 'A door.' }, th: { 'cg.vision.1': 'แสงสว่าง' } },
-  portraits: { Sage: { Happy: '/portraits/sage/happy.png' } },
-  cgs: { vision: [{ art: 'vision-1', captionKey: 'cg.vision.1' }, { art: 'vision-2', captionKey: 'cg.vision.2' }] },
-  cgArt: { 'vision-1': '/cg/vision/1.png', 'vision-2': '/cg/vision/2.png' },
+async function readFixtureFiles(): Promise<Readonly<Record<string, Uint8Array>>> {
+  return {
+    'scripts.clscb': new Uint8Array(await readFile(new URL('generated/scripts.clscb', import.meta.url))),
+    'strings.json': new TextEncoder().encode(JSON.stringify({
+      locale: 'en',
+      table: { en: { 'cg.vision.1': 'A light.', 'cg.vision.2': 'A door.' }, th: { 'cg.vision.1': 'แสงสว่าง' } },
+    })),
+  }
+}
+
+let fixtureFiles: ReturnType<typeof readFixtureFiles> | undefined
+
+export const liveVersion: WorldVersion = {
+  id: 'version-1',
+  assetBaseUrl: ASSET_BASE_URL,
+  manifest: {
+    start: { map: 'town', spawn: { x: 2, y: 3 }, player: 'fluffy' },
+    maps: { town: 'town.tmj' },
+    characters: { fluffy: { key: 'fluffy.png', frameWidth: 16, frameHeight: 20, offsetY: -8 } },
+    portraits: { Sage: { Happy: 'sage-happy.png' } },
+    cgs: { vision: ['vision-1.png', 'vision-2.png'] },
+    scripts: 'scripts.clscb',
+    strings: 'strings.json',
+    entities: ['Sage', 'Guard', 'Statue'],
+    files: [],
+  },
 }
 
 export async function getToken(): Promise<string> {
@@ -58,6 +85,8 @@ export async function getToken(): Promise<string> {
 const OK = 200
 
 type Route = keyof GameService
+
+const NOT_FOUND = 404
 
 // The status a call answers, 200 to succeed; a promise holds the call until it settles.
 type Answer = number | Promise<number>
@@ -78,18 +107,20 @@ export interface FakeService {
   answerNext: (route: Route, ...answers: Answer[]) => void
 }
 
-export function createFakeService(initial: Flags = {}): FakeService {
+// Holds `version` as the World's live one, and the fixture files under its `assetBaseUrl`.
+export function createFakeService(initial: Flags = {}, version: WorldVersion = liveVersion): FakeService {
   const stored = { ...initial }
   const calls: string[] = []
   const patches: Flags[] = []
-  const queued: Record<Route, Answer[]> = { readFlags: [], patchFlags: [] }
+  const queued: Record<Route, Answer[]> = { readFlags: [], patchFlags: [], readLiveVersion: [], readFile: [] }
 
   function answerNext(route: Route, ...answers: Answer[]): void {
     queued[route].push(...answers)
   }
 
-  async function answer<Data>(route: Route, token: string, data: () => Data): Promise<ServiceResponse<Data>> {
-    calls.push(`${route} ${token}`)
+  // `label` is what the call is logged with: the token, or for a file its URL.
+  async function answer<Data>(route: Route, label: string, data: () => Data): Promise<ServiceResponse<Data>> {
+    calls.push(`${route} ${label}`)
     const status = await (queued[route].shift() ?? OK)
     return status === OK ? { ok: true, data: data() } : { ok: false, status }
   }
@@ -99,6 +130,14 @@ export function createFakeService(initial: Flags = {}): FakeService {
     patchFlags: (token, patch) => {
       patches.push(patch)
       return answer('patchFlags', token, () => { Object.assign(stored, patch) })
+    },
+    readLiveVersion: (token) => answer('readLiveVersion', token, () => version),
+    readFile: async (url) => {
+      fixtureFiles ??= readFixtureFiles()
+      const files = await fixtureFiles
+      const file = url.startsWith(version.assetBaseUrl) ? files[url.slice(version.assetBaseUrl.length)] : undefined
+      const response = await answer('readFile', url, () => file)
+      return response.ok && !response.data ? { ok: false, status: NOT_FOUND } : response as ServiceResponse<Uint8Array>
     },
   }
   return { service, stored, calls, patches, answerNext }
@@ -116,7 +155,6 @@ export function createTestSession(options: Partial<HostSessionOptions> = {}): Ho
     createEngine: createFakeEngine().createEngine,
     service: createFakeService().service,
     getToken,
-    world,
     locale: 'en',
     wait: createInstantWait().wait,
     ...options,

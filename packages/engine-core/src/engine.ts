@@ -25,6 +25,9 @@ export interface ContentCatalogs {
 export interface CreateEngineOptions {
   worldConfig: WorldConfig
   catalogs: ContentCatalogs
+
+  // Where a Map's tileset images are: each is a key under it, as Publish wrote them (adr/0035).
+  assetBaseUrl: string
   onEvent?: (event: EngineEvent) => void
 }
 
@@ -70,6 +73,9 @@ function startGame(container: HTMLElement, sceneConfig: Omit<MapSceneConfig, 'on
     const game: Phaser.Game = new Phaser.Game({
       type: Phaser.AUTO,
       parent: container,
+
+      // The files come from the Game Service or a CDN, not the Platform's own origin: without this the browser taints their textures.
+      loader: { crossOrigin: 'anonymous' },
       scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -90,10 +96,10 @@ function getMapScene(game: Phaser.Game): Phaser.Scene & HostScene {
 }
 
 export async function createEngine(container: HTMLElement, options: CreateEngineOptions): Promise<EngineHandle> {
-  const { worldConfig, catalogs, onEvent } = options
+  const { worldConfig, catalogs, assetBaseUrl, onEvent } = options
   const map = resolveMap(worldConfig, catalogs.maps)
   const character = resolveCharacter(worldConfig, catalogs.characters)
-  const assets = await collectTiledMapAssets(map.tiledMapUrl)
+  const assets = await collectTiledMapAssets(map.tiledMapUrl, assetBaseUrl)
 
   const characterEntities = resolveCharacterEntities(map.id, assets.entities, catalogs.characters)
 

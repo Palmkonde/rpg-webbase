@@ -12,3 +12,8 @@ export function resolveLine(key: string, locale: string, table: StringTable): st
 export function resolveText(text: Text, locale: string, table: StringTable): string {
   return 'key' in text ? resolveLine(text.key, locale, table) : text.text
 }
+
+// A World's `strings.json` holds its table under `table`, beside a `locale` the Platform's own Locale replaces.
+export function parseStringTable(bytes: Uint8Array): StringTable {
+  return (JSON.parse(new TextDecoder().decode(bytes)) as { table: StringTable }).table
+}

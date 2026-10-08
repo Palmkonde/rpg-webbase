@@ -1,5 +1,5 @@
 /** @jsxImportSource preact */
-import type { EngineFactory, HostSession, WorldContent } from './session.ts'
+import type { EngineFactory, HostSession } from './session.ts'
 import { DEFAULT_LOCALE } from './strings.ts'
 import type { GameError } from './game-error.ts'
 import { Overlays } from './overlays/overlays.tsx'
@@ -19,9 +19,6 @@ export interface GameOptions {
   // Called on every error, whether or not the built-in ErrorScreen shows it (adr/0039).
   onError?: (error: GameError) => void
   locale?: string
-
-  // A stand-in for the World Version, until the Game Service serves it.
-  world: WorldContent
 }
 
 export interface MountOptions extends GameOptions {
@@ -103,7 +100,6 @@ function mountGame(element: HTMLElement, options: GameOptions, drawOverlays?: Dr
     service: createGameService(options.serviceUrl, options.worldId),
     getToken: options.getToken,
     onError: options.onError,
-    world: options.world,
     locale: options.locale ?? DEFAULT_LOCALE,
   })
   const removeOverlays = drawOverlays?.(session, wrapper)
