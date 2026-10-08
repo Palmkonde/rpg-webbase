@@ -1,5 +1,6 @@
 import { jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
+import { relations } from 'drizzle-orm'
 
 export const worlds = pgTable('worlds', {
   id: text('id').primaryKey(),
@@ -26,3 +27,28 @@ export const flags = pgTable(
   },
   (table) => [primaryKey({ columns: [table.worldId, table.studentId] })],
 )
+
+// App-level relations for `db.query`; they add no SQL, so no migration.
+// `world_versions.world_id` and `worlds.live_version_id` point at each other, hence the relation names.
+export const worldsRelations = relations(worlds, ({ one, many }) => ({
+  versions: many(worldVersions, { relationName: 'versions' }),
+  liveVersion: one(worldVersions, {
+    fields: [worlds.liveVersionId],
+    references: [worldVersions.id],
+    relationName: 'liveVersion',
+  }),
+  flags: many(flags),
+}))
+
+export const worldVersionsRelations = relations(worldVersions, ({ one }) => ({
+  world: one(worlds, {
+    fields: [worldVersions.worldId],
+    references: [worlds.id],
+    relationName: 'versions',
+  }),
+}))
+
+// Flags have no database foreign key (adr/0038), so `world` is null until the World is Published.
+export const flagsRelations = relations(flags, ({ one }) => ({
+  world: one(worlds, { fields: [flags.worldId], references: [worlds.id] }),
+}))
