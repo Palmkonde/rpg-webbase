@@ -1,5 +1,5 @@
+import { ASSET_BASE_URL, consoleCalls, createFakeEngine, createFakeService, createTestSession, holdEngineCreation, liveVersion, settle, startSession } from './helpers.ts'
 import type { CreateEngineOptions, EngineHandle } from '@codeleagues-rpg-engine/engine-core'
-import { consoleCalls, createFakeEngine, createFakeService, createTestSession, holdEngineCreation, settle, startSession, world } from './helpers.ts'
 import type { HostSession } from '../src/session.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
@@ -44,7 +44,7 @@ test('an Interaction shows its first line, with its Speaker and Portrait', async
     type: 'line',
     speaker: 'Sage',
     text: 'Hello there.',
-    portrait: '/portraits/sage/happy.png',
+    portrait: `${ASSET_BASE_URL}sage-happy.png`,
     canDismiss: true,
   })
 })
@@ -95,7 +95,7 @@ test('dismissDialogue clears the Dialogue mid-run', async () => {
 test('a CG a Script plays shows its first frame, with its art, caption and more to come', async () => {
   const { session } = await watchSagesVision()
 
-  assert.deepEqual(session.getSnapshot().cg, { art: '/cg/vision/1.png', caption: 'A light.', hasMore: true })
+  assert.deepEqual(session.getSnapshot().cg, { art: `${ASSET_BASE_URL}vision-1.png`, caption: 'A light.', hasMore: true })
 })
 
 test('advanceCg steps to the CG\'s next frame', async () => {
@@ -103,7 +103,7 @@ test('advanceCg steps to the CG\'s next frame', async () => {
 
   session.advanceCg()
 
-  assert.deepEqual(session.getSnapshot().cg, { art: '/cg/vision/2.png', caption: 'A door.', hasMore: false })
+  assert.deepEqual(session.getSnapshot().cg, { art: `${ASSET_BASE_URL}vision-2.png`, caption: 'A door.', hasMore: false })
 })
 
 test('advancing past a CG\'s last frame ends it, and the Dialogue goes on', async () => {
@@ -233,7 +233,7 @@ test('subscribe calls its listener when the snapshot changes, and stops once uns
 })
 
 test('a CG with no frames is skipped with a warning, and the Dialogue goes on', async () => {
-  const { session, engine } = await startSession({ world: { ...world, cgs: {} } })
+  const { session, engine } = await startSession({ service: createFakeService({}, { ...liveVersion, manifest: { ...liveVersion.manifest, cgs: {} } }).service })
   engine.emit({ type: 'interacted', entityId: 'Sage' })
   await settle()
   await session.advance()

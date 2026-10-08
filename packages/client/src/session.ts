@@ -1,40 +1,28 @@
-import type { CgArtRegistry, CgFrame, CgRegistry } from './cg.ts'
 import type { CgHandle, CgStep } from './play-cg.ts'
-import type { CgView, DialogueView, HostSnapshot } from './views.ts'
-import type { ContentCatalogs, CreateEngineOptions, EngineEvent, EngineHandle, WorldConfig } from '@codeleagues-rpg-engine/engine-core'
+import type { CreateEngineOptions, EngineEvent, EngineHandle } from '@codeleagues-rpg-engine/engine-core'
 import type { GameService, SavedFlagStore, Wait } from './game-service.ts'
 import { ServiceCalls, createSavedFlagStore, waitFor } from './game-service.ts'
+import type { WorldContent, WorldVersion } from './world-version.ts'
 import { activeCompanionIds, companionFlag, syncCompanions } from './companions.ts'
-import { resolveCg, resolveCgArt } from './cg.ts'
-import { resolveLine, resolveText } from './strings.ts'
+import { catalogsOf, contentOf, loadLiveWorld, worldConfigOf } from './world-version.ts'
+import { cgView, dialogueView } from './snapshot-views.ts'
+import { toEngineLoadError, toGameError } from './game-error.ts'
+import type { CgFrame } from './cg.ts'
 import type { GameError } from './game-error.ts'
-import type { PortraitRegistry } from './portraits.ts'
+import type { HostSnapshot } from './views.ts'
 import { ScriptPlayer } from './script-player.ts'
 import type { ScriptPrompt } from './script-player.ts'
-import type { StringTable } from './strings.ts'
 import { playCG } from './play-cg.ts'
-import { resolvePortrait } from './portraits.ts'
-import { toGameError } from './game-error.ts'
+import { resolveCg } from './cg.ts'
 
 // The Engine's `createEngine`, bound to the element the game is mounted in.
 export type EngineFactory = (options: CreateEngineOptions) => Promise<EngineHandle>
-
-export interface WorldContent {
-  worldConfig: WorldConfig
-  catalogs: ContentCatalogs
-  loadScripts: () => Promise<Uint8Array>
-  strings: StringTable
-  portraits: PortraitRegistry
-  cgs: CgRegistry
-  cgArt: CgArtRegistry
-}
 
 export interface HostSessionOptions {
   createEngine: EngineFactory
   service: GameService
   getToken: () => Promise<string>
   onError?: (error: GameError) => void
-  world: WorldContent
   locale: string
 
   // The backoff's timer, which tests replace so a retry takes no real time.
@@ -72,6 +60,7 @@ class Session implements HostSession {
   private status: HostSnapshot['status'] = 'loading'
   private error: GameError | undefined
   private engine: EngineHandle | undefined
+  private world: WorldContent = { strings: {}, portraits: {}, cgs: {} }
   private destroyed = false
   private prompt: ScriptPrompt | undefined
   private enginePaused = false
@@ -106,12 +95,9 @@ class Session implements HostSession {
   public start = async (): Promise<void> => {
     try {
       await this.loadFlags()
-      const engine = await this.loadEngine()
-      if (!engine) {return}
-      this.engine = engine
-      this.status = 'playing'
-      this.publish()
-      await this.syncCompanions()
+      const version = await this.loadWorld()
+      const engine = version && await this.loadEngine(version)
+      if (engine) {await this.play(engine)}
     } catch (error: unknown) {
       this.fail(error)
     }
@@ -161,19 +147,44 @@ class Session implements HostSession {
     this.flags.load(await this.calls.readFlags())
   }
 
-  // Undefined once the session is destroyed meanwhile: no Engine is created after that, and one already coming is destroyed.
-  private async loadEngine(): Promise<EngineHandle | undefined> {
-    const { world, createEngine } = this.options
-    this.player.load(await world.loadScripts())
+  // The session stays on the World Version it loaded (adr/0038). Undefined once the session is destroyed meanwhile.
+  private async loadWorld(): Promise<WorldVersion | undefined> {
+    const { version, scripts, strings } = await loadLiveWorld(this.calls)
     if (this.destroyed) {return undefined}
-    const engine = await createEngine({
-      worldConfig: world.worldConfig,
-      catalogs: world.catalogs,
+    this.player.load(scripts)
+    this.world = contentOf(version, strings)
+    await this.dismissGoneCompanions(version.manifest.entities)
+    return version
+  }
+
+  // A stored Companion the World Version no longer has would leave the Student a dismiss button for nothing (adr/0038).
+  private async dismissGoneCompanions(entities: readonly string[]): Promise<void> {
+    const stored = activeCompanionIds(await this.flags.getFlags())
+    const gone = stored.filter((entityId) => !this.player.declares(companionFlag(entityId)) || !entities.includes(entityId))
+    if (gone.length > 0) {
+      await this.flags.setFlags(Object.fromEntries(gone.map((entityId) => [companionFlag(entityId), false])))
+    }
+  }
+
+  // Undefined once the session is destroyed meanwhile: no Engine is created after that, and one already coming is destroyed.
+  private async loadEngine(version: WorldVersion): Promise<EngineHandle | undefined> {
+    if (this.destroyed) {return undefined}
+    const engine = await this.options.createEngine({
+      worldConfig: worldConfigOf(version),
+      catalogs: catalogsOf(version),
+      assetBaseUrl: version.assetBaseUrl,
       onEvent: (event) => { this.handleEvent(event) },
-    })
+    }).catch((error: unknown) => { throw toEngineLoadError(error) })
     if (!this.destroyed) {return engine}
     engine.destroy()
     return undefined
+  }
+
+  private async play(engine: EngineHandle): Promise<void> {
+    this.engine = engine
+    this.status = 'playing'
+    this.publish()
+    await this.syncCompanions()
   }
 
   private stop(): void {
@@ -222,7 +233,7 @@ class Session implements HostSession {
   }
 
   private readonly playCg = async (id: string): Promise<void> => {
-    const frames = resolveCg(id, this.options.world.cgs)
+    const frames = resolveCg(id, this.world.cgs)
     if (!frames) {
       console.warn(`[host] CG "${id}" has no frames; skipped`)
       return
@@ -250,43 +261,12 @@ class Session implements HostSession {
   private publish(): void {
     this.snapshot = {
       status: this.status,
-      dialogue: this.prompt && this.dialogueView(this.prompt),
-      cg: this.cgView(),
+      dialogue: this.prompt && dialogueView(this.prompt, { locale: this.locale, world: this.world, canDismiss: !this.enginePaused }),
+      cg: this.cgFrames && this.cgStep && cgView(this.cgFrames, this.cgStep, { locale: this.locale, world: this.world }),
       companions: this.enginePaused ? [] : this.companionIds,
       error: this.error,
     }
     for (const listener of this.listeners) {listener()}
-  }
-
-  private dialogueView(prompt: ScriptPrompt): DialogueView {
-    const { locale, options: { world: { strings, portraits } } } = this
-    const canDismiss = !this.enginePaused
-    if (prompt.type === 'choices') {
-      const choices = prompt.choices.map((choice) => ({
-        text: resolveText(choice, locale, strings),
-        locked: choice.locked && resolveText(choice.locked, locale, strings),
-      }))
-      return { type: 'choices', choices, canDismiss }
-    }
-    return {
-      type: 'line',
-      speaker: prompt.speaker,
-      text: resolveText(prompt, locale, strings),
-      portrait: resolvePortrait(prompt.speaker, prompt.expression, portraits),
-      canDismiss,
-    }
-  }
-
-  private cgView(): CgView | undefined {
-    const { cgFrames, cgStep } = this
-    if (!cgFrames || !cgStep) {return undefined}
-    const { locale, options: { world: { strings, cgArt } } } = this
-    const frame = cgFrames[cgStep.frameIndex]
-    return {
-      art: resolveCgArt(frame.art, cgArt),
-      caption: resolveLine(frame.captionKey, locale, strings),
-      hasMore: cgStep.hasMore,
-    }
   }
 }
 

@@ -1,24 +1,34 @@
 import type { FlagStore, Flags } from './flags.ts'
 import { GameError, toGameError } from './game-error.ts'
 import type { App } from '@codeleagues-rpg-engine/game-service/app'
+import type { GameErrorKind } from './game-error.ts'
+import type { WorldVersion } from './world-version.ts'
 import { treaty } from '@elysiajs/eden'
 
 const UNAUTHORIZED = 401
 const FORBIDDEN = 403
+const NOT_FOUND = 404
 const SERVER_ERROR = 500
+const SERVICE_UNAVAILABLE = 503
 
 // Milliseconds before the second and third tries: three tries over about five seconds.
 const FIRST_BACKOFF = 1000
 const SECOND_BACKOFF = 4000
 const BACKOFF = [FIRST_BACKOFF, SECOND_BACKOFF]
 
-// A network failure answers 503, as Eden reports it.
+// A network failure answers 503, as Eden and `fetch` report it.
 export type ServiceResponse<Data> = { ok: true; data: Data } | { ok: false; status: number }
 
 // The Game Service routes a session calls for one World, each with a Student token (adr/0036). Tests replace it with a fake.
 export interface GameService {
   readFlags: (token: string) => Promise<ServiceResponse<Flags>>
   patchFlags: (token: string, patch: Flags) => Promise<ServiceResponse<void>>
+
+  // The World's live World Version, asked for once at mount (adr/0038).
+  readLiveVersion: (token: string) => Promise<ServiceResponse<WorldVersion>>
+
+  // A World file by its URL, `assetBaseUrl + key`: served without a token (adr/0042).
+  readFile: (url: string) => Promise<ServiceResponse<Uint8Array>>
 }
 
 export type Wait = (milliseconds: number) => Promise<void>
@@ -37,6 +47,15 @@ export function createGameService(serviceUrl: string, worldId: string): GameServ
   return {
     readFlags: async (token) => toResponse(await world.flags.get(bearer(token))),
     patchFlags: async (token, patch) => toResponse(await world.flags.patch(patch, bearer(token))),
+    readLiveVersion: async (token) => toResponse(await world.versions.live.get(bearer(token))),
+    readFile: async (url) => {
+      try {
+        const response = await fetch(url)
+        return response.ok ? { ok: true, data: new Uint8Array(await response.arrayBuffer()) } : { ok: false, status: response.status }
+      } catch {
+        return { ok: false, status: SERVICE_UNAVAILABLE }
+      }
+    },
   }
 }
 
@@ -45,10 +64,12 @@ export function waitFor(milliseconds: number): Promise<void> {
   return new Promise((resolve) => { setTimeout(resolve, milliseconds) })
 }
 
-function errorFor(status: number): GameError {
+// A 404 means something different per call: no live World Version at all, or a file of the pinned one that was pruned (adr/0038).
+function errorFor(status: number, notFound: GameErrorKind): GameError {
   const message = `The Game Service answered ${status}`
   if (status === UNAUTHORIZED) {return new GameError('unauthorized', message)}
   if (status === FORBIDDEN) {return new GameError('forbidden', message)}
+  if (status === NOT_FOUND) {return new GameError(notFound, message)}
   return new GameError('unavailable', message)
 }
 
@@ -85,19 +106,25 @@ export class ServiceCalls {
 
   public patchFlags = (patch: Flags): Promise<void> => this.call((token) => this.service.patchFlags(token, patch))
 
-  private async call<Data>(request: (token: string) => Promise<ServiceResponse<Data>>): Promise<Data> {
+  // No live World Version means the World was never Published.
+  public readLiveVersion = (): Promise<WorldVersion> => this.call((token) => this.service.readLiveVersion(token))
+
+  // Mid-session, a missing file means the World Version was pruned.
+  public readFile = (url: string): Promise<Uint8Array> => this.call(() => this.service.readFile(url), 'worldUpdated')
+
+  private async call<Data>(request: (token: string) => Promise<ServiceResponse<Data>>, notFound: GameErrorKind = 'unavailable'): Promise<Data> {
     const attempt: Attempt = { token: this.token ?? await this.requestToken(), refreshed: false, retries: 0 }
     for (;;) {
       // oxlint-disable-next-line no-await-in-loop -- each try waits on the one before it.
       const response = await request(attempt.token)
       if (response.ok) {return response.data}
       // oxlint-disable-next-line no-await-in-loop
-      await this.prepareRetry(attempt, response.status)
+      await this.prepareRetry(attempt, response.status, notFound)
     }
   }
 
   // A 401 asks for a fresh token and retries once (adr/0036); a 5xx or network failure retries with backoff. Anything else fails at once.
-  private async prepareRetry(attempt: Attempt, status: number): Promise<void> {
+  private async prepareRetry(attempt: Attempt, status: number, notFound: GameErrorKind): Promise<void> {
     if (status === UNAUTHORIZED && !attempt.refreshed) {
       attempt.refreshed = true
       attempt.token = await this.requestToken()
@@ -105,7 +132,7 @@ export class ServiceCalls {
       await this.wait(BACKOFF[attempt.retries])
       attempt.retries += 1
     } else {
-      throw errorFor(status)
+      throw errorFor(status, notFound)
     }
   }
 }

@@ -5,8 +5,7 @@ import pkg from './package.json' with { type: 'json' }
 
 const preactLicense = fileURLToPath(new URL('LICENSE', import.meta.resolve('preact/package.json')))
 
-// Engine-core is here only for the World Config and catalogs `WorldContent` carries, until the Game Service serves them.
-const PUBLIC_TYPE_SOURCES = ['./src/', '../engine-core/src/'].map((dir) => fileURLToPath(new URL(dir, import.meta.url)))
+const PUBLIC_TYPE_SOURCES = ['./src/'].map((dir) => fileURLToPath(new URL(dir, import.meta.url)))
 
 type CodeChunk = Extract<RolldownChunk, { type: 'chunk' }>
 
