@@ -35,3 +35,8 @@ test('a Companion Flag stored as true aborts the run, naming it in a console.err
   })
   assert.deepEqual(errors, [['Flag "companion:Guard" is stored as true, but it is declared Character?: the run is aborted']])
 })
+
+test('a Program declares the Companion Flag of each Mover, and no Flag it does not name', async () => {
+  const program = loadProgram(await compiled('companion'), {})
+  assert.deepEqual([program.declares('companion:Guard'), program.declares('companion:Cat'), program.declares('Guard')], [true, false, false])
+})
