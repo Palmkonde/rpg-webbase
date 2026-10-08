@@ -1,14 +1,15 @@
 import { createDatabase, migrateDatabase } from './database.ts'
 import { readConfig, readDatabaseUrl } from './config.ts'
 import type { Env } from './config.ts'
+import { S3Client } from 'bun'
 import { createApp } from './app.ts'
 
 async function run(command: string, env: Env): Promise<void> {
   switch (command) {
     case 'serve': {
       const config = readConfig(env)
-      const { databaseUrl, jwtSecret, corsOrigins, port } = config
-      createApp({ db: createDatabase(databaseUrl), jwtSecret, corsOrigins }).listen(port)
+      const { databaseUrl, jwtSecret, corsOrigins, publishKey, s3, port } = config
+      createApp({ db: createDatabase(databaseUrl), jwtSecret, corsOrigins, publishKey, bucket: new S3Client(s3) }).listen(port)
       return
     }
     case 'migrate': {
