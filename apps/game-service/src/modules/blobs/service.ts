@@ -41,3 +41,22 @@ export async function storeBlob({ bucket, prefix }: BlobStore, key: string, body
   await bucket.write(`${prefix}${key}`, received.bytes)
   return 'stored'
 }
+
+export interface StoredBlob {
+  stream: ReadableStream<Uint8Array>
+  etag: string
+  size: number
+  type: string
+}
+
+// `stat()` first, so a missing key is told apart before any bytes stream; `ETag` and the length come from it.
+export async function readBlob({ bucket, prefix }: BlobStore, key: string): Promise<StoredBlob | undefined> {
+  const file = bucket.file(`${prefix}${key}`)
+  try {
+    const { etag, size, type } = await file.stat()
+    return { stream: file.stream(), etag, size, type }
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && (error.code === 'NoSuchKey' || error.code === 'NotFound')) {return undefined}
+    throw error
+  }
+}

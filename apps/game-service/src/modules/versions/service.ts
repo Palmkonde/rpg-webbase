@@ -1,5 +1,5 @@
 import type { Commit, Manifest } from './model.ts'
-import { TransactionRollbackError, eq, sql } from 'drizzle-orm'
+import { TransactionRollbackError, and, eq, sql } from 'drizzle-orm'
 import { worldVersions, worlds } from '../../schema.ts'
 import type { BlobStore } from '../blobs/service.ts'
 import type { Database } from '../../database.ts'
@@ -27,6 +27,29 @@ export async function readLiveSummary(db: Database, worldId: string): Promise<{ 
     .innerJoin(worldVersions, eq(worlds.liveVersionId, worldVersions.id))
     .where(eq(worlds.id, worldId))
   return row
+}
+
+export interface StoredVersion {
+  id: string
+  manifest: Manifest
+}
+
+export async function readLive(db: Database, worldId: string): Promise<StoredVersion | undefined> {
+  const [row] = await db
+    .select({ id: worldVersions.id, manifest: worldVersions.manifest })
+    .from(worlds)
+    .innerJoin(worldVersions, eq(worlds.liveVersionId, worldVersions.id))
+    .where(eq(worlds.id, worldId))
+  return row as StoredVersion | undefined
+}
+
+// Scoped to the World, so a token for one World never reads another's World Version by id (adr/0042).
+export async function readVersion(db: Database, worldId: string, id: string): Promise<StoredVersion | undefined> {
+  const [row] = await db
+    .select({ id: worldVersions.id, manifest: worldVersions.manifest })
+    .from(worldVersions)
+    .where(and(eq(worldVersions.id, id), eq(worldVersions.worldId, worldId)))
+  return row as StoredVersion | undefined
 }
 
 export type CommitResult = { committed: string } | { stale: true } | { unlisted: string[] } | { missing: string[] }

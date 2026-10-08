@@ -7,6 +7,9 @@ export interface Config {
   publishKey: string
   corsOrigins: string[]
   port: number
+
+  // Where Students fetch files from (adr/0042); absent, the service serves them itself.
+  assetBaseUrl?: string
 }
 
 const DEFAULT_PORT = 3000
@@ -43,6 +46,12 @@ function readPort(value: string | undefined): number {
   return port
 }
 
+// The client builds `assetBaseUrl + key`, so the slash that ends it is added when the operator left it off.
+function readAssetBaseUrl(value: string | undefined): string | undefined {
+  if (!value) {return undefined}
+  return value.endsWith('/') ? value : `${value}/`
+}
+
 export function readConfig(env: Env): Config {
   const vars = requireVariables(env, REQUIRED)
   return {
@@ -58,6 +67,7 @@ export function readConfig(env: Env): Config {
     publishKey: vars.PUBLISH_KEY,
     corsOrigins: vars.CORS_ORIGINS.split(',').map((origin) => origin.trim()),
     port: readPort(env.PORT),
+    assetBaseUrl: readAssetBaseUrl(env.ASSET_BASE_URL),
   }
 }
 

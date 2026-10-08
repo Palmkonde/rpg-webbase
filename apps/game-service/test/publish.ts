@@ -73,3 +73,13 @@ export function commit(world: string, body: unknown, publishKey: string | false 
 export function liveSummary(world: string, publishKey: string | false = PUBLISH_KEY): Promise<Response> {
   return app.handle(new Request(`http://localhost/api/v1/worlds/${world}/versions/live/summary`, { headers: withKey(publishKey) }))
 }
+
+// The Student reads: a World Version (`live` or an id) with the token's own header, a file with none.
+export function version(world: string, which: string, token?: string): Promise<Response> {
+  const headers: Record<string, string> = token === undefined ? {} : { authorization: `Bearer ${token}` }
+  return app.handle(new Request(`http://localhost/api/v1/worlds/${world}/versions/${which}`, { headers }))
+}
+
+export function blob(key: string): Promise<Response> {
+  return app.handle(new Request(`http://localhost/api/v1/blobs/${key}`))
+}

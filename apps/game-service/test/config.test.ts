@@ -22,6 +22,7 @@ test('readConfig reads every required variable and defaults PORT to 3000', () =>
     publishKey: 'publish',
     corsOrigins: ['http://localhost:3001'],
     port: 3000,
+    assetBaseUrl: undefined,
   })
 })
 
@@ -45,6 +46,11 @@ test('readConfig reads PORT when it is set', () => {
 
 test('readConfig rejects a PORT that is not a port number', () => {
   assert.throws(() => readConfig({ ...env, PORT: 'eighty' }), { message: 'PORT must be a port number, got "eighty"' })
+})
+
+test('readConfig reads ASSET_BASE_URL and ends it with a slash', () => {
+  assert.equal(readConfig({ ...env, ASSET_BASE_URL: 'https://cdn.example/assets' }).assetBaseUrl, 'https://cdn.example/assets/')
+  assert.equal(readConfig({ ...env, ASSET_BASE_URL: 'https://cdn.example/' }).assetBaseUrl, 'https://cdn.example/')
 })
 
 test('readDatabaseUrl needs only DATABASE_URL', () => {

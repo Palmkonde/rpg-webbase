@@ -18,13 +18,16 @@ export interface AppOptions {
   publishKey: string
   bucket: S3Client
 
+  // Overrides the service's own `/blobs/` as where Students fetch files from (adr/0042).
+  assetBaseUrl?: string
+
   // Where files live in the bucket; tests set their own so runs never see each other's files.
   blobPrefix?: string
 }
 
 // The return type stays inferred: it carries the routes Eden types its calls from (adr/0037).
 // oxlint-disable-next-line typescript/explicit-function-return-type, typescript/explicit-module-boundary-types
-export function createApp({ db, jwtSecret, corsOrigins, publishKey, bucket, blobPrefix = DEFAULT_PREFIX }: AppOptions) {
+export function createApp({ db, jwtSecret, corsOrigins, publishKey, bucket, assetBaseUrl, blobPrefix = DEFAULT_PREFIX }: AppOptions) {
   const store = { bucket, prefix: blobPrefix }
   return new Elysia()
     // `Authorization` is named: a wildcard never admits it (Fetch spec, CORS-safelisted headers).
@@ -45,7 +48,7 @@ export function createApp({ db, jwtSecret, corsOrigins, publishKey, bucket, blob
     })
 
     // Every route but `/healthz`, which stays where container runtimes and load balancers probe it.
-    .group('/api/v1', (api) => api.use(flagsModule({ db, jwtSecret })).use(blobsModule({ store, publishKey })).use(versionsModule({ db, store, publishKey })))
+    .group('/api/v1', (api) => api.use(flagsModule({ db, jwtSecret })).use(blobsModule({ store, publishKey })).use(versionsModule({ db, store, jwtSecret, publishKey, assetBaseUrl })))
 }
 
 export type App = ReturnType<typeof createApp>

@@ -8,8 +8,8 @@ async function run(command: string, env: Env): Promise<void> {
   switch (command) {
     case 'serve': {
       const config = readConfig(env)
-      const { databaseUrl, jwtSecret, corsOrigins, publishKey, s3, port } = config
-      createApp({ db: createDatabase(databaseUrl), jwtSecret, corsOrigins, publishKey, bucket: new S3Client(s3) }).listen(port)
+      const { databaseUrl, jwtSecret, corsOrigins, publishKey, s3, port, assetBaseUrl } = config
+      createApp({ db: createDatabase(databaseUrl), jwtSecret, corsOrigins, publishKey, bucket: new S3Client(s3), assetBaseUrl }).listen(port)
       return
     }
     case 'migrate': {
