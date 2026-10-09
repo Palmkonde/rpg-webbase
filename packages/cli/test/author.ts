@@ -40,3 +40,11 @@ export async function publishNew(service: Service, changes: Files = {}): Promise
   assert.equal(run.code, 0, run.output)
   return { author: who, run, manifest: await service.manifestOf(versionOf(run)) }
 }
+
+export function prune(service: Service, { root }: Author, ...args: string[]): Promise<Run> {
+  return crpg(root, ['prune', ...args], { env: { GAME_SERVICE_URL: service.url, PUBLISH_KEY: service.publishKey } })
+}
+
+export function versions(service: Service, { id, root }: Author): Promise<Run> {
+  return crpg(root, ['versions', id], { env: { GAME_SERVICE_URL: service.url, PUBLISH_KEY: service.publishKey } })
+}
