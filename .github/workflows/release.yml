@@ -106,7 +106,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           provenance: mode=max
           sbom: true
-      - uses: sigstore/cosign-installer@v4
+      - uses: sigstore/cosign-installer@v4.1.2
       - run: cosign sign --yes "$IMAGE@$DIGEST"
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
