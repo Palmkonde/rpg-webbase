@@ -1,6 +1,8 @@
-import { SQL, spawn } from 'bun'
+import { SQL, serve, spawn } from 'bun'
+import { mkdtemp, rm } from 'node:fs/promises'
 import { services, skipWithoutServices } from './services.ts'
 import assert from 'node:assert/strict'
+import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 
@@ -49,7 +51,7 @@ test('serve exits naming every missing required variable', async () => {
 test('an unknown command exits naming the commands there are', async () => {
   const { exitCode, stderr } = await runMain(['deploy'], {})
   assert.equal(exitCode, 1)
-  assert.match(stderr, /Unknown command "deploy": expected serve, migrate or prune/u)
+  assert.match(stderr, /Unknown command "deploy": expected serve, migrate, prune or health/u)
 })
 
 test('migrate applies the committed SQL to an empty database and exits', { skip: skipWithoutServices }, async () => {
@@ -64,4 +66,47 @@ test('prune exits naming the database and bucket variables it needs', async () =
   const { exitCode, stderr } = await runMain(['prune'], { JWT_SECRET: 'not needed' })
   assert.equal(exitCode, 1)
   assert.match(stderr, /Missing required environment variables: DATABASE_URL, S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_REGION/u)
+})
+
+async function healthWhileServing(status: number): Promise<{ exitCode: number; stderr: string }> {
+  const stub = serve({ port: 0, fetch: () => new Response('', { status }) })
+  try {
+    return await runMain(['health'], { PORT: String(stub.port) })
+  } finally {
+    await stub.stop(true)
+  }
+}
+
+test('health exits 0 when /healthz answers 200', async () => {
+  const { exitCode } = await healthWhileServing(200)
+  assert.equal(exitCode, 0)
+})
+
+test('health exits 1 naming the status when /healthz answers 503', async () => {
+  const { exitCode, stderr } = await healthWhileServing(503)
+  assert.equal(exitCode, 1)
+  assert.match(stderr, /503/u)
+})
+
+test('health exits 1 when nothing is listening', async () => {
+  const { exitCode } = await runMain(['health'], { PORT: '1' })
+  assert.equal(exitCode, 1)
+})
+
+// Catches the embedded migrations going missing before an image build does; the Dockerfile adds only the target and autoload flags.
+test('the compiled binary migrates an empty database', { skip: skipWithoutServices }, async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'game-service-'))
+  try {
+    const binary = path.join(dir, 'game-service')
+    const build = spawn(['bun', 'build', '--compile', '--asset', 'drizzle', '--outfile', binary, 'src/main.ts'], { cwd: path.join(import.meta.dir, '..'), stderr: 'pipe' })
+    assert.equal(await build.exited, 0, await new Response(build.stderr).text())
+    await withEmptyDatabase(services!.databaseUrl, async (url) => {
+      const child = spawn([binary, 'migrate'], { env: { DATABASE_URL: url }, stderr: 'pipe' })
+      const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()])
+      assert.equal(exitCode, 0, stderr)
+      assert.deepEqual(await listTables(url), ['flags', 'world_versions', 'worlds'])
+    })
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
 })

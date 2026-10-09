@@ -44,7 +44,7 @@ function requireVariables<Name extends string>(env: Env, names: readonly Name[])
   return Object.fromEntries(names.map((name) => [name, env[name]])) as Record<Name, string>
 }
 
-function readPort(value: string | undefined): number {
+export function readPort(value: string | undefined): number {
   if (value === undefined) {
     return DEFAULT_PORT
   }
