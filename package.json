@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "concurrently": "^10.0.5",
-    "oxlint": "^1.86.0"
+    "oxlint": "^1.87.0"
   },
   "overrides": {
     "phaser": "^4.2.1"
