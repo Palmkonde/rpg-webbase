@@ -66,9 +66,10 @@ jobs:
             fi
           done
 
-      - run: npm publish --provenance --access public --tag "$NPM_TAG"
+      # Staged, so a version goes live only once a maintainer approves it with 2FA (`npm stage approve`).
+      - run: npm stage publish --provenance --access public --tag "$NPM_TAG"
         working-directory: packages/client
-      - run: npm publish --provenance --access public --tag "$NPM_TAG"
+      - run: npm stage publish --provenance --access public --tag "$NPM_TAG"
         working-directory: packages/cli
 
   image:
