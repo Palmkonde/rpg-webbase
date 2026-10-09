@@ -1,0 +1,126 @@
+name: Release
+
+# Pushing a vX.Y.Z tag releases the client, the CLI and the Game Service image in lockstep (adr/0044).
+# A tag ruleset lets only admins create or move `v*` tags.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/palmkonde/codeleagues-rpg-engine-game-service
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+    steps:
+      - id: tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::$GITHUB_REF_NAME is not a vX.Y.Z or vX.Y.Z-pre.N tag"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$([[ "$version" == *-* ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  check:
+    uses: ./.github/workflows/ci.yml
+
+  npm:
+    needs: [version, check]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing (OIDC) and provenance; there is no NPM_TOKEN
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      NPM_TAG: ${{ needs.version.outputs.prerelease == 'true' && 'next' || 'latest' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+
+      # Trusted publishing needs npm >= 11.5.1, which Node 24 ships.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm pkg set version="$VERSION" --workspaces
+      - run: bun run --cwd packages/client build
+      - run: bun run --cwd packages/cli build
+
+      # Licensed art must never ship: allow only `dist/` (plus the package.json npm always adds).
+      - name: Refuse files outside dist/ or under assets/
+        run: |
+          for pkg in client cli; do
+            stray=$(cd "packages/$pkg" && npm pack --dry-run --json --ignore-scripts | jq -r '.[0].files[].path | select(((. == "package.json" or startswith("dist/")) and (test("(^|/)assets/") | not)) | not)')
+            if [ -n "$stray" ]; then
+              echo "::error::packages/$pkg would publish files outside dist/ or under assets/:"
+              echo "$stray"
+              exit 1
+            fi
+          done
+
+      - run: npm publish --provenance --access public --tag "$NPM_TAG"
+        working-directory: packages/client
+      - run: npm publish --provenance --access public --tag "$NPM_TAG"
+        working-directory: packages/cli
+
+  image:
+    needs: [version, check]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # keyless cosign signing
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/game-service/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
+      - uses: sigstore/cosign-installer@v4
+      - run: cosign sign --yes "$IMAGE@$DIGEST"
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+
+  release:
+    needs: [version, npm, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - run: |
+          args=(--verify-tag --generate-notes)
+          [ "$PRERELEASE" = true ] && args+=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" "${args[@]}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}

@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+  # The release workflow runs these same checks before it publishes anything.
+  workflow_call:
+
 permissions:
   contents: read
 
@@ -55,13 +58,5 @@ jobs:
       S3_REGION: us-east-1
     steps:
       - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
-
-      # Pinned: Cargo.toml denies clippy's pedantic/nursery groups, which grow every release.
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.98.1
-          components: clippy
-          targets: wasm32-unknown-unknown
-      - run: bun install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: bun run ${{ matrix.task }}
