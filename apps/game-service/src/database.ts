@@ -8,7 +8,9 @@ import path from 'node:path'
 // Seconds: `/healthz` should fail fast on an unreachable Postgres, not wait out the 30-second default.
 const CONNECTION_TIMEOUT = 5
 
-const MIGRATIONS = path.join(import.meta.dir, '../drizzle')
+// A compiled binary embeds `drizzle/` beside its entry, not beside `src/`.
+const IS_COMPILED_BINARY = import.meta.dir.startsWith('/$bunfs/')
+const MIGRATIONS = path.join(import.meta.dir, IS_COMPILED_BINARY ? 'drizzle' : '../drizzle')
 
 export type Database = BunSQLDatabase<typeof schema> & { $client: SQL }
 
