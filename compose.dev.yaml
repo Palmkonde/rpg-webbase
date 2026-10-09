@@ -31,6 +31,47 @@ services:
       timeout: 5s
       retries: 15
 
+  # Listens on 3000 like `bun run dev`'s own Game Service, so stop that one first.
+  game-service-migrate:
+    profiles: [image]
+    build: &game-service-build
+      context: .
+      dockerfile: apps/game-service/Dockerfile
+    image: game-service:local
+    command: ["migrate"]
+    environment: &game-service-environment
+      DATABASE_URL: postgres://${POSTGRES_USER:-game}:${POSTGRES_PASSWORD:-game}@postgres:5432/${POSTGRES_DB:-game}
+      S3_ENDPOINT: http://seaweedfs:8333
+      S3_BUCKET: ${S3_BUCKET:-game}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-dev-access-key}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-dev-secret-key}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-not-for-production}
+      PUBLISH_KEY: ${PUBLISH_KEY:-dev-publish-key}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3001}
+    read_only: &hardened-read-only true
+    tmpfs: &hardened-tmpfs [/tmp]
+    cap_drop: &hardened-cap-drop [ALL]
+    security_opt: &hardened-security-opt ["no-new-privileges:true"]
+    depends_on: &game-service-depends-on
+      postgres: { condition: service_healthy }
+      seaweedfs: { condition: service_healthy }
+
+  game-service:
+    profiles: [image]
+    build: *game-service-build
+    image: game-service:local
+    environment: *game-service-environment
+    ports:
+      - "3000:3000"
+    read_only: *hardened-read-only
+    tmpfs: *hardened-tmpfs
+    cap_drop: *hardened-cap-drop
+    security_opt: *hardened-security-opt
+    depends_on:
+      <<: *game-service-depends-on
+      game-service-migrate: { condition: service_completed_successfully }
+
 volumes:
   postgres:
   seaweedfs:
