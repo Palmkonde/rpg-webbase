@@ -11,7 +11,29 @@ export interface BlobStore {
   prefix: string
 }
 
+const KEY = /^[0-9a-f]{64}\.[a-z0-9]{1,16}$/u
+
+// The most keys S3 lists per request.
+const MAX_PAGE_SIZE = 1000
+
 export const DEFAULT_PREFIX = 'blobs/'
+
+// Every file key in the bucket under the store's prefix; anything else under it is not ours and is left out.
+export async function listKeys({ bucket, prefix }: BlobStore, pageSize = MAX_PAGE_SIZE): Promise<string[]> {
+  const keys: string[] = []
+  let continuationToken: string | undefined
+  do {
+    // oxlint-disable-next-line no-await-in-loop -- each page names the next.
+    const page = await bucket.list({ prefix, continuationToken, maxKeys: pageSize })
+    keys.push(...(page.contents ?? []).map(({ key }) => key.slice(prefix.length)).filter((key) => KEY.test(key)))
+    continuationToken = page.isTruncated ? page.nextContinuationToken : undefined
+  } while (continuationToken)
+  return keys
+}
+
+export async function deleteBlob({ bucket, prefix }: BlobStore, key: string): Promise<void> {
+  await bucket.delete(`${prefix}${key}`)
+}
 
 export async function missingKeys({ bucket, prefix }: BlobStore, keys: string[]): Promise<string[]> {
   const unique = [...new Set(keys)]

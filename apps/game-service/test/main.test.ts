@@ -49,7 +49,7 @@ test('serve exits naming every missing required variable', async () => {
 test('an unknown command exits naming the commands there are', async () => {
   const { exitCode, stderr } = await runMain(['deploy'], {})
   assert.equal(exitCode, 1)
-  assert.match(stderr, /Unknown command "deploy": expected serve or migrate/u)
+  assert.match(stderr, /Unknown command "deploy": expected serve, migrate or prune/u)
 })
 
 test('migrate applies the committed SQL to an empty database and exits', { skip: skipWithoutServices }, async () => {
@@ -58,4 +58,10 @@ test('migrate applies the committed SQL to an empty database and exits', { skip:
     assert.equal(exitCode, 0)
     assert.deepEqual(await listTables(url), ['flags', 'world_versions', 'worlds'])
   })
+})
+
+test('prune exits naming the database and bucket variables it needs', async () => {
+  const { exitCode, stderr } = await runMain(['prune'], { JWT_SECRET: 'not needed' })
+  assert.equal(exitCode, 1)
+  assert.match(stderr, /Missing required environment variables: DATABASE_URL, S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_REGION/u)
 })

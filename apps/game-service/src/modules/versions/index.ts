@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia'
-import { commitVersion, readLive, readLiveSummary, readVersion } from './service.ts'
+import { commitVersion, listVersions, readLive, readLiveSummary, readVersion } from './service.ts'
 import type { BlobStore } from '../blobs/service.ts'
 import type { Database } from '../../database.ts'
 import { VersionsModel } from './model.ts'
@@ -32,6 +32,7 @@ export function versionsModule({ db, store, jwtSecret, publishKey: key, assetBas
       const version = await readVersion(db, world, id)
       return version ? { ...version, assetBaseUrl: baseUrlFor(request) } : status(NOT_FOUND, 'This World Version is gone')
     }, { student: true, params: t.Object({ world: t.String(), id: t.String({ format: 'uuid' }) }) })
+    .get('/', async ({ params: { world }, status }) => await listVersions(db, world) ?? status(NOT_FOUND, 'This World was never Published'), { publish: true })
     .get('/live/summary', async ({ params: { world }, status }) => await readLiveSummary(db, world) ?? status(NOT_FOUND, 'This World was never Published'), { publish: true })
     .post('/', async ({ params: { world }, body, status }) => {
       const result = await commitVersion({ db, store }, world, body)
