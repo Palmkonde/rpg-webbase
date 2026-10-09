@@ -1,6 +1,6 @@
 import type { Context, Problem } from './problem.ts'
 import { cgProblems, characterProblems, handlerProblems } from './references.ts'
-import { filesUnder, isDirectory, isFile } from './files.ts'
+import { filesUnder, isDirectory, isFile, isId } from './files.ts'
 import type { CharacterRef } from './references.ts'
 import type { Maps } from './maps.ts'
 import type { ScriptFacts } from './clsc.ts'
@@ -72,7 +72,7 @@ export interface Checked {
 
 export async function checkWorld(root: string, worldId: string): Promise<Checked> {
   const context = { root, worldId }
-  if (!/^[a-z0-9_-]+$/u.test(worldId) || !(await isDirectory(`${root}/worlds/${worldId}`))) {
+  if (!isId(worldId) || !(await isDirectory(`${root}/worlds/${worldId}`))) {
     return { problems: [errorAt(`worlds/${worldId}`, 'is not a World folder (ids are lower-case a-z, 0-9, - and _)')], maps: { byId: new Map(), complete: false }, characterIds: [], cgs: [], bytecode: undefined, facts: undefined }
   }
 
