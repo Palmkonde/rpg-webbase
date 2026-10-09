@@ -11,12 +11,14 @@ import { createInterface } from 'node:readline'
 import { formatProblem } from './problem.ts'
 import { isDirectory } from './files.ts'
 import { once } from 'node:events'
+import { writeTiledProject } from './tiled.ts'
 
 const USAGE = `crpg: check and publish a World
 
 Usage: crpg publish <world> [--dry-run] [--new] [--yes]
        crpg versions <world>
        crpg prune [--version <id>]
+       crpg tiled <world>
 
   --dry-run  check the World, print what a Publish would change for Students, and upload nothing
   --new      create the World: a World's first Publish needs it, and no other does
@@ -25,6 +27,7 @@ Usage: crpg publish <world> [--dry-run] [--new] [--yes]
   versions   list the World's World Versions, newest first, with the live one marked: the ids prune --version takes
   prune      delete the files no kept World Version uses: the live one, and any retired within the grace period
   --version  with prune, retire that World Version now instead of waiting out the grace period (the live one is refused)
+  tiled      write the World's Tiled project, with the Library as a project folder and every custom type the Engine reads, creating the World folder and its empty maps/, scripts/, portraits/, cg/ and tilesets/ folders and placeholder world.json and strings.json if they are missing; run it again to refresh the Character list
 
 Publish runs from the content root, the folder holding library/ and worlds/.
 Both commands read GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its shared Publish key) from the environment.`
@@ -189,15 +192,31 @@ async function publishFrom(args: string[]): Promise<number> {
   return flags.includes('--dry-run') ? reportDryRun(world, process.cwd()) : publish(world, process.cwd(), { isNew: flags.includes('--new'), yes: flags.includes('--yes') })
 }
 
+async function tiled(world: string): Promise<number> {
+  const written = await writeTiledProject(process.cwd(), world)
+  if ('reason' in written) {return fail(written.reason, 1)}
+  process.stdout.write(`Wrote ${written.file}. Open it in Tiled.\n`)
+  return 0
+}
+
+// `tiled <world>`; any other argument prints the usage.
+function tiledFrom(args: string[]): Promise<number> | number {
+  return args.length === 1 && !args[0].startsWith('-') ? tiled(args[0]) : fail(`unexpected arguments \`tiled ${args.join(' ')}\`\n\n${USAGE}`)
+}
+
+function versionsFrom(args: string[]): Promise<number> | number {
+  return args.length === 1 && !args[0].startsWith('-') ? listVersions(args[0]) : fail(`unexpected arguments \`versions ${args.join(' ')}\`\n\n${USAGE}`)
+}
+
+const COMMANDS: Record<string, (args: string[]) => Promise<number> | number> = { publish: publishFrom, versions: versionsFrom, prune: pruneFrom, tiled: tiledFrom }
+
 async function main(args: string[]): Promise<number> {
   const [command, ...rest] = args
   if (command === undefined || command === '--help' || command === '-h') {
     process.stdout.write(`${USAGE}\n`)
     return 0
   }
-  if (command === 'publish') {return publishFrom(rest)}
-  if (command === 'versions' && rest.length === 1 && !rest[0].startsWith('-')) {return listVersions(rest[0])}
-  return command === 'prune' ? pruneFrom(rest) : fail(`unexpected arguments \`${args.join(' ')}\`\n\n${USAGE}`)
+  return Object.hasOwn(COMMANDS, command) ? COMMANDS[command](rest) : fail(`unexpected arguments \`${args.join(' ')}\`\n\n${USAGE}`)
 }
 
 // A bin script nothing `require`s, so the top-level `await` can't trip a loader.
