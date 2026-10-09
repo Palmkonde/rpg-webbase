@@ -1,5 +1,5 @@
 import type { Commit, Manifest } from './model.ts'
-import { TransactionRollbackError, and, eq, sql } from 'drizzle-orm'
+import { TransactionRollbackError, and, desc, eq, sql } from 'drizzle-orm'
 import { worldVersions, worlds } from '../../schema.ts'
 import type { BlobStore } from '../blobs/service.ts'
 import type { Database } from '../../database.ts'
@@ -27,6 +27,25 @@ export async function readLiveSummary(db: Database, worldId: string): Promise<{ 
     .innerJoin(worldVersions, eq(worlds.liveVersionId, worldVersions.id))
     .where(eq(worlds.id, worldId))
   return row
+}
+
+export interface ListedVersion {
+  id: string
+  createdAt: Date
+  retiredAt: Date | null
+  live: boolean
+}
+
+// Newest first, for an Author who needs a World Version's id (`prune --version`); `undefined` for a World never Published.
+export async function listVersions(db: Database, worldId: string): Promise<ListedVersion[] | undefined> {
+  const [world] = await db.select({ live: worlds.liveVersionId }).from(worlds).where(eq(worlds.id, worldId))
+  if (!world) {return undefined}
+  const rows = await db
+    .select({ id: worldVersions.id, createdAt: worldVersions.createdAt, retiredAt: worldVersions.retiredAt })
+    .from(worldVersions)
+    .where(eq(worldVersions.worldId, worldId))
+    .orderBy(desc(worldVersions.createdAt))
+  return rows.map(({ id, createdAt, retiredAt }) => ({ id, createdAt, retiredAt, live: id === world.live }))
 }
 
 export interface StoredVersion {

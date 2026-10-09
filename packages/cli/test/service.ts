@@ -37,6 +37,9 @@ export interface Tools {
   manifestOf: (versionId: string) => Promise<Manifest>
   blob: (key: string) => Promise<Buffer>
 
+  // Backdates when a World Version stopped being live, to put it past the grace period.
+  retireDaysAgo: (versionId: string, days: number) => Promise<void>
+
   // Commits `manifest` the way the CLI does, to make a Publish land first.
   commit: (world: string, body: object) => Promise<Response>
 }
@@ -74,6 +77,9 @@ function toolsFor({ app, db, bucket, prefix }: Stores): Tools {
     async manifestOf(versionId) {
       const [row] = await db.$client`select manifest from world_versions where id = ${versionId}`
       return row.manifest as Manifest
+    },
+    async retireDaysAgo(versionId, days) {
+      await db.$client`update world_versions set retired_at = now() - make_interval(days => ${days}) where id = ${versionId}`
     },
     async blob(key) {
       return Buffer.from(await bucket.file(`${prefix}${key}`).arrayBuffer())

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { PublishError, connect } from './service.ts'
+import type { PublishService, VersionInfo } from './service.ts'
 import { publishWorld, reportAgainst } from './publish.ts'
 import type { Checked } from './world.ts'
 import type { Context } from './problem.ts'
-import type { PublishService } from './service.ts'
 import type { Published } from './publish.ts'
 import type { Report } from './summary.ts'
 import { checkWorld } from './world.ts'
@@ -15,13 +15,19 @@ import { once } from 'node:events'
 const USAGE = `crpg: check and publish a World
 
 Usage: crpg publish <world> [--dry-run] [--new] [--yes]
+       crpg versions <world>
+       crpg prune [--version <id>]
 
   --dry-run  check the World, print what a Publish would change for Students, and upload nothing
   --new      create the World: a World's first Publish needs it, and no other does
   --yes      go live without asking when the Publish adds or removes Flags, Zones or Companions
 
-Run it from the content root, the folder holding library/ and worlds/.
-Publishing reads GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its shared Publish key) from the environment.`
+  versions   list the World's World Versions, newest first, with the live one marked: the ids prune --version takes
+  prune      delete the files no kept World Version uses: the live one, and any retired within the grace period
+  --version  with prune, retire that World Version now instead of waiting out the grace period (the live one is refused)
+
+Publish runs from the content root, the folder holding library/ and worlds/.
+Both commands read GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its shared Publish key) from the environment.`
 
 const FLAGS = new Set(['--dry-run', '--new', '--yes'])
 
@@ -126,23 +132,72 @@ async function publish(world: string, root: string, options: { isNew: boolean; y
   return publishChecked({ root, worldId: world }, options, checked)
 }
 
+function versionLine({ id, live, retiredAt }: VersionInfo): string {
+  return `${id}  ${live ? 'live' : `retired ${retiredAt ? new Date(retiredAt).toISOString() : 'at an unknown time'}`}`
+}
+
+// Runs `run` against the Game Service the environment names; a refusal prints and exits 1.
+async function withPublishService(what: string, run: (service: PublishService) => Promise<number>): Promise<number> {
+  const service = serviceFromEnvironment()
+  if (service === undefined) {
+    return fail(`${what} needs GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its Publish key) in the environment`)
+  }
+  try {
+    return await run(service)
+  } catch (error) {
+    if (error instanceof PublishError) {return fail(error.message, 1)}
+    throw error
+  }
+}
+
+function listVersions(world: string): Promise<number> {
+  return withPublishService('listing World Versions', async (service) => {
+    const found = await service.versions(world)
+    if (found === undefined) {return fail(`World "${world}" has never been Published`, 1)}
+    process.stdout.write(`${found.map((version) => versionLine(version)).join('\n')}\n`)
+    return 0
+  })
+}
+
+function prune(version?: string): Promise<number> {
+  return withPublishService('pruning', async (service) => {
+    const removed = await service.prune(version)
+    process.stdout.write(removed.length === 0 ? 'Nothing to prune.\n' : `Pruned ${plural(removed.length, 'file')}:\n${removed.join('\n')}\n`)
+    return 0
+  })
+}
+
 async function inContentRoot(root: string): Promise<boolean> {
   return (await isDirectory(`${root}/library`)) && (await isDirectory(`${root}/worlds`))
 }
 
-async function main(args: string[]): Promise<number> {
-  const [command, world, ...flags] = args
-  if (command === undefined || command === '--help' || command === '-h') {
-    process.stdout.write(`${USAGE}\n`)
-    return 0
-  }
-  if (command !== 'publish' || world === undefined || world.startsWith('-') || flags.some((flag) => !FLAGS.has(flag))) {
-    return fail(`unexpected arguments \`${args.join(' ')}\`\n\n${USAGE}`)
+// `prune` or `prune --version <id>`; any other argument prints the usage.
+function pruneFrom(args: string[]): Promise<number> | number {
+  if (args.length === 0) {return prune()}
+  if (args.length === 2 && args[0] === '--version' && !args[1].startsWith('-')) {return prune(args[1])}
+  return fail(`unexpected arguments \`prune ${args.join(' ')}\`\n\n${USAGE}`)
+}
+
+async function publishFrom(args: string[]): Promise<number> {
+  const [world, ...flags] = args
+  if (world === undefined || world.startsWith('-') || flags.some((flag) => !FLAGS.has(flag))) {
+    return fail(`unexpected arguments \`publish ${args.join(' ')}\`\n\n${USAGE}`)
   }
   if (!(await inContentRoot(process.cwd()))) {
     return fail(`${process.cwd()} is not a content root: run crpg in the folder that holds library/ and worlds/`)
   }
   return flags.includes('--dry-run') ? reportDryRun(world, process.cwd()) : publish(world, process.cwd(), { isNew: flags.includes('--new'), yes: flags.includes('--yes') })
+}
+
+async function main(args: string[]): Promise<number> {
+  const [command, ...rest] = args
+  if (command === undefined || command === '--help' || command === '-h') {
+    process.stdout.write(`${USAGE}\n`)
+    return 0
+  }
+  if (command === 'publish') {return publishFrom(rest)}
+  if (command === 'versions' && rest.length === 1 && !rest[0].startsWith('-')) {return listVersions(rest[0])}
+  return command === 'prune' ? pruneFrom(rest) : fail(`unexpected arguments \`${args.join(' ')}\`\n\n${USAGE}`)
 }
 
 // A bin script nothing `require`s, so the top-level `await` can't trip a loader.

@@ -19,14 +19,28 @@ export class PublishError extends Error {
 export interface PublishService {
   // The World Version live for `world` with the summary stored with it, or `undefined` for a World never Published.
   live: (world: string) => Promise<LiveVersion | undefined>
+
+  // Every World Version of `world`, newest first, or `undefined` for a World never Published.
+  versions: (world: string) => Promise<VersionInfo[] | undefined>
   missing: (keys: string[]) => Promise<string[]>
   upload: (key: string, bytes: Buffer) => Promise<void>
+
+  // Deletes the files no kept World Version uses and returns their keys; with `version`, first retires that World Version whatever its age.
+  prune: (version?: string) => Promise<string[]>
   commit: (world: string, version: { manifest: Manifest; summary: Summary }, expectedLive: string | undefined) => Promise<string>
 }
 
 export interface LiveVersion {
   id: string
   summary: unknown
+}
+
+export interface VersionInfo {
+  id: string
+  // Eden turns the service's ISO timestamps back into Dates.
+  createdAt: Date
+  retiredAt: Date | null
+  live: boolean
 }
 
 interface Reply {
@@ -67,12 +81,23 @@ export function connect(serviceUrl: string, publishKey: string): PublishService 
       const reply = await api.worlds({ world }).versions.live.summary.get({ headers })
       return reply.error?.status === NOT_FOUND ? undefined : expectData<LiveVersion>(reply, 'the live World Version')
     },
+    async versions(world) {
+      const reply = await api.worlds({ world }).versions.get({ headers })
+      return reply.error?.status === NOT_FOUND ? undefined : expectData<VersionInfo[]>(reply, 'the list of World Versions')
+    },
     async missing(keys) {
       const reply = await api.blobs.missing.post({ keys }, { headers })
       return expectData<{ missing: string[] }>(reply, 'the list of files').missing
     },
     async upload(key, bytes) {
       expectData(await putFile(serviceUrl, headers, { key, bytes }), key)
+    },
+    async prune(version) {
+      const reply = await api.prune.post({ version }, { headers })
+
+      // The live World Version is the one refusal here that is not a lost Publish race (409).
+      if (reply.error?.status === CONFLICT) {throw new PublishError(String(reply.error.value))}
+      return expectData<{ removed: string[] }>(reply, 'the cleanup').removed
     },
     async commit(world, { manifest, summary }, expectedLive) {
       const reply = await api.worlds({ world }).versions.post({ manifest, summary: { ...summary }, expectedLive }, { headers })

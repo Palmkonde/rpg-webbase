@@ -1,4 +1,4 @@
-import { readConfig, readDatabaseUrl } from '../src/config.ts'
+import { readConfig, readDatabaseUrl, readPruneConfig } from '../src/config.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
@@ -23,6 +23,7 @@ test('readConfig reads every required variable and defaults PORT to 3000', () =>
     corsOrigins: ['http://localhost:3001'],
     port: 3000,
     assetBaseUrl: undefined,
+    pruneGraceDays: 90,
   })
 })
 
@@ -56,4 +57,18 @@ test('readConfig reads ASSET_BASE_URL and ends it with a slash', () => {
 test('readDatabaseUrl needs only DATABASE_URL', () => {
   assert.equal(readDatabaseUrl({ DATABASE_URL: env.DATABASE_URL }), env.DATABASE_URL)
   assert.throws(() => readDatabaseUrl({}), { message: 'Missing required environment variables: DATABASE_URL' })
+})
+
+test('readConfig reads PRUNE_GRACE_DAYS, and rejects one that is not a whole number of days', () => {
+  assert.equal(readConfig({ ...env, PRUNE_GRACE_DAYS: '30' }).pruneGraceDays, 30)
+  assert.equal(readConfig({ ...env, PRUNE_GRACE_DAYS: '0' }).pruneGraceDays, 0)
+  for (const bad of ['soon', '-1', '1.5']) {
+    assert.throws(() => readConfig({ ...env, PRUNE_GRACE_DAYS: bad }), { message: `PRUNE_GRACE_DAYS must be a whole number of days, got "${bad}"` })
+  }
+})
+
+test('readPruneConfig needs only the database and the bucket', () => {
+  const { databaseUrl, s3, pruneGraceDays } = readConfig(env)
+  assert.deepEqual(readPruneConfig({ DATABASE_URL: env.DATABASE_URL, S3_ENDPOINT: env.S3_ENDPOINT, S3_BUCKET: env.S3_BUCKET, S3_ACCESS_KEY_ID: env.S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY: env.S3_SECRET_ACCESS_KEY, S3_REGION: env.S3_REGION }), { databaseUrl, s3, pruneGraceDays })
+  assert.throws(() => readPruneConfig({}), { message: 'Missing required environment variables: DATABASE_URL, S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_REGION' })
 })

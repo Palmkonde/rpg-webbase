@@ -5,6 +5,7 @@ import type { S3Client } from 'bun'
 import { blobsModule } from './modules/blobs/index.ts'
 import { cors } from '@elysiajs/cors'
 import { flagsModule } from './modules/flags/index.ts'
+import { pruneModule } from './modules/prune/index.ts'
 import { sql } from 'drizzle-orm'
 import { versionsModule } from './modules/versions/index.ts'
 
@@ -23,11 +24,14 @@ export interface AppOptions {
 
   // Where files live in the bucket; tests set their own so runs never see each other's files.
   blobPrefix?: string
+
+  // Days a retired World Version's files stay after it stops being live (`PRUNE_GRACE_DAYS`, adr/0038).
+  pruneGraceDays?: number
 }
 
 // The return type stays inferred: it carries the routes Eden types its calls from (adr/0037).
 // oxlint-disable-next-line typescript/explicit-function-return-type, typescript/explicit-module-boundary-types
-export function createApp({ db, jwtSecret, corsOrigins, publishKey, bucket, assetBaseUrl, blobPrefix = DEFAULT_PREFIX }: AppOptions) {
+export function createApp({ db, jwtSecret, corsOrigins, publishKey, bucket, assetBaseUrl, blobPrefix = DEFAULT_PREFIX, pruneGraceDays }: AppOptions) {
   const store = { bucket, prefix: blobPrefix }
   return new Elysia()
     // `Authorization` is named: a wildcard never admits it (Fetch spec, CORS-safelisted headers).
@@ -48,7 +52,7 @@ export function createApp({ db, jwtSecret, corsOrigins, publishKey, bucket, asse
     })
 
     // Every route but `/healthz`, which stays where container runtimes and load balancers probe it.
-    .group('/api/v1', (api) => api.use(flagsModule({ db, jwtSecret })).use(blobsModule({ store, publishKey })).use(versionsModule({ db, store, jwtSecret, publishKey, assetBaseUrl })))
+    .group('/api/v1', (api) => api.use(flagsModule({ db, jwtSecret })).use(blobsModule({ store, publishKey })).use(versionsModule({ db, store, jwtSecret, publishKey, assetBaseUrl })).use(pruneModule({ db, store, publishKey, graceDays: pruneGraceDays })))
 }
 
 export type App = ReturnType<typeof createApp>
