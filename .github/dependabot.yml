@@ -14,6 +14,13 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+
+  # The `FROM` digests are pinned, so they only move through these PRs.
+  - package-ecosystem: docker
+    directory: /apps/game-service
+    schedule:
+      interval: weekly
+
   - package-ecosystem: cargo
     directory: /packages/clsc/compiler
     schedule:

@@ -1,0 +1,7 @@
+.git
+**/node_modules
+assets
+docs
+packages/*/target
+packages/clsc/compiler/target
+apps/web
