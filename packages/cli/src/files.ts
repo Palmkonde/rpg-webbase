@@ -66,3 +66,8 @@ export function extensionOf(fileName: string): string {
 export function stemOf(fileName: string): string {
   return fileName.slice(0, fileName.lastIndexOf('.'))
 }
+
+// World and Character ids are lower-case a-z, 0-9, - and _.
+export function isId(id: string): boolean {
+  return /^[a-z0-9_-]+$/u.test(id)
+}

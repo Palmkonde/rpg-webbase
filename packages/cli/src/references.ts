@@ -1,6 +1,6 @@
 import type { Context, Problem } from './problem.ts'
 import { errorAt, warningAt } from './problem.ts'
-import { extensionOf, filesUnder, isFile, isRaw, readJsonObject } from './files.ts'
+import { extensionOf, filesUnder, isFile, isId, isRaw, readJsonObject } from './files.ts'
 import type { Maps } from './maps.ts'
 import type { ScriptFacts } from './clsc.ts'
 
@@ -39,7 +39,7 @@ export async function readCharacterSheet(root: string, id: string): Promise<{ sh
 }
 
 async function hasSheet(context: Context, id: string): Promise<boolean> {
-  return /^[a-z0-9_-]+$/u.test(id) && (await isFile(`${context.root}/library/characters/${id}/${id}.png`))
+  return isId(id) && (await isFile(`${context.root}/library/characters/${id}/${id}.png`))
 }
 
 async function sheetProblem(context: Context, id: string): Promise<Problem[]> {
