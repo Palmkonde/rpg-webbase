@@ -2,6 +2,11 @@
   "name": "@codeleagues-rpg-engine/cli",
   "version": "0.0.0",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Palmkonde/rpg-webbase.git",
+    "directory": "packages/cli"
+  },
   "type": "module",
   "bin": {
     "crpg": "./dist/cli.js"
