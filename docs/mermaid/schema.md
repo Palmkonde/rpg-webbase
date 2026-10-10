@@ -1,4 +1,7 @@
 ```mermaid
+---
+title: Postgres schema game_service
+---
 erDiagram
   worlds ||--o{ world_versions : "has versions (world_id)"
   worlds |o--o| world_versions : "live version (live_version_id)"
