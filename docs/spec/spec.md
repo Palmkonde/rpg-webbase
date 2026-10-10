@@ -1110,7 +1110,9 @@ Every Student route is token-checked (`adr/0036`): the `:world` in the path must
 
 **Guides** (`docs/guides/`, one topic per file)
 
-- New: installing the Game Service (operator), mounting the game (Platform developer), Publishing a World (Author), the content folder (Author), and local dev (contributor). The README links to them in that order: operator → Platform developer → Author.
+- A **Getting started** tutorial takes a reader from nothing to playing on one machine. It runs the Game Service with the operator wizard, builds a tiny World from generated placeholder art (no licensed content), Publishes it, and builds a Next.js Platform from `apps/web`'s code, including one UI override.
+- **Reference pages**, one per part: the Game Service (operator), the client package and UI overrides (Platform developer), `crpg` and the content folder (Author), plus local dev (contributor). The README links Getting started first, then the references in the order operator → Platform developer → Author.
+- The Compose deploy is a committed file, `deploy/compose.yaml`, that the tutorial and the Game Service reference both download, so neither keeps its own copy.
 - Updated: Tiled object authoring is reduced to what `crpg tiled` doesn't generate. CG art, Portrait assets, and Character sheet layout are rewritten from `public/assets` paths and registry edits to content-folder paths.
 - **Wizards**: an operator-install `/wizard` and an Author-setup `/wizard` (`adr/0040`), committed as `scripts/operator-install.sh` and `scripts/author-setup.sh` and fetched by raw URL, since operators and Authors have no clone.
 

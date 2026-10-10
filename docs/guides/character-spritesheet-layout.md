@@ -1,3 +1,14 @@
+# Laying out a Character sheet
+
+A Character lives in the Asset Library of your content folder ([`content-folder.md`](content-folder.md)) as two files:
+
+```text
+library/characters/<id>/<id>.png         the sheet, in the layout below
+library/characters/<id>/character.json   { "frameWidth": 32, "frameHeight": 32, "offsetY": 0 }
+```
+
+`<id>` uses lower-case `a-z`, `0-9`, `-` and `_`. It is the id `world.json`'s `player`, an Entity's `characterId` in Tiled, and a Script's `character` name. `frameWidth` and `frameHeight` are one frame's size in whole pixels. `offsetY` is optional: it moves the sprite up or down on its tile, in pixels. Keep the downloaded original beside them as `raw.png` (any `raw.*` name): `crpg publish` never uploads it. After adding a Character, run `crpg tiled <world>` again so Tiled's `characterId` dropdown lists it.
+
 ## The canonical layout
 
 `grid-engine`'s default character-animation model (`characterIndex`) expects a fixed grid: one row of 3 frames per cardinal direction.
@@ -48,7 +59,7 @@ END { print "COLUMNS:"; ranges(colhas, w-1); print "ROWS:"; ranges(rowhas, h-1) 
 
 `w`/`h` come off the `txt:-` header line (`# ImageMagick pixel enumeration: <w>,<h>,...`) so the bounds always match the sheet you're actually measuring, not whatever sheet you last measured.
 
-The contiguous ranges are the real content bands; the gaps between them are gutters, and the distance between band starts is the frame pitch. Worked example, Temmie (`assets/sprites/characters/temmie/`): columns `1-29, 33-61, 65-93`, rows `6-31, 38-63, 70-95, 102-127` — band starts 32px apart on both axes, so the real frame tile is **32x32**, even though the source canvas was 168x280. Content only filled the top-left 3 cols x 4 rows (96x128); the rest of the canvas was empty padding invisible at a glance in a shrunk-down render.
+The contiguous ranges are the real content bands; the gaps between them are gutters, and the distance between band starts is the frame pitch. Worked example, Temmie (`library/characters/temmie/raw.png`): columns `1-29, 33-61, 65-93`, rows `6-31, 38-63, 70-95, 102-127` — band starts 32px apart on both axes, so the real frame tile is **32x32** (`"frameWidth": 32, "frameHeight": 32` in `character.json`), even though the source canvas was 168x280. Content only filled the top-left 3 cols x 4 rows (96x128); the rest of the canvas was empty padding invisible at a glance in a shrunk-down render.
 
 ## Filling a missing direction
 
@@ -56,10 +67,10 @@ When a source sheet has no real art for one or more directions (see `docs/adr/00
 
 ```bash
 magick raw.png -crop <rowWidth>x<frameHeight>+0+0 +repage down-row.png
-magick down-row.png down-row.png down-row.png down-row.png -append normalized.png
+magick down-row.png down-row.png down-row.png down-row.png -append <id>.png
 ```
 
-This crops the one real direction's row (here, "down") and vertically appends four copies of it, producing a canonical-shaped sheet where every direction plays the same real frames.
+This crops the one real direction's row (here, "down") and vertically appends four copies of it, producing the canonical-shaped `<id>.png`, where every direction plays the same real frames.
 
 ## Tooling
 
