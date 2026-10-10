@@ -1094,7 +1094,7 @@ Every Student route is token-checked (`adr/0036`): the `:world` in the path must
 - **Build**: `bun build --compile` produces one binary per architecture, cross-compiled in a `--platform=$BUILDPLATFORM` stage (no QEMU). Migrations are embedded with `--asset`. Dotenv and bunfig autoloading are disabled in the binary. The final stage only copies the binary onto `gcr.io/distroless/base-nossl-debian13:nonroot`, pinned by digest, with numeric `USER 65532`. `Bun.sql` and `Bun.s3` connect from the compiled binary (proved in the first image ticket, so the `oven/bun:1.4-distroless` fallback is not needed). The embedded `drizzle/` folder sits beside the entry in Bun's virtual filesystem, so `database.ts` reads it from there when compiled. Docker Hardened Images were weighed as the base and not used: pulls need a `docker login dhi.io`, which every contributor and CI build would then need, and the distroless base is anonymous and already tracked by Dependabot.
 - **Subcommands**: `serve` (default), `migrate`, `prune`, `health`. `HEALTHCHECK` uses `health`, since the image has no shell or curl.
 - **Environment**: `DATABASE_URL`; `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION` (always passed explicitly, because Bun signs with region `auto` for a custom endpoint, and strict servers reject it); `JWT_SECRET`; `PUBLISH_KEY`; `CORS_ORIGINS` (comma-separated). Optional: `ASSET_BASE_URL`, `PRUNE_GRACE_DAYS` (default 90), `PORT` (default 3000). The service checks them at startup and exits naming any that are missing.
-- **Running it**: `migrate` runs as a one-off container before `serve` (compose `service_completed_successfully`, or a Kubernetes Job). `prune` is scheduled by the operator; the service never schedules anything itself. The guide's examples set a read-only root filesystem, a tmpfs at `/tmp`, and drop all capabilities.
+- **Running it**: `migrate` runs as a one-off container before `serve` (compose `service_completed_successfully`, or a Kubernetes Job). The install guide's Compose example has a `bundled` profile that runs Postgres and SeaweedFS beside the service, unpublished; the operator wizard picks it by default and generates their credentials, and an operator with their own Postgres and bucket answers no. `prune` is scheduled by the operator; the service never schedules anything itself. The guide's examples set a read-only root filesystem, a tmpfs at `/tmp`, and drop all capabilities.
 
 **Local dev**
 
@@ -1112,7 +1112,7 @@ Every Student route is token-checked (`adr/0036`): the `:world` in the path must
 
 - New: installing the Game Service (operator), mounting the game (Platform developer), Publishing a World (Author), the content folder (Author), and local dev (contributor). The README links to them in that order: operator → Platform developer → Author.
 - Updated: Tiled object authoring is reduced to what `crpg tiled` doesn't generate. CG art, Portrait assets, and Character sheet layout are rewritten from `public/assets` paths and registry edits to content-folder paths.
-- **Wizards**: an operator-install `/wizard` and an Author-setup `/wizard` (`adr/0040`).
+- **Wizards**: an operator-install `/wizard` and an Author-setup `/wizard` (`adr/0040`), committed as `scripts/operator-install.sh` and `scripts/author-setup.sh` and fetched by raw URL, since operators and Authors have no clone.
 
 ### Testing Decisions
 
