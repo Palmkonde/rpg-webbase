@@ -75,11 +75,11 @@ function toolsFor({ app, db, bucket, prefix }: Stores): Tools {
       return live?.id
     },
     async manifestOf(versionId) {
-      const [row] = await db.$client`select manifest from world_versions where id = ${versionId}`
+      const [row] = await db.$client`select manifest from game_service.world_versions where id = ${versionId}`
       return row.manifest as Manifest
     },
     async retireDaysAgo(versionId, days) {
-      await db.$client`update world_versions set retired_at = now() - make_interval(days => ${days}) where id = ${versionId}`
+      await db.$client`update game_service.world_versions set retired_at = now() - make_interval(days => ${days}) where id = ${versionId}`
     },
     async blob(key) {
       return Buffer.from(await bucket.file(`${prefix}${key}`).arrayBuffer())

@@ -82,7 +82,7 @@ test('a refused commit for a World nobody Published leaves no World behind', { s
   const response = await publish(world, crypto.randomUUID())
 
   assert.equal(response.status, CONFLICT)
-  const rows = await db.$client`select id from worlds where id = ${world}`
+  const rows = await db.$client`select id from game_service.worlds where id = ${world}`
   assert.equal(rows.length, 0)
 })
 

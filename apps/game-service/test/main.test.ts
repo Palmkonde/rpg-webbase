@@ -29,14 +29,51 @@ async function withEmptyDatabase(serverUrl: string, run: (url: string) => Promis
   }
 }
 
-async function listTables(url: string): Promise<string[]> {
+async function withConnection<T>(url: string, run: (db: SQL) => Promise<T>): Promise<T> {
   const db = new SQL(url)
   try {
-    const rows: { table_name: string }[] = await db`select table_name from information_schema.tables where table_schema = 'public' order by table_name`
-    return rows.map((row) => row.table_name)
+    return await run(db)
   } finally {
     await db.close()
   }
+}
+
+async function listTables(url: string, schema: string): Promise<string[]> {
+  const rows: { table_name: string }[] = await withConnection(url, (db) => db`select table_name from information_schema.tables where table_schema = ${schema} order by table_name`)
+  return rows.map((row) => row.table_name)
+}
+
+async function schemaExists(url: string, schema: string): Promise<boolean> {
+  const rows: unknown[] = await withConnection(url, (db) => db`select 1 from information_schema.schemata where schema_name = ${schema}`)
+  return rows.length > 0
+}
+
+const GAME_SERVICE_TABLES = ['__drizzle_migrations', 'flags', 'world_versions', 'worlds']
+
+// Another Drizzle app's migration log row is dated after every committed migration, so a service that read that log would skip its own.
+const OTHER_APP_SETUP_SQL = `
+  create table public.worlds (name text primary key);
+  create table public.world_versions (name text primary key);
+  create table public.flags (name text primary key);
+  insert into public.worlds values ('other app');
+  insert into public.world_versions values ('other app');
+  insert into public.flags values ('other app');
+  create schema drizzle;
+  create table drizzle.__drizzle_migrations (id serial primary key, hash text not null, created_at bigint);
+  insert into drizzle.__drizzle_migrations (hash, created_at) values ('other app', 9999999999999);
+`
+
+async function otherAppRows(url: string): Promise<unknown[]> {
+  return withConnection(url, (db) => db`
+    select 'worlds' as source, name as value from public.worlds
+    union all select 'world_versions', name from public.world_versions
+    union all select 'flags', name from public.flags
+    union all select 'drizzle', hash || '@' || created_at from drizzle.__drizzle_migrations
+    order by source`)
+}
+
+async function appliedMigrations(url: string): Promise<unknown[]> {
+  return withConnection(url, (db) => db`select hash, created_at from game_service.__drizzle_migrations order by id`)
 }
 
 test('serve exits naming every missing required variable', async () => {
@@ -54,11 +91,36 @@ test('an unknown command exits naming the commands there are', async () => {
   assert.match(stderr, /Unknown command "deploy": expected serve, migrate, prune or health/u)
 })
 
-test('migrate applies the committed SQL to an empty database and exits', { skip: skipWithoutServices }, async () => {
+test('migrate creates everything in the game_service schema of an empty database', { skip: skipWithoutServices }, async () => {
   await withEmptyDatabase(services!.databaseUrl, async (url) => {
-    const { exitCode } = await runMain(['migrate'], { DATABASE_URL: url })
-    assert.equal(exitCode, 0)
-    assert.deepEqual(await listTables(url), ['flags', 'world_versions', 'worlds'])
+    const { exitCode, stderr } = await runMain(['migrate'], { DATABASE_URL: url })
+    assert.equal(exitCode, 0, stderr)
+    assert.deepEqual(await listTables(url, 'game_service'), GAME_SERVICE_TABLES)
+    assert.deepEqual(await listTables(url, 'public'), [])
+    assert.equal(await schemaExists(url, 'drizzle'), false)
+  })
+})
+
+test('migrate leaves another app\'s same-named tables and Drizzle migration log untouched', { skip: skipWithoutServices }, async () => {
+  await withEmptyDatabase(services!.databaseUrl, async (url) => {
+    await withConnection(url, (db) => db.unsafe(OTHER_APP_SETUP_SQL))
+    const before = await otherAppRows(url)
+    const { exitCode, stderr } = await runMain(['migrate'], { DATABASE_URL: url })
+    assert.equal(exitCode, 0, stderr)
+    assert.deepEqual(await otherAppRows(url), before)
+    assert.deepEqual(await listTables(url, 'game_service'), GAME_SERVICE_TABLES)
+  })
+})
+
+test('a second migrate changes nothing', { skip: skipWithoutServices }, async () => {
+  await withEmptyDatabase(services!.databaseUrl, async (url) => {
+    const first = await runMain(['migrate'], { DATABASE_URL: url })
+    assert.equal(first.exitCode, 0, first.stderr)
+    const applied = await appliedMigrations(url)
+    const { exitCode, stderr } = await runMain(['migrate'], { DATABASE_URL: url })
+    assert.equal(exitCode, 0, stderr)
+    assert.deepEqual(await appliedMigrations(url), applied)
+    assert.deepEqual(await listTables(url, 'game_service'), GAME_SERVICE_TABLES)
   })
 })
 
@@ -104,7 +166,7 @@ test('the compiled binary migrates an empty database', { skip: skipWithoutServic
       const child = spawn([binary, 'migrate'], { env: { DATABASE_URL: url }, stderr: 'pipe' })
       const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()])
       assert.equal(exitCode, 0, stderr)
-      assert.deepEqual(await listTables(url), ['flags', 'world_versions', 'worlds'])
+      assert.deepEqual(await listTables(url, 'game_service'), GAME_SERVICE_TABLES)
     })
   } finally {
     await rm(dir, { recursive: true, force: true })

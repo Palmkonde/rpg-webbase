@@ -21,7 +21,7 @@ export function createDatabase(url: string): Database {
 export async function migrateDatabase(url: string): Promise<void> {
   const db = createDatabase(url)
   try {
-    await migrate(db, { migrationsFolder: MIGRATIONS })
+    await migrate(db, { migrationsFolder: MIGRATIONS, migrationsSchema: schema.gameService.schemaName })
   } finally {
     await db.$client.close()
   }

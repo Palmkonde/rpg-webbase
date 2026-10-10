@@ -38,7 +38,7 @@ async function retiredThenLive(world: string, shared?: string): Promise<{ retire
 }
 
 async function retiredDaysAgo(id: string, days: number): Promise<void> {
-  await db.$client`update world_versions set retired_at = now() - make_interval(days => ${days}) where id = ${id}`
+  await db.$client`update game_service.world_versions set retired_at = now() - make_interval(days => ${days}) where id = ${id}`
 }
 
 async function exists(key: string): Promise<boolean> {
@@ -61,8 +61,8 @@ async function studentSees(world: string, id: string): Promise<number> {
 test('a commit stamps the World Version it replaces as retired, and not the new one', { skip: skipWithoutServices }, async () => {
   const { retired, live } = await retiredThenLive(newWorld())
 
-  const [retiredRow] = await db.$client`select retired_at from world_versions where id = ${retired.id}`
-  const [liveRow] = await db.$client`select retired_at from world_versions where id = ${live.id}`
+  const [retiredRow] = await db.$client`select retired_at from game_service.world_versions where id = ${retired.id}`
+  const [liveRow] = await db.$client`select retired_at from game_service.world_versions where id = ${live.id}`
 
   assert.ok(retiredRow.retired_at instanceof Date)
   assert.ok(!liveRow.retired_at)
@@ -193,7 +193,7 @@ function shortGraceApp(world: string): { publishVia: (expectedLive?: string) => 
 }
 
 async function versionRows(id: string): Promise<number> {
-  const rows = await db.$client`select id from world_versions where id = ${id}`
+  const rows = await db.$client`select id from game_service.world_versions where id = ${id}`
   return rows.length
 }
 
@@ -202,7 +202,7 @@ test('a configured grace period replaces the default', { skip: skipWithoutServic
   const retired = await publishVia()
   await publishVia(retired)
   async function rowsAfterRetiring(interval: string): Promise<number> {
-    await db.$client`update world_versions set retired_at = now() - ${interval}::interval where id = ${retired}`
+    await db.$client`update game_service.world_versions set retired_at = now() - ${interval}::interval where id = ${retired}`
     await pruneVia()
     return versionRows(retired)
   }
