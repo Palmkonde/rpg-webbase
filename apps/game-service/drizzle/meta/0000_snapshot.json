@@ -1,12 +1,12 @@
 {
-  "id": "bf7e118e-3651-435c-bc20-7c8225ef9053",
+  "id": "1f6abb97-0ca0-421d-af49-ef16a09ac3b1",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.flags": {
+    "game_service.flags": {
       "name": "flags",
-      "schema": "",
+      "schema": "game_service",
       "columns": {
         "world_id": {
           "name": "world_id",
@@ -44,9 +44,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.world_versions": {
+    "game_service.world_versions": {
       "name": "world_versions",
-      "schema": "",
+      "schema": "game_service",
       "columns": {
         "id": {
           "name": "id",
@@ -93,6 +93,7 @@
           "name": "world_versions_world_id_worlds_id_fk",
           "tableFrom": "world_versions",
           "tableTo": "worlds",
+          "schemaTo": "game_service",
           "columnsFrom": [
             "world_id"
           ],
@@ -109,9 +110,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.worlds": {
+    "game_service.worlds": {
       "name": "worlds",
-      "schema": "",
+      "schema": "game_service",
       "columns": {
         "id": {
           "name": "id",
@@ -132,6 +133,7 @@
           "name": "worlds_live_version_id_world_versions_id_fk",
           "tableFrom": "worlds",
           "tableTo": "world_versions",
+          "schemaTo": "game_service",
           "columnsFrom": [
             "live_version_id"
           ],
@@ -150,7 +152,9 @@
     }
   },
   "enums": {},
-  "schemas": {},
+  "schemas": {
+    "game_service": "game_service"
+  },
   "sequences": {},
   "roles": {},
   "policies": {},

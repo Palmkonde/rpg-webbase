@@ -1,14 +1,17 @@
-import { jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { jsonb, pgSchema, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
-export const worlds = pgTable('worlds', {
+// Everything the service owns, its migration log too, lives in this schema, so it can share a database with other apps (adr/0045).
+export const gameService = pgSchema('game_service')
+
+export const worlds = gameService.table('worlds', {
   id: text('id').primaryKey(),
   // oxlint-disable-next-line no-use-before-define -- a World and its World Versions reference each other
   liveVersionId: uuid('live_version_id').references((): AnyPgColumn => worldVersions.id),
 })
 
-export const worldVersions = pgTable('world_versions', {
+export const worldVersions = gameService.table('world_versions', {
   id: uuid('id').primaryKey().defaultRandom(),
   worldId: text('world_id').notNull().references(() => worlds.id),
   manifest: jsonb('manifest').notNull(),
@@ -18,7 +21,7 @@ export const worldVersions = pgTable('world_versions', {
 })
 
 // No foreign key to `worlds`: Flags are keyed by World id alone, and a Student may write them before the World is Published (adr/0038).
-export const flags = pgTable(
+export const flags = gameService.table(
   'flags',
   {
     worldId: text('world_id').notNull(),
