@@ -30,7 +30,7 @@ Usage: crpg publish <world> [--dry-run] [--new] [--yes]
   tiled      write the World's Tiled project, with the Library as a project folder and every custom type the Engine reads, creating the World folder and its empty maps/, scripts/, portraits/, cg/ and tilesets/ folders and placeholder world.json and strings.json if they are missing; run it again to refresh the Character list
 
 Publish runs from the content root, the folder holding library/ and worlds/.
-Both commands read GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its shared Publish key) from the environment.`
+publish, versions and prune read GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its shared Publish key) from the environment, or from a .env in the folder crpg runs in.`
 
 const FLAGS = new Set(['--dry-run', '--new', '--yes'])
 
@@ -50,6 +50,15 @@ function report(world: string, { problems }: Checked): { errors: number; summary
     process.stderr.write(`${formatProblem(problem)}\n`)
   }
   return { errors, summary: `Checked World "${world}": ${plural(errors, 'error')}, ${plural(problems.length - errors, 'warning')}.` }
+}
+
+// Node, unlike Bun, never reads `.env` itself. A variable already in the environment keeps its value.
+function loadDotEnv(): void {
+  try {
+    process.loadEnvFile('.env')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {throw error}
+  }
 }
 
 // The Game Service the environment names, or `undefined` while a setting is missing.
@@ -119,7 +128,7 @@ async function publishWithService(context: Context, checked: Checked, options: P
 async function publishChecked(context: Context, options: { isNew: boolean; yes: boolean }, checked: Checked): Promise<number> {
   const service = serviceFromEnvironment()
   if (service === undefined) {
-    return fail('publishing needs GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its Publish key) in the environment')
+    return fail('publishing needs GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its Publish key) in the environment or a .env')
   }
   return publishWithService(context, checked, { isNew: options.isNew, service, approve: approver(options.yes) })
 }
@@ -143,7 +152,7 @@ function versionLine({ id, live, retiredAt }: VersionInfo): string {
 async function withPublishService(what: string, run: (service: PublishService) => Promise<number>): Promise<number> {
   const service = serviceFromEnvironment()
   if (service === undefined) {
-    return fail(`${what} needs GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its Publish key) in the environment`)
+    return fail(`${what} needs GAME_SERVICE_URL (the Game Service) and PUBLISH_KEY (its Publish key) in the environment or a .env`)
   }
   try {
     return await run(service)
@@ -211,6 +220,7 @@ function versionsFrom(args: string[]): Promise<number> | number {
 const COMMANDS: Record<string, (args: string[]) => Promise<number> | number> = { publish: publishFrom, versions: versionsFrom, prune: pruneFrom, tiled: tiledFrom }
 
 async function main(args: string[]): Promise<number> {
+  loadDotEnv()
   const [command, ...rest] = args
   if (command === undefined || command === '--help' || command === '-h') {
     process.stdout.write(`${USAGE}\n`)

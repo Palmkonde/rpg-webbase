@@ -1,0 +1,56 @@
+name: Wiki
+
+# Mirrors docs/guides/ to the repo's GitHub wiki. docs/guides/ stays the source of truth: the mirror
+# overwrites every wiki page on each run, so an edit made on the wiki is lost.
+# The wiki's git repo exists only once a first page has been created in the web UI.
+on:
+  push:
+    branches: [main]
+    paths: ['docs/guides/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write # the job's token pushes to this repo's .wiki.git
+
+concurrency: wiki
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Clone the wiki
+        run: git clone "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # A guide links a sibling guide as `name.md` and anything else in the repo by a `../` path. A wiki
+      # page is named without `.md`, the index (README.md) becomes Home, and repo paths become links to main.
+      - name: Copy the guides as wiki pages
+        run: |
+          rm -f wiki/*.md
+          blob="https://github.com/${GITHUB_REPOSITORY}/blob/main"
+          for guide in docs/guides/*.md; do
+            page=$(basename "$guide" .md)
+            [ "$page" = README ] && page=Home
+            sed -E \
+              -e "s#\]\(\.\./\.\./#](${blob}/#g" \
+              -e "s#\]\(\.\./#](${blob}/docs/#g" \
+              -e 's#\]\(README\.md#](Home#g' \
+              -e 's#\]\(([A-Za-z0-9_-]+)\.md#](\1#g' \
+              "$guide" > "wiki/$page.md"
+          done
+
+      - name: Push the changes
+        working-directory: wiki
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The wiki already matches docs/guides/."
+            exit 0
+          fi
+          git commit -m "Mirror docs/guides/ at ${GITHUB_SHA::7}"
+          git push

@@ -1,0 +1,74 @@
+# The Game Service, run with Docker Compose: docs/guides/game-service.md explains every part.
+# Put it next to the .env that scripts/operator-install.sh writes, then: docker compose up -d --wait
+# COMPOSE_PROFILES=bundled in .env also runs Postgres and a SeaweedFS bucket; leave it out to use your own.
+
+x-game-service: &game-service
+  image: ghcr.io/palmkonde/codeleagues-rpg-engine-game-service:${GAME_SERVICE_VERSION:?set GAME_SERVICE_VERSION in .env}
+  env_file: .env
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+x-bundled-storage: &bundled-storage
+  postgres: { condition: service_healthy, required: false }
+  seaweedfs: { condition: service_healthy, required: false }
+
+services:
+  migrate:
+    <<: *game-service
+    command: ["migrate"]
+    depends_on: *bundled-storage
+
+  game-service:
+    <<: *game-service
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      <<: *bundled-storage
+      migrate: { condition: service_completed_successfully }
+
+  # Not started by `up`: run it from cron (below).
+  prune:
+    <<: *game-service
+    command: ["prune"]
+    profiles: [prune]
+    depends_on: *bundled-storage
+
+  # The bundled profile: Postgres and the bucket, when you don't bring your own.
+  postgres:
+    image: postgres:18
+    profiles: [bundled]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: game
+      POSTGRES_DB: game
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U game -d game"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.48
+    profiles: [bundled]
+    restart: unless-stopped
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+    volumes:
+      - seaweedfs:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8888/buckets/$${S3_BUCKET}/ > /dev/null"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  postgres:
+  seaweedfs:
