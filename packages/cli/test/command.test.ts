@@ -36,6 +36,23 @@ test('a World id outside a-z, 0-9, - and _ is refused', async () => {
   expectError(await crpg(root, ['publish', '../demo', '--dry-run']), 'is not a World folder')
 })
 
+// Nothing listens on these ports, so the run fails naming the Game Service it was pointed at.
+const FROM_DOT_ENV = 'http://127.0.0.1:9'
+const FROM_SHELL = 'http://127.0.0.1:7'
+const DOT_ENV = `GAME_SERVICE_URL='${FROM_DOT_ENV}'\nPUBLISH_KEY='key'\n`
+
+test('the settings are read from a .env in the folder crpg runs in', async () => {
+  const root = await content({ ...world(), '.env': DOT_ENV })
+  const run = await crpg(root, ['versions', 'demo'], { env: { GAME_SERVICE_URL: undefined, PUBLISH_KEY: undefined } })
+  assert.ok(run.output.includes(`could not reach the Game Service at ${FROM_DOT_ENV}`), run.output)
+})
+
+test('a setting in the environment wins over the .env', async () => {
+  const root = await content({ ...world(), '.env': DOT_ENV })
+  const run = await crpg(root, ['versions', 'demo'], { env: { GAME_SERVICE_URL: FROM_SHELL, PUBLISH_KEY: undefined } })
+  assert.ok(run.output.includes(`could not reach the Game Service at ${FROM_SHELL}`), run.output)
+})
+
 test('unexpected arguments print the usage', async () => {
   const root = await content(world())
   const run = await crpg(root, ['frobnicate'])

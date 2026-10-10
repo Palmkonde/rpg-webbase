@@ -95,8 +95,8 @@ const execFileAsync = promisify(execFile)
 export interface CrpgOptions {
   runtime?: 'node' | 'bun'
 
-  // Set over the test process's own environment.
-  env?: Record<string, string>
+  // Set over the test process's own environment; `undefined` unsets a variable.
+  env?: Record<string, string | undefined>
 
   // What the command reads from stdin; a prompt gets end-of-input, which answers no, when this is left out.
   input?: string
