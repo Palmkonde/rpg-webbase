@@ -284,7 +284,8 @@ else
   BUNDLED=no
   save COMPOSE_PROFILES ""
   say ""
-  say "Create an empty database and a user that owns it. migrate creates the tables."
+  say "A new database or one your other apps already use both work. Its user needs CREATE"
+  say "on the database (an owner has it). migrate keeps its tables in a game_service schema."
   note "Format: postgres://user:password@host:5432/database"
   warn "The container reads this URL, so localhost is the container itself. For a"
   note "  Postgres on this machine, use host.docker.internal (Docker Desktop) or the host's address (Linux)."

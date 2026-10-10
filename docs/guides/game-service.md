@@ -13,7 +13,7 @@ An install hands out two values:
 
 On Compose, [`deploy/compose.yaml`](../../deploy/compose.yaml) can run Postgres and a SeaweedFS bucket for you, and the wizard sets them up by default. To use your own instead:
 
-- **Postgres.** Any reachable Postgres works; 18 is the tested version. Create an empty database and a user that owns it. `migrate` creates the tables. Don't share a database with another app: if it already has a `worlds`, `world_versions` or `flags` table, `migrate` fails.
+- **Postgres.** Any reachable Postgres works; 18 is the tested version. A new database or one your other apps already use both work. Its user needs the `CREATE` privilege on the database, which an owner has. `migrate` creates a `game_service` schema and keeps all of the service's tables there, so it never touches another app's. `DROP SCHEMA game_service CASCADE` removes it.
 - **An S3-compatible bucket.** AWS S3, Cloudflare R2, SeaweedFS and others all work. Create the bucket yourself: the service never creates it. Keep it private, because Students fetch files through the service and never from the bucket directly. The access key needs `ListBucket`, `GetObject`, `PutObject` and `DeleteObject` on that bucket.
 
 ## The image

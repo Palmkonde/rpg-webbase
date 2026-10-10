@@ -26,7 +26,7 @@ flowchart LR
     GS["Elysia on Bun<br/>stateless"]
   end
 
-  PG[("Postgres<br/>worlds, world_versions, flags")]
+  PG[("Postgres, schema game_service<br/>worlds, world_versions, flags")]
   Bucket[("S3-compatible bucket<br/>blobs/sha256.ext")]
 
   Author --> CLI
