@@ -47,7 +47,7 @@
     "@codeleagues-rpg-engine/game-service": "*",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "preact": "^11.0.0",
+    "preact": "^11.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tsdown": "^0.23.0",
