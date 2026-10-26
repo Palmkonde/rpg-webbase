@@ -1,6 +1,6 @@
 import type { GridEngine } from 'grid-engine'
 import { MoveToResult } from 'grid-engine'
-import type { TileCoord } from './tiled-assets.ts'
+import type { TileCoord } from './map-objects.ts'
 
 // Every character is created in this group, so they all block each other.
 export const CHARACTER_COLLISION_GROUP = 'character'

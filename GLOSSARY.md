@@ -81,7 +81,7 @@ An Entity with no Character: a fixed picture at a fixed Map position, drawn from
 _Avoid_: Static Entity, decoration
 
 **Spawn Point**:
-The Map coordinate the Player appears at on entering a Map, whether as a Map's default entry point or a Portal's target.
+A named tile on a Map where the Player appears on arriving through a Portal. A Map has one for each way in, so a Player who walks back through a Portal lands beside the Portal they left by, not at one fixed entrance. Where the Player appears is always the tile the Author placed, never a remembered position.
 _Avoid_: Start position, entry tile
 
 **Zone**:
@@ -91,12 +91,12 @@ _Avoid_: Trigger area, collision box (this project has no pixel-level collision 
 ### Movement
 
 **Transition**:
-Movement of the Player from one Map to another, triggered either by walking off a Map's edge into an adjacent Map, or by touching a Portal.
-_Avoid_: Warp, level change
+Movement of the Player from one Map to another, triggered by touching a Portal. There is no separate edge-walk: a way off a Map's edge is a Portal drawn over that opening.
+_Avoid_: Warp, level change, edge-walk
 
 **Portal**:
-An object authored on a Map that triggers a Transition to a specific target Map and Spawn Point when the Player touches it.
-_Avoid_: Door, warp point
+A Tiled-authored rectangular region on a Map that triggers a Transition to a named Spawn Point on a target Map when the Player touches it. An opening at a Map's edge is a Portal like any other; it needs no tile art of its own.
+_Avoid_: Door, warp point, Exit
 
 ### Contract
 

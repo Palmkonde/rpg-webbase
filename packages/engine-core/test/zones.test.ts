@@ -1,4 +1,4 @@
-import { collectZones, findOverlappingZoneIds } from '../src/tiled-assets.ts'
+import { collectZones, findOverlappingZoneIds } from '../src/map-objects.ts'
 import assert from 'node:assert/strict'
 import { findDuplicates } from '../src/util.ts'
 import { test } from 'node:test'

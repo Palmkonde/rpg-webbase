@@ -106,7 +106,7 @@ It prints the deleted files, or `Nothing to prune.` A Student still playing a de
 crpg tiled <world>
 ```
 
-Writes `worlds/<world>/<world>.tiled-project`, which lists the Asset Library as a project folder and defines every custom type the Engine reads ([`tiled-object-authoring.md`](tiled-object-authoring.md)). If they are missing, it also creates the World folder, its empty `maps/`, `scripts/`, `portraits/`, `cg/` and `tilesets/` folders, and a placeholder `world.json` and `strings.json`. It never overwrites a file you edited. Run it again after adding a Character to the Library.
+Writes `worlds/<world>/<world>.tiled-project`, which lists the Asset Library as a project folder and defines every custom type the Engine reads ([`tiled-object-authoring.md`](tiled-object-authoring.md)). If they are missing, it also creates the World folder, its empty `maps/`, `scripts/`, `portraits/`, `cg/` and `tilesets/` folders, and a placeholder `world.json` and `strings.json`. It never overwrites a file you edited. Run it again after adding a Character to the Library or a Map to the World.
 
 ## Checks
 
@@ -123,7 +123,7 @@ An error stops the Publish. A warning doesn't, but it usually means something wo
 |---|---|
 | World | The World id isn't lower-case `a-z`, `0-9`, `-` and `_`, or `worlds/<world>/` doesn't exist |
 | `world.json` | Missing or not JSON; no `startMap`, or its Map doesn't exist; no whole-number `spawn`, or the spawn tile is off the start Map; no `player` |
-| Maps | An XML Map (`.tmx`); a Map that isn't JSON; not orthogonal; infinite; a compressed tile layer; an external tileset; a tileset image with no `tilesets/` folder in its path, or that doesn't exist; Maps with different tile sizes; an `entityId` or `zoneId` used twice in the World |
+| Maps | An XML Map (`.tmx`); a Map that isn't JSON; not orthogonal; infinite; a compressed tile layer; an external tileset; a tileset image with no `tilesets/` folder in its path, or that doesn't exist; Maps with different tile sizes; an `entityId` or `zoneId` used twice in the World; a Portal with no `targetMap` or `targetSpawn`, a `targetMap` that isn't a Map of the World, or a `targetSpawn` that isn't a Spawn Point on that Map; a `spawnId` used twice on one Map; a Spawn Point outside its Map |
 | Characters | A Character named by `world.json`'s `player`, an Entity's `characterId` or a Script's `character` with no `library/characters/<id>/<id>.png`; a `character.json` that is missing, has no whole-number `frameWidth` and `frameHeight`, or has an `offsetY` that isn't a number |
 | Scripts | Any compile error ([`codeleagues-script.md`](codeleagues-script.md#compiling-and-reading-errors)); a `prelude.clsc` of your own; a String Table key missing from a Locale, or a `strings.json` that can't be read |
 | CGs | A CG a Script declares with no image in `cg/<cg-id>/` |

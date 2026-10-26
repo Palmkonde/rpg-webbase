@@ -18,6 +18,9 @@ export interface Manifest {
   scripts: string
   strings: string
   entities: string[]
+
+  // Each Map's Spawn Points by `spawnId`, so the Engine resolves a Portal's target without loading that Map (adr/0046).
+  spawnPoints: Record<string, Record<string, { x: number; y: number }>>
   files: string[]
 }
 
@@ -152,6 +155,7 @@ async function contentOf(context: Context, checked: Checked, store: Store): Prom
     scripts: store.add(requireBytecode(checked), 'clscb'),
     strings: await stringsKey(context, store),
     entities: [...checked.maps.byId.values()].flatMap((map) => map.entities),
+    spawnPoints: Object.fromEntries([...checked.maps.byId.values()].map((map) => [map.id, Object.fromEntries(map.spawnPoints.map(({ spawnId, x, y }) => [spawnId, { x, y }]))])),
   }
 }
 

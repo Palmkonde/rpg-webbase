@@ -21,7 +21,7 @@ Everything about each part, by role.
 ## Authoring how-tos
 
 - [Writing Scripts](codeleagues-script.md): CodeLeagues Script, the language of Dialogue, Cutscenes and Flags
-- [Placing Entities and Zones in Tiled](tiled-object-authoring.md)
+- [Placing Entities, Zones and Portals in Tiled](tiled-object-authoring.md)
 - [Laying out a Character sheet](character-spritesheet-layout.md)
 - [Adding Dialogue Portrait art](dialogue-portrait-assets.md)
 - [Adding CG art](cg-art-assets.md)

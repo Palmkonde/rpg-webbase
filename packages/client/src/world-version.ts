@@ -15,6 +15,9 @@ export interface Manifest {
   scripts: string
   strings: string
   entities: string[]
+
+  // Absent from World Versions Published before Portals (adr/0046).
+  spawnPoints?: Record<string, Record<string, { x: number; y: number }>>
   files: string[]
 }
 
@@ -34,9 +37,9 @@ export function worldConfigOf({ manifest: { start } }: WorldVersion): WorldConfi
 }
 
 export function catalogsOf(version: WorldVersion): ContentCatalogs {
-  const { maps, characters } = version.manifest
+  const { maps, characters, spawnPoints } = version.manifest
   return {
-    maps: Object.entries(maps).map(([id, key]) => ({ id, tiledMapUrl: fileUrl(version, key) })),
+    maps: Object.entries(maps).map(([id, key]) => ({ id, tiledMapUrl: fileUrl(version, key), spawnPoints: spawnPoints?.[id] ?? {} })),
     characters: Object.entries(characters).map(([id, sheet]) => ({
       id,
       spriteUrl: fileUrl(version, sheet.key),

@@ -8,6 +8,8 @@ const spawn = t.Object({ x: t.Integer(), y: t.Integer() })
 const start = t.Object({ map: t.String(), spawn, player: t.String() })
 const character = t.Object({ key, frameWidth: t.Integer(), frameHeight: t.Integer(), offsetY: t.Number() })
 const expressions = t.Record(t.String(), key)
+const spawnPointsOfMap = t.Record(t.String(), spawn)
+const spawnPoints = t.Record(t.String(), spawnPointsOfMap)
 
 // The manifest as the spec gives it. Portrait Expressions and Character ids stay open strings: the CLI has already checked them.
 const manifest = t.Object({
@@ -19,6 +21,9 @@ const manifest = t.Object({
   scripts: key,
   strings: key,
   entities: t.Array(t.String()),
+
+  // Optional: World Versions Published before Portals (adr/0046) have none.
+  spawnPoints: t.Optional(spawnPoints),
   files: t.Array(key),
 })
 

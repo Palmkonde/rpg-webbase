@@ -30,10 +30,18 @@ test('the Engine starts on the manifest\'s Map, spawn and Player Character, ever
 
   assert.deepEqual(engine.created?.worldConfig, { mapId: 'town', player: { spawn: { x: 2, y: 3 }, characterId: 'fluffy' } })
   assert.deepEqual(engine.created?.catalogs, {
-    maps: [{ id: 'town', tiledMapUrl: `${ASSET_BASE_URL}town.tmj` }],
+    maps: [{ id: 'town', tiledMapUrl: `${ASSET_BASE_URL}town.tmj`, spawnPoints: { gate: { x: 4, y: 0 } } }],
     characters: [{ id: 'fluffy', spriteUrl: `${ASSET_BASE_URL}fluffy.png`, frameWidth: 16, frameHeight: 20, offsetY: -8 }],
   })
   assert.equal(engine.created?.assetBaseUrl, ASSET_BASE_URL)
+})
+
+test('a Map of a World Version Published before Spawn Points existed has none', async () => {
+  const { spawnPoints: _, ...older } = liveVersion.manifest
+  const engine = createFakeEngine()
+  await startSession({ createEngine: engine.createEngine, service: createFakeService({}, { ...liveVersion, manifest: older }).service })
+
+  assert.deepEqual(engine.created?.catalogs.maps[0].spawnPoints, {})
 })
 
 test('a stored Companion whose Entity the World Version no longer has is dismissed, and saved as false', async () => {

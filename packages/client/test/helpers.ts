@@ -74,6 +74,7 @@ export const liveVersion: WorldVersion = {
     scripts: 'scripts.clscb',
     strings: 'strings.json',
     entities: ['Sage', 'Guard', 'Statue'],
+    spawnPoints: { town: { gate: { x: 4, y: 0 } } },
     files: [],
   },
 }

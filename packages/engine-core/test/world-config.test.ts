@@ -7,6 +7,7 @@ const maps: MapDefinition[] = [
   {
     id: 'map-1',
     tiledMapUrl: '/assets/maps/map-1.json',
+    spawnPoints: {},
   },
 ]
 
