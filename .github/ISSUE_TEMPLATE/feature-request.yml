@@ -1,0 +1,42 @@
+name: Feature request
+description: Ask for something the engine can't do yet. A maintainer discusses it with you and records a decision.
+title: "[Request] "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This game is mounted by a **Platform**: the application a Student signs in to. The Platform owns sign-in, courses and its own features, and the game renders the World and plays its Scripts. A good request says what should happen in the game. The maintainer decides with you which side should own each part.
+
+        Phrase the title as a question, e.g. `[Request] Can a Script move the Player to another Map and Spawn Point?`
+
+        What happens next: the request is triaged, then discussed until each open question has a decision, and closes with a **Decision** comment (Accepted, Declined or Deferred) that links what was recorded. Vocabulary: [GLOSSARY.md](https://github.com/Palmkonde/rpg-webbase/blob/main/GLOSSARY.md).
+  - type: textarea
+    id: journey
+    attributes:
+      label: User journey
+      description: The steps you expect, in order, as the Student playing and/or the Author building the World. Say what you expect to see at each step.
+      placeholder: |
+        1. The Student walks up to the Slime and interacts with it.
+        2. The Platform's coding view opens over the game.
+        3. The Student solves the problem (or gives up), and the view closes.
+        4. The Slime says a different line depending on whether they won.
+    validations:
+      required: true
+  - type: textarea
+    id: missing
+    attributes:
+      label: What's missing today
+      description: What you tried, and why it falls short. "I couldn't find a way to do this" is a fine answer.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Starting suggestion
+      description: Optional. A sketch of how it could look (a Script, a `mount()` call). It is a starting point for the discussion, not a spec.
+  - type: textarea
+    id: open-points
+    attributes:
+      label: Open points
+      description: Optional. Questions you already know need answering.
