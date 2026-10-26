@@ -47,7 +47,7 @@ Atomic: group by logical concern (new package, new app, docs change = separate c
 
 ### Issue tracker
 
-GitHub Issues on repo `origin` (`Palmkonde/rpg-webbase`), via `gh` CLI. Spec = single, continuously-updated `docs/spec/spec.md`, never published to tracker. See `docs/agents/issue-tracker.md`.
+GitHub Issues on repo `origin` (`Palmkonde/rpg-webbase`), via `gh` CLI. Spec = single, continuously-updated `docs/spec/spec.md`, never published to tracker. See `docs/agents/issue-tracker.md`, which also holds the feature-request lifecycle and the `/triage` label mapping ("Triage labels").
 
 ### Domain docs
 
