@@ -1,13 +1,16 @@
 import * as Phaser from 'phaser'
-import type { AnimationFrame, EntityObject, Facing, TileCoord, TiledMapAssets, ZoneObject } from './tiled-assets.ts'
+import type { AnimationFrame, TiledMapAssets } from './tiled-assets.ts'
 import { CHARACTER_COLLISION_GROUP, createCutsceneMovement } from './cutscene-movement.ts'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
+import type { EntityObject, Facing, TileCoord } from './map-objects.ts'
 import { preloadCharacterSprite, resolveCharacterTexture } from './character-assets.ts'
 import type { CutsceneMovement } from './cutscene-movement.ts'
 import { Direction } from 'grid-engine'
 import type { GridEngine } from 'grid-engine'
+import type { RegionWatch } from './regions.ts'
 import { computeCameraBounds } from './util.ts'
 import { stepAnimation } from './tile-animation.ts'
+import { watchZones } from './regions.ts'
 
 export const PLAYER_ID = 'player'
 const CAMERA_ZOOM = 2
@@ -20,10 +23,6 @@ export type PlayerCharId = typeof PLAYER_ID
 
 export interface HostScene extends CutsceneMovement {
   setPaused: (paused: boolean) => void
-}
-
-function zoneContains(zone: ZoneObject, pos: TileCoord): boolean {
-  return zone.tiles.some((tile) => tile.x === pos.x && tile.y === pos.y)
 }
 
 export interface CharacterEntity {
@@ -117,7 +116,7 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
       this.cutsceneMovement = createCutsceneMovement(this.gridEngine, PLAYER_ID)
       this.setupCamera(tilemap)
       this.setupInput()
-      this.setupZones()
+      this.setupRegions()
       onCreated()
     }
 
@@ -206,21 +205,15 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
       })
     }
 
-    private setupZones(): void {
-      const player = this.gridEngine.getPosition(PLAYER_ID)
-      for (const zone of assets.zones) {
-
-        // Only outside→inside counts; steppedOn also fires on steps between tiles inside the Zone.
-        // A Cutscene-driven entry while paused is dropped, not queued (adr/0026).
-        this.gridEngine
-          .steppedOn([PLAYER_ID], zone.tiles, [PLAYER_LAYER])
-          .subscribe(({ exitTile }) => {
-            if (!this.paused && !zoneContains(zone, exitTile)) {onEvent?.({ type: 'zoneEntered', zoneId: zone.zoneId })}
-          })
-
-        // Deferred a frame, so createEngine has resolved and the Host holds the handle before a Script can run.
-        if (zoneContains(zone, player)) {this.events.once(Phaser.Scenes.Events.UPDATE, () => { onEvent?.({ type: 'zoneEntered', zoneId: zone.zoneId }) })}
+    private setupRegions(): void {
+      const watch: RegionWatch = {
+        gridEngine: this.gridEngine,
+        playerId: PLAYER_ID,
+        layer: PLAYER_LAYER,
+        isPaused: () => this.paused,
+        emit: (event) => { onEvent?.(event) },
       }
+      watchZones(watch, assets.zones, (fire) => { this.events.once(Phaser.Scenes.Events.UPDATE, fire) })
     }
 
     private setupCamera(tilemap: Phaser.Tilemaps.Tilemap): void {

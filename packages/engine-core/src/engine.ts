@@ -1,12 +1,13 @@
 import * as Phaser from 'phaser'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
 import type { CharacterEntity, HostScene, MapSceneConfig } from './map-scene.ts'
-import type { EntityObject, TileCoord, ZoneObject } from './tiled-assets.ts'
+import type { EntityObject, TileCoord, ZoneObject } from './map-objects.ts'
 import { MAP_SCENE_KEY, PLAYER_ID, createMapScene } from './map-scene.ts'
-import { collectTiledMapAssets, findOverlappingZoneIds } from './tiled-assets.ts'
 import { resolveCharacter, resolveMap } from './world-config.ts'
 import { GridEngine } from 'grid-engine'
+import { collectTiledMapAssets } from './tiled-assets.ts'
 import { findDuplicates } from './util.ts'
+import { findOverlappingZoneIds } from './map-objects.ts'
 
 export interface EngineHandle {
   destroy: () => void

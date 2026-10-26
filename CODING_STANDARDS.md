@@ -25,7 +25,7 @@ Judgement-call rules for review, adapted from Robert C. Martin's *Clean Code* (c
 
 ## Boundaries [ch. 8]
 
-- **External data is parsed once, at its seam.** Raw Tiled JSON becomes typed values in `tiled-assets.ts`, including defaults. The Scene and Host consume those types and never re-parse or re-default a raw string. *Hit:* the `facing` default existed in both `tiled-assets.ts` and `map-scene.ts`.
+- **External data is parsed once, at its seam.** Raw Tiled JSON becomes typed values in `tiled-assets.ts` (tilesets) and `map-objects.ts` (Entities, Zones), including defaults. The Scene and Host consume those types and never re-parse or re-default a raw string. *Hit:* the `facing` default existed in both `tiled-assets.ts` and `map-scene.ts`.
 - **Third-party APIs are wrapped where the Host touches them.** grid-engine and Phaser calls stay inside `engine-core`; the Host goes through `EngineHandle`.
 
 ## Error handling [ch. 7]

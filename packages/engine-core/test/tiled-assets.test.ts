@@ -1,4 +1,5 @@
-import { collectEntities, collectPropTiles, collectTileAnimations, collectTileImages, collectTileProperties } from '../src/tiled-assets.ts'
+import { collectEntities, collectPropTiles } from '../src/map-objects.ts'
+import { collectTileAnimations, collectTileImages, collectTileProperties } from '../src/tiled-assets.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
