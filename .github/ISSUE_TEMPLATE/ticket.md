@@ -1,6 +1,6 @@
 ---
 name: Ticket
-about: One tracer-bullet slice of the spec, pickable by an agent via /implement
+about: Maintainers only — one tracer-bullet slice of the spec, pickable by an agent via /implement
 ---
 
 <!-- Title: a present-tense behaviour sentence, e.g. "Walking into a Zone runs its Script, once". -->
