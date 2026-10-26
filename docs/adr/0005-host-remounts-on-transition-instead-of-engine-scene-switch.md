@@ -1,3 +1,7 @@
+---
+status: accepted (amended by adr/0046: a Transition comes from touching a Portal, not crossing an edge, and lands on the Portal's named Spawn Point, not the target Map's default one)
+---
+
 # Host reacts to a Transition by supplying a new World Config, not the Engine switching scenes
 
 When `MapScene` detects the Player crossed a configured edge, `createEngine`'s `onEvent` callback will fire a `transitioned` event carrying `toMapId` and the target Map's default Spawn Point — the Engine will not swap Phaser scenes itself. The Host (`GameCanvas`) will hold `WorldConfig` as local state seeded from its prop; on a `transitioned` event it sets `{ mapId: toMapId, player: { spawn } }`, which re-runs the same teardown/rebuild effect already used for first mount (`createEngine` is torn down and recreated whenever `WorldConfig` changes).

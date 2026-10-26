@@ -26,7 +26,7 @@ sequenceDiagram
   Engine-->>Host: Engine Event: zoneEntered
   Host->>VM: run the Zone's Script (once-only Flag gates it)
 
-  Student->>Engine: walk off an edge or touch a Portal
+  Student->>Engine: step onto a Portal
   Engine-->>Host: Engine Event: transitioned (target Map, Spawn Point)
   Host->>VM: abort a waiting Dialogue
   Host->>Host: set World Config to the target Map
