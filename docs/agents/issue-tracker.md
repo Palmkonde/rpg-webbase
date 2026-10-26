@@ -23,6 +23,47 @@ Tickets for this repo live as GitHub issues on `origin` (`Palmkonde/rpg-webbase`
 - **Comment on a ticket**: `gh issue comment <number> --body "..."`.
 - **Complete a ticket**: work on a branch named `<issue>-<slug>`, push it, and open a PR to `main` (`gh pr create`, body written with the `/pr` skill) with `Closes #<number>` in its body or a commit message. `main` only accepts PRs that pass the `lint`, `typecheck` and `test` checks, merged by rebase so atomic commits survive; GitHub auto-closes the issue when the PR merges and deletes the branch. No separate "update ticket status" commit, and no live-ticking of acceptance-criteria checkboxes as work progresses — the checklist in the issue body is the definition of done, verified before the PR merges; the issue's open/closed state is the only "is this finished" signal.
 
+## Feature requests
+
+Anyone asking for something new (a Platform developer, a future adopter of this project, or the maintainer transcribing one) files it with `.github/ISSUE_TEMPLATE/feature-request.yml`. A request is not a ticket: it answers "should we, and how?"; the tickets it spawns answer "is it built?".
+
+- **Title**: a question with a `[Request] ` prefix ("[Request] Can a Script move the Player to another Map and Spawn Point?"). This is the one exception to the no-prefix title rule above, which covers tickets.
+- **Lifecycle**: filed with `enhancement` + `needs-triage` → `/triage` (to `needs-info` while waiting on the filer) → `/grill-with-docs`, which records decisions in `GLOSSARY.md` and `docs/adr/` as usual → a Decision comment, then:
+  - **Accepted**: `/to-spec` → `/to-tickets`, then close the request as completed. Closed means decided, not built: the tickets listed in its Decision comment track the build from there.
+  - **Declined**: label `wontfix`, write or extend `.out-of-scope/<concept>.md` (the `/triage` knowledge base, one file per concept), close as not planned.
+  - **Deferred**: close as not planned, with a "Revisit when" line naming what would reopen it, and no `.out-of-scope/` entry, since it isn't rejected.
+- An accepted request never takes `/triage`'s `ready-for-agent`/`ready-for-human` shortcut: it always goes through the spec and tickets.
+- **Decision comment** (an agent posting it starts with `/triage`'s AI disclaimer line):
+
+  ```markdown
+  ## Decision: Accepted | Declined | Deferred
+
+  **Why:** <one paragraph>
+
+  **Recorded in:** ADR-00NN, docs/spec/spec.md §<section>, GLOSSARY terms touched
+  **Tickets:** #N, #N                          ← Accepted only
+  **Revisit when:** <trigger>                  ← Deferred only
+  **Out of scope:** .out-of-scope/<concept>.md ← Declined only
+  ```
+
+## Triage labels
+
+`/triage`'s canonical roles map to these labels:
+
+| Role              | Label             | Notes                                                    |
+| ----------------- | ----------------- | -------------------------------------------------------- |
+| `bug`             | `bug`             |                                                          |
+| `enhancement`     | `enhancement`     | Every feature request                                    |
+| `needs-triage`    | `needs-triage`    | Applied by the feature-request form                      |
+| `needs-info`      | `needs-info`      | Waiting on the filer                                     |
+| `ready-for-agent` | `ready-for-agent` | Tickets only (see Conventions); not used for requests    |
+| `ready-for-human` | none              | Not used                                                 |
+| `wontfix`         | `wontfix`         | Declined requests                                        |
+
+Tickets (issues labelled `ready-for-agent` or `blocked`, with no category label) are outside `/triage`'s scope: it never re-triages them.
+
+**PRs as a request surface: no.** A PR that proposes a new feature is pointed at the feature-request form, so the decision is grilled before code is reviewed.
+
 ## Wayfinding operations
 
 For `/wayfinder` efforts. The rules above still hold, with these differences:
