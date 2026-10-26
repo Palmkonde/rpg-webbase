@@ -61,6 +61,17 @@ for (const [name, field, expected] of [
   })
 }
 
+test('the manifest carries each Map\'s Spawn Points as tiles, by spawnId', { skip: skipWithoutServices }, async () => {
+  await withService({}, async (service) => {
+    const gate = { name: 'gate', type: 'SpawnPoint', point: true, x: 80, y: 48, properties: [{ name: 'spawnId', type: 'string', value: 'gate' }] }
+    const school = mapWith({ layers: [{ type: 'objectgroup', name: 'objects', objects: [gate] }] })
+
+    const { manifest } = await publishNew(service, { 'worlds/demo/maps/school.tmj': school })
+
+    assert.deepEqual(manifest.spawnPoints, { school: { gate: { x: 2, y: 1 } }, start: {} })
+  })
+})
+
 test('the manifest names the compiled Scripts, and the file holds bytecode', { skip: skipWithoutServices }, async () => {
   await withService({}, async (service) => {
     const { manifest } = await publishNew(service)

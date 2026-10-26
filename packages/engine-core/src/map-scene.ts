@@ -3,14 +3,14 @@ import type { AnimationFrame, TiledMapAssets } from './tiled-assets.ts'
 import { CHARACTER_COLLISION_GROUP, createCutsceneMovement } from './cutscene-movement.ts'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
 import type { EntityObject, Facing, TileCoord } from './map-objects.ts'
+import type { RegionWatch, ResolvedPortal } from './regions.ts'
 import { preloadCharacterSprite, resolveCharacterTexture } from './character-assets.ts'
+import { watchPortals, watchZones } from './regions.ts'
 import type { CutsceneMovement } from './cutscene-movement.ts'
 import { Direction } from 'grid-engine'
 import type { GridEngine } from 'grid-engine'
-import type { RegionWatch } from './regions.ts'
 import { computeCameraBounds } from './util.ts'
 import { stepAnimation } from './tile-animation.ts'
-import { watchZones } from './regions.ts'
 
 export const PLAYER_ID = 'player'
 const CAMERA_ZOOM = 2
@@ -48,6 +48,7 @@ export interface MapSceneConfig {
   map: MapDefinition
   character: CharacterDefinition
   characterEntities: CharacterEntity[]
+  portals: ResolvedPortal[]
   worldConfig: WorldConfig
   assets: TiledMapAssets
   onEvent?: (event: EngineEvent) => void
@@ -55,7 +56,7 @@ export interface MapSceneConfig {
   onCreated: () => void
 }
 
-export function createMapScene({ map, character, characterEntities, worldConfig, assets, onEvent, onCreated }: MapSceneConfig): typeof Phaser.Scene {
+export function createMapScene({ map, character, characterEntities, portals, worldConfig, assets, onEvent, onCreated }: MapSceneConfig): typeof Phaser.Scene {
   const characterEntityIds = new Set(characterEntities.map(({ entity }) => entity.entityId))
 
   return class MapScene extends Phaser.Scene implements HostScene {
@@ -210,10 +211,12 @@ export function createMapScene({ map, character, characterEntities, worldConfig,
         gridEngine: this.gridEngine,
         playerId: PLAYER_ID,
         layer: PLAYER_LAYER,
+        portals,
         isPaused: () => this.paused,
         emit: (event) => { onEvent?.(event) },
       }
       watchZones(watch, assets.zones, (fire) => { this.events.once(Phaser.Scenes.Events.UPDATE, fire) })
+      watchPortals(watch, map.id)
     }
 
     private setupCamera(tilemap: Phaser.Tilemaps.Tilemap): void {

@@ -1,4 +1,4 @@
-// The objects a Map places on its object layers: Entities and Zones, each tagged by its Custom Class (adr/0010, adr/0012).
+// The objects a Map places on its object layers: Entities, Zones and Portals, each tagged by its Custom Class (adr/0010, adr/0012).
 
 interface TiledPropertyDef {
   name: string
@@ -53,6 +53,13 @@ export interface ZoneObject {
   tiles: TileCoord[]
 }
 
+// Where a Portal sends the Player: a Spawn Point, named by its `spawnId`, on another Map (adr/0046).
+export interface PortalObject {
+  tiles: TileCoord[]
+  targetMap: string
+  targetSpawn: string
+}
+
 const OBJECT_LAYER_TYPE = 'objectgroup'
 const ENTITY_CLASS = 'Entity'
 const ENTITY_ID_PROPERTY = 'entityId'
@@ -62,6 +69,9 @@ const FACINGS = ['down', 'left', 'right', 'up'] as const
 const DEFAULT_FACING: Facing = 'down'
 const ZONE_CLASS = 'Zone'
 const ZONE_ID_PROPERTY = 'zoneId'
+const PORTAL_CLASS = 'Portal'
+const TARGET_MAP_PROPERTY = 'targetMap'
+const TARGET_SPAWN_PROPERTY = 'targetSpawn'
 
 function collectFromObjects<T>(raw: TiledObjectsJson, read: (object: TiledObjectDef) => T | undefined): T[] {
   const results: T[] = []
@@ -80,7 +90,7 @@ function collectFromObjects<T>(raw: TiledObjectsJson, read: (object: TiledObject
   return results
 }
 
-// The one non-blank-string-property lookup every Entity and Zone string property shares.
+// The one non-blank-string-property lookup every Map object's string property shares.
 function readNonBlankStringProperty(object: TiledObjectDef, name: string): string | undefined {
   const value = object.properties?.find((prop) => prop.name === name)?.value
   return typeof value === 'string' && value !== '' ? value : undefined
@@ -135,40 +145,65 @@ function tilesInRect(start: TileCoord, count: TileCoord): TileCoord[] {
   return tiles
 }
 
-// A Zone's rectangle is authored pre-snapped to the grid (guide-enforced, not validated here).
+// A Zone's or Portal's rectangle is authored pre-snapped to the grid (guide-enforced, not validated here).
+function tilesCovered(object: TiledObjectDef, tilewidth: number, tileheight: number): TileCoord[] {
+  const start = { x: Math.floor(object.x / tilewidth), y: Math.floor(object.y / tileheight) }
+  const count = { x: Math.floor((object.width ?? 0) / tilewidth), y: Math.floor((object.height ?? 0) / tileheight) }
+  return tilesInRect(start, count)
+}
+
 function readZone(object: TiledObjectDef, tilewidth: number, tileheight: number): ZoneObject | undefined {
   if (object.type !== ZONE_CLASS) {return undefined}
 
   const zoneId = readNonBlankStringProperty(object, ZONE_ID_PROPERTY)
   if (!zoneId) {return undefined}
 
-  const start = { x: Math.floor(object.x / tilewidth), y: Math.floor(object.y / tileheight) }
-  const count = { x: Math.floor((object.width ?? 0) / tilewidth), y: Math.floor((object.height ?? 0) / tileheight) }
-
-  return { zoneId, tiles: tilesInRect(start, count) }
+  return { zoneId, tiles: tilesCovered(object, tilewidth, tileheight) }
 }
 
 export function collectZones(raw: TiledObjectsJson): ZoneObject[] {
   return collectFromObjects(raw, (object) => readZone(object, raw.tilewidth, raw.tileheight))
 }
 
+function readPortal(object: TiledObjectDef, tilewidth: number, tileheight: number): PortalObject | undefined {
+  if (object.type !== PORTAL_CLASS) {return undefined}
+
+  // A blank target is kept as `''`, so the Engine warns about the Portal instead of losing it silently.
+  const targetMap = readNonBlankStringProperty(object, TARGET_MAP_PROPERTY) ?? ''
+  const targetSpawn = readNonBlankStringProperty(object, TARGET_SPAWN_PROPERTY) ?? ''
+  return { tiles: tilesCovered(object, tilewidth, tileheight), targetMap, targetSpawn }
+}
+
+export function collectPortals(raw: TiledObjectsJson): PortalObject[] {
+  return collectFromObjects(raw, (object) => readPortal(object, raw.tilewidth, raw.tileheight))
+}
+
 function tileKey(tile: TileCoord): string {
   return `${tile.x},${tile.y}`
 }
 
-// Every zoneId that shares at least one tile with another Zone on the same Map.
-export function findOverlappingZoneIds(zones: ZoneObject[]): string[] {
+// The label of every region that shares at least one tile with another on the same Map.
+function findOverlapping<Region extends { tiles: TileCoord[] }>(regions: Region[], labelOf: (region: Region) => string): string[] {
   const overlapping = new Set<string>()
 
-  for (const [i, zoneA] of zones.entries()) {
-    const tilesA = new Set(zoneA.tiles.map(tileKey))
-    for (const zoneB of zones.slice(i + 1)) {
-      if (zoneB.tiles.some((tile) => tilesA.has(tileKey(tile)))) {
-        overlapping.add(zoneA.zoneId)
-        overlapping.add(zoneB.zoneId)
+  for (const [i, regionA] of regions.entries()) {
+    const tilesA = new Set(regionA.tiles.map(tileKey))
+    for (const regionB of regions.slice(i + 1)) {
+      if (regionB.tiles.some((tile) => tilesA.has(tileKey(tile)))) {
+        overlapping.add(labelOf(regionA))
+        overlapping.add(labelOf(regionB))
       }
     }
   }
 
   return [...overlapping]
+}
+
+export function findOverlappingZoneIds(zones: ZoneObject[]): string[] {
+  return findOverlapping(zones, (zone) => zone.zoneId)
+}
+
+// A Portal has no id of its own, so it is named by its target.
+export function findOverlappingPortals(portals: PortalObject[]): string[] {
+  return findOverlapping(portals, (portal) => `${portal.targetMap}/${portal.targetSpawn}`)
 }

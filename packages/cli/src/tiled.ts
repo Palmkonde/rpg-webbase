@@ -30,6 +30,12 @@ async function libraryCharacters(root: string): Promise<string[]> {
   return found.flat()
 }
 
+// The World's Maps, by the id a Portal names them with: each `.tmj` file under `maps/`, without its extension.
+async function worldMaps(root: string, world: string): Promise<string[]> {
+  const children = await entries(`${root}/worlds/${world}/maps`)
+  return children.filter((entry) => entry.isFile() && entry.name.endsWith('.tmj')).map(({ name }) => name.slice(0, -'.tmj'.length)).toSorted()
+}
+
 function text(name: string): Member {
   return { name, type: 'string', value: '' }
 }
@@ -42,15 +48,17 @@ function objectClass(name: string, members: Member[]): PropertyType {
   return { name, type: 'class', color: '#ffa0a0a4', drawFill: true, useAs: ['object'], members }
 }
 
-// Every custom type the Engine reads, as Tiled writes them. `Entity` and `Zone` carry the identity property the Engine looks objects up by (adr/0012); `Portal` has none yet, as the Engine reads nothing from it.
-function generatedTypes(characters: string[]): PropertyType[] {
+// Every custom type the Engine reads, as Tiled writes them. `Entity` and `Zone` carry the identity property the Engine looks objects up by (adr/0012); a `Portal` is named by its target instead, a `SpawnPoint` on another Map (adr/0046).
+function generatedTypes(characters: string[], maps: string[]): PropertyType[] {
   return [
     { name: 'Facing', type: 'enum', storageType: 'string', valuesAsFlags: false, values: FACINGS },
     // The default stays blank: a default that matches would make Tiled omit the value and turn the Entity into a Prop Entity (adr/0024).
     { name: 'CharacterId', type: 'enum', storageType: 'string', valuesAsFlags: false, values: characters },
+    { name: 'MapId', type: 'enum', storageType: 'string', valuesAsFlags: false, values: maps },
     objectClass('Entity', [text('entityId'), choice('characterId', 'CharacterId'), choice('facing', 'Facing', 'down')]),
     objectClass('Zone', [text('zoneId')]),
-    objectClass('Portal', []),
+    objectClass('Portal', [choice('targetMap', 'MapId'), text('targetSpawn')]),
+    objectClass('SpawnPoint', [text('spawnId')]),
   ]
 }
 
@@ -90,9 +98,9 @@ async function makeStarter(root: string, world: string): Promise<void> {
 }
 
 // The project's other settings stay; the generated types and the two project folders are refreshed.
-function refreshed(project: Project, characters: string[]): Project {
+function refreshed(project: Project, characters: string[], maps: string[]): Project {
   const folders = [...FOLDERS, ...(project.folders ?? []).filter((folder) => !FOLDERS.includes(folder))]
-  return { ...project, folders, propertyTypes: withTypes(project.propertyTypes ?? [], generatedTypes(characters)) }
+  return { ...project, folders, propertyTypes: withTypes(project.propertyTypes ?? [], generatedTypes(characters, maps)) }
 }
 
 // The World's project as it is on disk, a new one when there is none, or why it can't be used.
@@ -112,7 +120,7 @@ export async function writeTiledProject(root: string, world: string): Promise<{ 
   const current = await currentProject(root, file)
   if ('reason' in current) {return current}
   await makeStarter(root, world)
-  const project = refreshed(current.project, await libraryCharacters(root))
+  const project = refreshed(current.project, await libraryCharacters(root), await worldMaps(root, world))
   await writeFile(`${root}/${file}`, `${JSON.stringify(project, undefined, 2)}\n`)
   return { file }
 }

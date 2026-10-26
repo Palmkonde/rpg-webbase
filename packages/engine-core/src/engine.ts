@@ -1,13 +1,15 @@
 import * as Phaser from 'phaser'
 import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
 import type { CharacterEntity, HostScene, MapSceneConfig } from './map-scene.ts'
-import type { EntityObject, TileCoord, ZoneObject } from './map-objects.ts'
+import type { EntityObject, PortalObject, TileCoord } from './map-objects.ts'
 import { MAP_SCENE_KEY, PLAYER_ID, createMapScene } from './map-scene.ts'
+import { findOverlappingPortals, findOverlappingZoneIds } from './map-objects.ts'
 import { resolveCharacter, resolveMap } from './world-config.ts'
 import { GridEngine } from 'grid-engine'
+import type { ResolvedPortal } from './regions.ts'
+import type { TiledMapAssets } from './tiled-assets.ts'
 import { collectTiledMapAssets } from './tiled-assets.ts'
 import { findDuplicates } from './util.ts'
-import { findOverlappingZoneIds } from './map-objects.ts'
 
 export interface EngineHandle {
   destroy: () => void
@@ -40,12 +42,30 @@ function warnDuplicateIds(mapId: string, kind: string, ids: string[]): void {
   }
 }
 
-// Overlapping Zones aren't specially resolved (first match wins) but are worth flagging.
-function warnOverlappingZones(mapId: string, zones: ZoneObject[]): void {
-  const overlapping = findOverlappingZoneIds(zones)
+// Overlapping Zones or Portals aren't specially resolved (first match wins) but are worth flagging.
+function warnOverlapping(mapId: string, kind: string, overlapping: string[]): void {
   if (overlapping.length > 0) {
-    console.warn(`[engine] Map "${mapId}" has overlapping Zone(s): ${overlapping.join(', ')}`)
+    console.warn(`[engine] Map "${mapId}" has overlapping ${kind}(s): ${overlapping.join(', ')}`)
   }
+}
+
+function warnAuthoringMistakes(mapId: string, { entities, zones, portals }: TiledMapAssets): void {
+  warnDuplicateIds(mapId, 'entityId', entities.map((entity) => entity.entityId))
+  warnDuplicateIds(mapId, 'zoneId', zones.map((zone) => zone.zoneId))
+  warnOverlapping(mapId, 'Zone', findOverlappingZoneIds(zones))
+  warnOverlapping(mapId, 'Portal', findOverlappingPortals(portals))
+}
+
+// Resolved from the catalog, never by loading the target Map (adr/0046).
+function resolvePortals(mapId: string, portals: PortalObject[], maps: MapDefinition[]): ResolvedPortal[] {
+  return portals.flatMap(({ tiles, targetMap, targetSpawn }) => {
+    const spawnPoints = maps.find((candidate) => candidate.id === targetMap)?.spawnPoints
+    if (!spawnPoints || !Object.hasOwn(spawnPoints, targetSpawn)) {
+      console.warn(`[engine] Map "${mapId}" has a Portal to "${targetMap}/${targetSpawn}", which leads nowhere; skipped`)
+      return []
+    }
+    return [{ tiles, toMapId: targetMap, spawn: spawnPoints[targetSpawn] }]
+  })
 }
 
 // An unknown characterId is an authoring mistake: warn and skip that Entity rather than fail the whole Map load.
@@ -103,13 +123,10 @@ export async function createEngine(container: HTMLElement, options: CreateEngine
   const assets = await collectTiledMapAssets(map.tiledMapUrl, assetBaseUrl)
 
   const characterEntities = resolveCharacterEntities(map.id, assets.entities, catalogs.characters)
+  warnAuthoringMistakes(map.id, assets)
 
-  // Warning guards
-  warnDuplicateIds(map.id, 'entityId', assets.entities.map((entity) => entity.entityId))
-  warnDuplicateIds(map.id, 'zoneId', assets.zones.map((zone) => zone.zoneId))
-  warnOverlappingZones(map.id, assets.zones)
-
-  const game = await startGame(container, { map, character, characterEntities, worldConfig, assets, onEvent })
+  const portals = resolvePortals(map.id, assets.portals, catalogs.maps)
+  const game = await startGame(container, { map, character, characterEntities, portals, worldConfig, assets, onEvent })
 
   return {
     destroy: () => {game.destroy(true)},

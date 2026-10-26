@@ -62,7 +62,7 @@ test('the project defines every custom type the Engine reads', async () => {
   const root = await content(LIBRARY)
   await crpg(root, ['tiled', 'demo'])
   const project = await readProject(root)
-  assert.deepEqual(project.propertyTypes.map(({ name }) => name).toSorted(), ['CharacterId', 'Entity', 'Facing', 'Portal', 'Zone'])
+  assert.deepEqual(project.propertyTypes.map(({ name }) => name).toSorted(), ['CharacterId', 'Entity', 'Facing', 'MapId', 'Portal', 'SpawnPoint', 'Zone'])
   assert.deepEqual(typeNamed(project, 'Facing').values, ['down', 'left', 'right', 'up'])
   assert.equal(new Set(project.propertyTypes.map(({ id }) => id)).size, project.propertyTypes.length)
   assert.deepEqual(typeNamed(project, 'Zone').members?.map(({ name }) => name), ['zoneId'])
@@ -78,6 +78,18 @@ test('CharacterId lists the Characters in the Library, and Entity picks from it 
   assert.deepEqual(members.find(({ name }) => name === 'characterId'), { name: 'characterId', type: 'string', propertyType: 'CharacterId', value: '' })
   assert.deepEqual(members.find(({ name }) => name === 'facing'), { name: 'facing', type: 'string', propertyType: 'Facing', value: 'down' })
   assert.deepEqual(members.find(({ name }) => name === 'entityId'), { name: 'entityId', type: 'string', value: '' })
+})
+
+test('MapId lists the World\'s Maps, a Portal picks its targetMap from it, and a SpawnPoint has a spawnId', async () => {
+  const root = await content({ ...world(), 'worlds/demo/maps/school.tmj': '{}', 'worlds/demo/maps/notes.txt': 'x' })
+  await crpg(root, ['tiled', 'demo'])
+  const project = await readProject(root)
+  assert.deepEqual(typeNamed(project, 'MapId').values, ['school', 'start'])
+  assert.deepEqual(typeNamed(project, 'Portal').members, [
+    { name: 'targetMap', type: 'string', propertyType: 'MapId', value: '' },
+    { name: 'targetSpawn', type: 'string', value: '' },
+  ])
+  assert.deepEqual(typeNamed(project, 'SpawnPoint').members, [{ name: 'spawnId', type: 'string', value: '' }])
 })
 
 test('re-running adds new Characters and leaves Maps alone', async () => {

@@ -1,5 +1,5 @@
 import type { CgHandle, CgStep } from './play-cg.ts'
-import type { CreateEngineOptions, EngineEvent, EngineHandle } from '@codeleagues-rpg-engine/engine-core'
+import type { CreateEngineOptions, EngineEvent, EngineHandle, TransitionedEvent, WorldConfig } from '@codeleagues-rpg-engine/engine-core'
 import type { GameService, SavedFlagStore, Wait } from './game-service.ts'
 import { ServiceCalls, createSavedFlagStore, waitFor } from './game-service.ts'
 import type { WorldContent, WorldVersion } from './world-version.ts'
@@ -60,6 +60,7 @@ class Session implements HostSession {
   private status: HostSnapshot['status'] = 'loading'
   private error: GameError | undefined
   private engine: EngineHandle | undefined
+  private version: WorldVersion | undefined
   private world: WorldContent = { strings: {}, portraits: {}, cgs: {} }
   private destroyed = false
   private prompt: ScriptPrompt | undefined
@@ -152,6 +153,7 @@ class Session implements HostSession {
     const { version, scripts, strings } = await loadLiveWorld(this.calls)
     if (this.destroyed) {return undefined}
     this.player.load(scripts)
+    this.version = version
     this.world = contentOf(version, strings)
     await this.dismissGoneCompanions(version.manifest.entities)
     return version
@@ -167,10 +169,10 @@ class Session implements HostSession {
   }
 
   // Undefined once the session is destroyed meanwhile: no Engine is created after that, and one already coming is destroyed.
-  private async loadEngine(version: WorldVersion): Promise<EngineHandle | undefined> {
+  private async loadEngine(version: WorldVersion, worldConfig: WorldConfig = worldConfigOf(version)): Promise<EngineHandle | undefined> {
     if (this.destroyed) {return undefined}
     const engine = await this.options.createEngine({
-      worldConfig: worldConfigOf(version),
+      worldConfig,
       catalogs: catalogsOf(version),
       assetBaseUrl: version.assetBaseUrl,
       onEvent: (event) => { this.handleEvent(event) },
@@ -208,8 +210,26 @@ class Session implements HostSession {
     this.options.onError?.(gameError)
   }
 
+  // The Engine is rebuilt on the target Map rather than switching Maps itself (adr/0005), with the Player as the same Character.
+  private async transition({ toMapId, spawn }: TransitionedEvent): Promise<void> {
+    const { version } = this
+    if (!version) {return}
+    this.stop()
+    try {
+      const { player } = worldConfigOf(version)
+      const engine = await this.loadEngine(version, { mapId: toMapId, player: { ...player, spawn } })
+      if (engine) {await this.play(engine)}
+    } catch (error: unknown) {
+      this.fail(error)
+    }
+  }
+
   private async handleEvent(event: EngineEvent): Promise<void> {
     console.warn('[Engine Event]', event)
+    if (event.type === 'transitioned') {
+      await this.transition(event)
+      return
+    }
     try {
       if (event.type === 'interacted') {
         await this.player.runInteraction(event.entityId, this.isDestroyed)

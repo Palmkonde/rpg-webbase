@@ -9,6 +9,8 @@ interface TiledProperty {
 
 interface TiledObject {
   type?: string
+  x?: number
+  y?: number
   properties?: TiledProperty[]
 }
 
@@ -46,6 +48,12 @@ export interface MapInfo {
 
   // A `characterId` on an Entity.
   characters: string[]
+
+  // Where each Portal on the Map leads; either may be missing, which a check reports.
+  portals: { targetMap?: string; targetSpawn?: string }[]
+
+  // The tile each Spawn Point marks, in the order they are on the Map, repeats included.
+  spawnPoints: { spawnId: string; x: number; y: number }[]
 }
 
 export interface Maps {
@@ -148,7 +156,43 @@ function describe({ id, map }: ReadMap): MapInfo {
     entities: entities.map((object) => stringProperty(object, 'entityId')).filter((value) => value !== undefined),
     zones: objectsOfKind(map, 'Zone', 'zoneId').map((object) => stringProperty(object, 'zoneId')).filter((value) => value !== undefined),
     characters: entities.map((object) => stringProperty(object, 'characterId')).filter((value) => value !== undefined),
+    portals: objectsIn(map).filter((object) => object.type === 'Portal').map((object) => ({ targetMap: stringProperty(object, 'targetMap'), targetSpawn: stringProperty(object, 'targetSpawn') })),
+    spawnPoints: objectsOfKind(map, 'SpawnPoint', 'spawnId').map((object) => ({
+      spawnId: stringProperty(object, 'spawnId') ?? '',
+      x: Math.floor((object.x ?? 0) / map.tilewidth),
+      y: Math.floor((object.y ?? 0) / map.tileheight),
+    })),
   }
+}
+
+// A `spawnId` is unique on its own Map only, since a Portal always names the Map too (adr/0046).
+function spawnPointProblems({ file, info }: { file: string; info: MapInfo }): Problem[] {
+  const seen = new Set<string>()
+  return info.spawnPoints.flatMap(({ spawnId, x, y }) => {
+    const repeated = seen.has(spawnId)
+    seen.add(spawnId)
+    const inside = x >= 0 && x < info.width && y >= 0 && y < info.height
+    return [
+      ...(repeated ? [`repeats the Spawn Point id "${spawnId}"`] : []),
+      ...(inside ? [] : [`has the Spawn Point "${spawnId}" at (${x}, ${y}), outside the Map, which is ${info.width}x${info.height} tiles`]),
+    ].map((message) => errorAt(file, `Map "${info.id}" ${message}`))
+  })
+}
+
+// While a Map couldn't be read, a Portal's target on it can't be judged (adr/0046).
+function portalProblems(maps: { file: string; info: MapInfo }[], complete: boolean): Problem[] {
+  const byId = new Map(maps.map(({ info }) => [info.id, info]))
+  return maps.flatMap(({ file, info }) => info.portals.flatMap(({ targetMap, targetSpawn }) => {
+    if (targetMap === undefined || targetSpawn === undefined) {
+      return [errorAt(file, `Map "${info.id}" has a Portal with no ${targetMap === undefined ? 'targetMap' : 'targetSpawn'}`)]
+    }
+    const target = byId.get(targetMap)
+    if (target === undefined) {
+      return complete ? [errorAt(file, `Map "${info.id}" has a Portal to Map "${targetMap}", which is not in the World`)] : []
+    }
+    const found = target.spawnPoints.some(({ spawnId }) => spawnId === targetSpawn)
+    return found ? [] : [errorAt(file, `Map "${info.id}" has a Portal to Spawn Point "${targetSpawn}", which is not on Map "${targetMap}"`)]
+  }))
 }
 
 // An Entity or Zone id is unique within the World, not only within its Map, so the Engine's per-Map warning is not enough.
@@ -194,9 +238,11 @@ export async function checkMaps(context: Context): Promise<{ maps: Maps; problem
   const loaded = await Promise.all(names.filter((name) => name.endsWith('.tmj')).map((name) => load(context, dir, name)))
   const read = loaded.filter((candidate): candidate is LoadedMap & ReadMap => candidate.map !== undefined)
   const perMap = await Promise.all(read.map((candidate) => tilesetProblems(context, candidate)))
+  const described = read.map((candidate) => ({ file: candidate.file, info: describe(candidate) }))
+  const complete = xml.length === 0 && read.length === loaded.length
 
   return {
-    maps: { byId: new Map(read.map((candidate) => [candidate.id, describe(candidate)])), complete: xml.length === 0 && read.length === loaded.length },
-    problems: [...xml, ...loaded.flatMap((candidate) => candidate.problems), ...read.flatMap((candidate) => structureProblems(candidate)), ...perMap.flat(), ...duplicateProblems(read.map((candidate) => ({ file: candidate.file, info: describe(candidate) }))), ...tileSizeProblems(read)],
+    maps: { byId: new Map(described.map(({ info }) => [info.id, info])), complete },
+    problems: [...xml, ...loaded.flatMap((candidate) => candidate.problems), ...read.flatMap((candidate) => structureProblems(candidate)), ...perMap.flat(), ...duplicateProblems(described), ...described.flatMap((map) => spawnPointProblems(map)), ...portalProblems(described, complete), ...tileSizeProblems(read)],
   }
 }

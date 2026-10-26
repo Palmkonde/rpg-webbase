@@ -6,6 +6,9 @@ export interface SpawnPoint {
 export interface MapDefinition {
   id: string
   tiledMapUrl: string
+
+  // The Map's Spawn Points by `spawnId`, so a Portal on another Map resolves its target without loading this one (adr/0046).
+  spawnPoints: Record<string, SpawnPoint>
 }
 
 export interface CharacterDefinition {

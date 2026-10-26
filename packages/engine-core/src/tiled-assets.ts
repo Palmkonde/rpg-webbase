@@ -1,5 +1,5 @@
-import type { EntityObject, PropTile, TiledObjectsJson, ZoneObject } from './map-objects.ts'
-import { collectEntities, collectPropTiles, collectZones } from './map-objects.ts'
+import type { EntityObject, PortalObject, PropTile, TiledObjectsJson, ZoneObject } from './map-objects.ts'
+import { collectEntities, collectPortals, collectPropTiles, collectZones } from './map-objects.ts'
 import { MapFileError } from './map-file-error.ts'
 
 interface TiledTilePropertyDef {
@@ -48,6 +48,7 @@ export interface TiledMapAssets {
   entities: EntityObject[]
   propTiles: PropTile[]
   zones: ZoneObject[]
+  portals: PortalObject[]
 }
 
 // Build a gid-keyed Map by extracting one value per tile across all tilesets
@@ -121,5 +122,6 @@ export async function collectTiledMapAssets(tiledMapUrl: string, assetBaseUrl: s
     entities: collectEntities(raw),
     propTiles: collectPropTiles(raw),
     zones: collectZones(raw),
+    portals: collectPortals(raw),
   }
 }
