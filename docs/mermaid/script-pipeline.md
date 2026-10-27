@@ -8,9 +8,9 @@ sequenceDiagram
   participant VM as Script VM (TypeScript)
   participant Engine as Engine
 
-  Author->>Src: write on interact(Guard), on enter(Zone), on arrive(Map), cutscene, cg
+  Author->>Src: write on interact(Guard), on enter(Zone), on arrive(Map), cutscene (scripts root), cg (beside its art, in its CG folder's cg.clsc)
   Author->>Compiler: build (next build, clsc build --watch, or publish)
-  Compiler->>Src: read every .clsc file as one program
+  Compiler->>Src: read every .clsc file, scripts root and CG files, as one program
   Compiler->>Compiler: type-check Flags, Speakers, Movers, Characters
   Compiler->>Compiler: reject two handlers for the same trigger and id
   alt compile error
@@ -23,7 +23,7 @@ sequenceDiagram
   Engine-->>Host: Engine Event (interacted, zoneEntered, transitioned)
   Host->>VM: start the handler for (trigger, id), Flag snapshot
   loop until the block ends
-    VM-->>Host: what it waits for (line, choices, command, CG, Flag write, freeze, unfreeze)
+    VM-->>Host: what it waits for (line, choices, command, CG with its pages, Flag write, freeze, unfreeze)
     Host->>Engine: setPaused, move, follow
     Host->>Host: draw Dialogue / CG overlay, save Flag write
     Host->>VM: next() or choose(i)

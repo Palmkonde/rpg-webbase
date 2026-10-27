@@ -1318,6 +1318,109 @@ An Author draws a Portal: a rectangle on any object layer, Class `Portal`, over 
 - `adr/0046` lists the rejected options: whole-edge links, an `Exit` Class, one default Spawn Point per Map, a remembered position, and a `toSpawnId` the Host resolves.
 - The `school` Map is temporary content for building this. It lives in the gitignored content folder, not in the repo.
 
+## CG Captions: A CG Is Declared Beside Its Art
+
+Confirmed 2026-10-27 via grilling session. Decision record: `adr/0048`, amending `adr/0032`. See `GLOSSARY.md`'s new **Caption** entry and its updated **CG** and **String Table** entries.
+
+### Problem Statement
+
+An Author who plays a CG from a Script can't see or write its text anywhere in the Script. A CG is declared with one bare line, `cg intro_fox;`, and its captions come from String Table keys named by a hidden rule, `cg.<id>.<n>`, one per image. An Author who doesn't know the rule gets a CG with no message at all, or a bracketed key on screen. Dialogue lets the Author write English inline while drafting, or use `@key` once it needs translating. A CG allows neither. One image can carry only one caption, so a narrated intro or a Chapter title card needs a copy of the same image for every sentence. A CG also can't vary what it shows from the Student's Flags.
+
+### Solution
+
+Every CG is declared in its own file, `cg/<id>/cg.clsc`, in the same folder as its images. The declaration can have a body, read top to bottom. A `frame("<stem>")` step puts an image on screen. Each Caption after it, written inline or as `@key`, is one click of the Player. The image stays until the next `frame`. An `if` on a Flag can vary which frames and Captions play. A Script that plays the CG writes `use cg.<id>;` and `play(cg::<id>)`, as for anything else declared in another file. A CG with no body still plays every image in filename order, with no Captions. The hidden `cg.<id>.<n>` rule is gone.
+
+### User Stories
+
+1. As an Author, I want to write a CG's Captions in the same file that declares the CG, so that I can see what the Player will read without opening `strings.json`.
+2. As an Author, I want to write a Caption as inline English while drafting, so that a CG works before anything is translated.
+3. As an Author, I want to write a Caption as `@key`, so that it can be translated through the String Table like a Dialogue line.
+4. As an Author, I want a missing Caption `@key` to fail the compile, so that a CG never shows a bracketed key to a Student.
+5. As an Author, I want to show several Captions over one image, so that a narrated intro or a Chapter title card doesn't need a copy of the image per sentence.
+6. As an Author, I want to choose which image shows with a `frame` step, so that the order in the Script, not the file names, decides what the Player sees.
+7. As an Author, I want to name an image by its file stem, so that adding an image to the folder never shifts the frames I already wrote.
+8. As an Author, I want a `frame` with no Caption after it to still take one click, so that a CG can hold pure-art pages between captioned ones.
+9. As an Author, I want an `if` on a Flag inside a CG body, so that a CG can show a different image or Caption to a Student who has done something.
+10. As an Author, I want a CG body to refuse lines with a Speaker, choices, `set`, `play` and commands, so that a CG never turns into a Cutscene by accident.
+11. As an Author, I want a CG body that doesn't start with a `frame` outside any `if` to fail the compile, so that a Caption never shows over no image.
+12. As an Author, I want a `frame` naming an image the folder doesn't have to fail Publish, so that a typo never reaches Students.
+13. As an Author, I want an image no `frame` names to fail Publish, so that I notice art I forgot to place. A `raw.*` source file never counts.
+14. As an Author, I want a `cg/<id>/` folder with images but no `cg.clsc` to warn at Publish, so that I notice a forgotten declaration without being blocked.
+15. As an Author, I want a CG's declared name to have to match its folder, so that the folder and the CG it holds can never drift apart.
+16. As an Author, I want `cg x;` with no body to keep playing every image in filename order, so that a pure-art slideshow needs nothing more.
+17. As an Author, I want to reach a CG from a Script with `use cg.<id>;`, so that playing one works like using anything else declared in another file.
+18. As an Author, I want a `cg` declared under the scripts root to fail the compile with a message saying where it belongs, so that a CG has exactly one home.
+19. As an Author, I want a `cg/` folder under the scripts root to fail the compile, so that `use cg.<id>;` can only ever mean the World's CG folder.
+20. As an Author, I want to keep marking a CG once-only on its declaration, so that `set seen_x = true` works as it does for a Cutscene.
+21. As an Author, I want any Script that uses a CG to read its once-only Flag, so that I can branch on whether the Student has seen it.
+22. As an Author, I want the CG file's own `use` lines to reach the scripts root, so that its `if`s can check Flags declared there.
+23. As a Player, I want each click to show the next Caption, so that I read the CG at my own pace.
+24. As a Player, I want skip to end the whole CG at once, as it does today, so that a CG I've seen before doesn't hold me up.
+25. As a Player, I want to see Captions in my Locale, so that a translated CG reads the same way translated Dialogue does.
+26. As a Player, I want to stay frozen while a CG plays, as today, so that I can't wander off mid-slideshow.
+27. As a Host developer, I want the VM to hand back a CG's resolved pages in one `cg` output, so that the existing slideshow plays them with no new VM call.
+28. As a Host developer, I want the manifest to list each CG image with its stem, so that the Host can find a page's art by the name the Script used.
+29. As a Host developer, I want a bodyless CG to hand back no pages, so that the Host falls back to the manifest's order with no Captions.
+30. As a future maintainer, I want it recorded why a CG lives beside its art and not under the scripts root, so that nobody moves it back.
+
+### Implementation Decisions
+
+- **Where a CG is declared** (`adr/0048`). Every `cg` lives in `cg/<id>/cg.clsc`, and its declared name must equal `<id>`. A `cg` declaration in a file under the scripts root is a compile error. So is a `cg/` folder under the scripts root. `crpg` compiles the CG files as part of the one program, beside the scripts root (`adr/0032`).
+- **Reaching a CG.** `use cg.<id>;` makes the CG's names visible: its id and its once-only Flag. `cg.` is a reserved prefix in `use` that means the World's `cg/` folder. The CG file's own `use` lines resolve against the scripts root as usual. The existing rules still hold: names are unique across the whole program, `_private` names stay private to their file, and `use` is not transitive.
+- **Body grammar.** `cg <id> [set <flag> = true] { … }`, or `cg <id> [set <flag> = true];` for a bodyless CG. A body allows only these steps:
+  - `frame("<stem>");`
+  - a Caption: a bare quoted string or `@key` with a `;`, and no Speaker
+  - `if` / `else` on Flag expressions, nesting the same three steps
+
+  The first step must be a `frame` outside any `if`. `frame` is a language keyword, not a prelude command. A Caption's text follows the same escape and `@key` rules as a line, including the check that every key exists in every Locale.
+- **Pages.** A body resolves to an ordered list of pages, each `{ frame: stem, caption?: Text }`. Each Caption becomes one page with the current frame. A `frame` that no Caption follows before the next `frame` or the end becomes one page without a Caption.
+- **VM.** A `cg` block compiles to its body's code, then the existing `Cg` instruction. When it is `play`ed, the VM pushes the frame and emits `freeze` as today. It runs the body without stopping, collecting pages, and then hands back one output: `{ type: 'cg', id, pages }`. Running the body in one pass is equivalent to running it click by click, because a CG body can't change a Flag. A bodyless CG hands back `pages: []`. A body always yields at least one page. The once-only marker behaves as today. The bytecode format version goes from 7 to 8.
+- **Manifest.** `cgs` changes from `Record<id, key[]>` to `Record<id, { stem, key }[]>`, still in natural filename order. The Game Service's manifest model changes to match. World Versions published before this have to be published again, as for every earlier format bump.
+- **Host.** The Script player passes the output's pages to `playCg`. The session builds the CG's frames from them: art by stem from the manifest, Caption as a `Text`. With no pages, it uses every manifest image in order with no Caption. A Caption resolves through the same line resolution Dialogue uses. The CG view's `caption` becomes optional, and the default overlay leaves the caption out when there is none. The slideshow (`playCG`, the stepper, advance and skip) is unchanged: it counts pages.
+- **`crpg publish` checks.** The compiler's facts list, for each CG, the stems its body names, or nothing for a bodyless CG. `crpg` uses them to fail on a stem the folder lacks and on an image (not `raw.*`) no `frame` names. It warns on a `cg/<id>/` folder that has images but no `cg.clsc`. The existing failure for a declared CG with no images stays.
+- **Removed.** The `cg.<id>.<n>` caption key rule, with no fallback.
+- **Editor support.** The VS Code grammar learns `frame` and the Caption form. The grammar-sync test keeps it in step with the compiler.
+- **Demo content.** `intro_fox`, `campfire_vision` and `intro` each move to `cg/<id>/cg.clsc`. `intro_fox` gets Captions. `intro` gets a body that uses its existing `@cg.intro.*` keys. `campfire_vision` keeps its once-only marker. The Scripts that play them switch to `use cg.<id>;`.
+- **Docs.** `docs/guides/cg-art-assets.md` is rewritten around `cg.clsc`, `frame` and Captions. The `cg` section of `docs/guides/codeleagues-script.md` shows a body and `use cg.<id>;`. `docs/guides/content-folder.md`'s `cg/` entry mentions `cg.clsc`. `docs/spec/clsc.md` points here instead of leaving CG content out of the language.
+
+### Testing Decisions
+
+- A good test drives a module through its public seam and asserts what a caller sees, not how it gets there. These are the seams the tests use, all existing ones:
+- **Client session** (prior art: `session.test.ts`'s CG tests, with compiled `.clsc` fixtures and a fake Game Service). This is the main seam. A fixture CG is played through the session, and the snapshot's `cg` view (`art`, `caption`, `hasMore`) is asserted after each click. It covers:
+  - several Captions over one image
+  - a `frame` with no Caption
+  - an `if` on a Flag choosing a different Caption
+  - a `@key` Caption in a second Locale
+  - a bodyless CG playing manifest images in filename order with no Caption
+  - skip ending the CG with the Dialogue carrying on
+- **`crpg` checks** (prior art: `scripts.test.ts`). These cover the checks that need both the folder and the script:
+  - a stem the folder lacks fails
+  - an image no `frame` names fails, while a `raw.*` file doesn't
+  - a folder with images but no `cg.clsc` warns
+  - a valid CG passes
+- **Compiler error fixtures** (prior art: `compiler/tests/errors`). One fixture each for:
+  - a `cg` declared under the scripts root
+  - a `cg/` folder under the scripts root
+  - a declared name that doesn't match its folder
+  - a line with a Speaker, a choice, `set`, `play` or a command inside a CG body
+  - a body that doesn't start with a `frame` outside any `if`
+  - a Caption `@key` missing from a Locale
+- **Manual** (no browser automation, per `CLAUDE.md`). Arrive on `school` and confirm `intro_fox` shows its Captions click by click and that skip ends it. Interact with the campfire and confirm `campfire_vision` still plays once only. Remove `intro`'s `cg.clsc` and confirm Publish warns but succeeds.
+
+### Out of Scope
+
+- `shake`, `fade_in` and `fade_out` inside a CG body: #149, whose comment asks for them to be allowed in a `cg` as well as a `cutscene`.
+- A Caption with a Speaker or Portrait, or Dialogue shown over a CG's art. That is a Cutscene that plays a CG.
+- Timed or auto-advancing Captions.
+- Choices, `set` and `play` inside a CG body.
+- A replay or gallery mode for seen CGs.
+- The Player not freezing while an `on arrive` handler plays: #157.
+
+### Further Notes
+
+- `adr/0048` lists the rejected options: keeping `cg` in the scripts root, splitting body and bodyless CGs between two homes, keeping the `cg.<id>.<n>` rule as a fallback, naming frames by position, and one Caption per image.
+- Supersedes "CG & Cutscene" above on CG content: Captions no longer come from the String Table by position, and a CG's art no longer always plays in filename order.
+
 ## Explicitly out of scope / deferred
 
 - **Quests, XP, inventory, progression rules** beyond the Flags described above — these belong to the Host/main-repo backend, not the Engine, and Flags themselves stay a flat key/value store, not a full progression system.
