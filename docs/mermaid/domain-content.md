@@ -26,6 +26,7 @@ classDiagram
   class Cutscene
   class FollowStep["Follow step"]
   class CG
+  class Caption
   class Speaker
   class Portrait
   class Expression
@@ -78,6 +79,8 @@ classDiagram
   Zone ..> Flag : plays once, gated by
   Cutscene ..> Flag : once-only, gated by
   CG ..> Flag : once-only, gated by
+  CG "1" *-- "*" Caption
+  CG ..> Flag : varies what it shows by
 
   Dialogue "1" --> "*" Speaker : lines attributed to
   Dialogue ..> Portrait : may show
