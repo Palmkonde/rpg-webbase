@@ -206,7 +206,7 @@ The spec fixes what the file contains, not its byte layout. The layout is worked
 - **Hot reload** of bytecode without a page reload.
 - **Checking `on` ids and cast names against the Tiled Maps**, and doing ADR-0012's cross-Map `entityId` uniqueness check in the compiler.
 - **Quest.** It isn't designed as a domain concept yet.
-- **Authoring CG slideshow content.** The language only triggers a CG.
+- **Authoring CG slideshow content.** The language only triggers a CG. No longer deferred: see `spec.md`'s "CG Captions: A CG Is Declared Beside Its Art" (`adr/0048`).
 - **Resuming a run partway through** after a reload or remount.
 - **Player-switchable translation** (English and Thai, including translated Speaker names). That's v2, and `@key` lines are the route to it.
 - **Getting the compiler into a deploy build.** No deploy target exists yet.
@@ -217,4 +217,4 @@ The spec fixes what the file contains, not its byte layout. The layout is worked
 
 - The `script-language` branch holds all of this work. The TS Scripts keep working on it until each one's port passes its playtest.
 - The syntax verdict and the three rejected candidates are on branch `prototype/script-language`, under the prototype README. The runtime research on Yarn and Ink, and the parser-language research, are on the `research/*` branches.
-- `resolveLine`'s fallback (to English, then `[key]`) becomes unreachable for keyed lines once the compiler rejects missing keys. It is left in place for the CG captions that still use it.
+- `resolveLine`'s fallback (to English, then `[key]`) becomes unreachable for keyed lines once the compiler rejects missing keys. It is left in place for the CG captions that still use it. Once CG Captions are checked like lines (`adr/0048`), it is unreachable for those too.
