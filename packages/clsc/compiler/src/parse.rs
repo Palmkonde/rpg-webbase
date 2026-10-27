@@ -113,6 +113,7 @@ impl Playable {
 pub enum Trigger {
     Interact,
     Enter,
+    Arrive,
 }
 
 impl Trigger {
@@ -120,6 +121,7 @@ impl Trigger {
         match self {
             Self::Interact => "interact",
             Self::Enter => "enter",
+            Self::Arrive => "arrive",
         }
     }
 }
@@ -258,8 +260,14 @@ fn block(pair: Pair<'_, Rule>) -> Result<Block<'_>, ParseError> {
         Block { kind: BlockKind::Played(Playable::Cutscene), name: pair.as_span(), cast: Vec::new(), body: Vec::new(), sections: Vec::new(), once: None };
     for part in pair.into_inner() {
         match part.as_rule() {
-            Rule::trigger if part.as_str() == "interact" => block.kind = BlockKind::Handler(Trigger::Interact),
-            Rule::trigger => block.kind = BlockKind::Handler(Trigger::Enter),
+            Rule::trigger => {
+                block.kind = BlockKind::Handler(match part.as_str() {
+                    "interact" => Trigger::Interact,
+                    "enter" => Trigger::Enter,
+                    "arrive" => Trigger::Arrive,
+                    other => unreachable!("the grammar allows no trigger `{other}`"),
+                });
+            }
             Rule::name => block.name = part.as_span(),
             Rule::cast => block.cast = names(part),
             Rule::block_body => {

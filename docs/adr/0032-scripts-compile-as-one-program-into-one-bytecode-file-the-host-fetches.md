@@ -1,5 +1,5 @@
 ---
-status: accepted (supersedes adr/0020)
+status: accepted (supersedes adr/0020; amended by adr/0047: the handler index gains the `arrive` trigger)
 ---
 
 # Scripts compile as one program into one bytecode file the Host fetches

@@ -8,10 +8,10 @@ export type { CommandArg, Flags, Output, Run, ShownChoice, Text, Tile, Trigger }
 const MAGIC = 'CLSC'
 
 // Hand-written, not generated from Rust: this is the layout this decoder reads, so a file from a newer or older compiler fails loudly.
-export const FORMAT_VERSION = 6
+export const FORMAT_VERSION = 7
 
 // Decoded by position, as `bytecode.rs` writes them.
-const TRIGGERS: readonly Trigger[] = ['interact', 'enter']
+const TRIGGERS: readonly Trigger[] = ['interact', 'enter', 'arrive']
 const BLOCK_KINDS: readonly Block['kind'][] = ['handler', 'cutscene', 'cg']
 const FLAG_TYPES: readonly FlagDeclaration['type'][] = ['bool', 'Character?']
 const PARAM_TYPES = ['Mover', 'Tile'] as const
@@ -132,7 +132,7 @@ function checkHeader(reader: Reader): void {
   }
 }
 
-// Keyed by trigger and id together, so interact and enter keep separate namespaces.
+// Keyed by trigger and id together, so each trigger keeps its own namespace.
 function handlerKey(trigger: Trigger, id: string): string {
   return `${trigger} ${id}`
 }

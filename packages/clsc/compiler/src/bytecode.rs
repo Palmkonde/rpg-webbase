@@ -30,10 +30,10 @@ use std::collections::HashMap;
 use std::fmt::Write as _;
 
 const MAGIC: &[u8; 4] = b"CLSC";
-const FORMAT_VERSION: u16 = 6;
+const FORMAT_VERSION: u16 = 7;
 
 // The VM decodes these by position, so the order is part of the layout.
-const TRIGGERS: [Trigger; 2] = [Trigger::Interact, Trigger::Enter];
+const TRIGGERS: [Trigger; 3] = [Trigger::Interact, Trigger::Enter, Trigger::Arrive];
 const BLOCK_KINDS: [&str; 3] = ["handler", "cutscene", "cg"];
 const FLAG_TYPES: [&str; 2] = ["bool", CHARACTER_FLAG_TYPE];
 const CHARACTER_FLAG_TYPE: &str = "Character?";
@@ -572,7 +572,7 @@ mod tests {
 
         assert_eq!(
             disasm(&bytecode).unwrap(),
-            "format version 6
+            "format version 7
 
 strings
      0  \"companion:Guard\"

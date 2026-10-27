@@ -5,3 +5,7 @@ on interact(Camp) with Narrator {
 on enter(Camp) with Narrator {
     Narrator: "You walk into the camp.";
 }
+
+on arrive(Camp) with Narrator {
+    Narrator: "You arrive at the camp.";
+}

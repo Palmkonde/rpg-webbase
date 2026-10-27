@@ -17,7 +17,7 @@ cg        = { cg_keyword ~ name ~ (once | ";") }
 // Any bool parses, so `check.rs` can reject `false` with a message saying why.
 once      = { set_keyword ~ name ~ "=" ~ bool_literal ~ ";" }
 handler   = { on_keyword ~ trigger ~ "(" ~ name ~ ")" ~ cast? ~ block_body }
-trigger   = { "interact" | "enter" }
+trigger   = { "interact" | "enter" | "arrive" }
 cast      = { with_keyword ~ name ~ ("," ~ name)* }
 body      = { "{" ~ statement* ~ "}" }
 
