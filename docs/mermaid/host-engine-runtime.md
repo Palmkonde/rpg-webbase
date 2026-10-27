@@ -5,10 +5,10 @@ sequenceDiagram
   participant Engine as Engine (Phaser)
   participant VM as Script VM
 
-  Host->>Engine: createEngine(World Config: Map, Player spawn, Character)
+  Host->>Engine: createEngine(World Config: Map, Player spawn, Character, Companions)
   Engine-->>Host: Map loaded
   Host->>Engine: re-apply Companion Flags (follow / stopMovement)
-  Note over Engine: Entities, Zones, Portals come from the Map itself
+  Note over Engine: Entities, Zones, Portals come from the Map itself<br/>Companions appear next to the Player, not at their Tiled placement
 
   Student->>Engine: move
   Engine-->>Host: Engine Event: player moved
@@ -29,7 +29,7 @@ sequenceDiagram
   Student->>Engine: step onto a Portal
   Engine-->>Host: Engine Event: transitioned (target Map, Spawn Point)
   Host->>VM: abort a waiting Dialogue
-  Host->>Host: set World Config to the target Map
+  Host->>Host: set World Config to the target Map, with the active Companions
   Host->>Engine: tear down and recreate with the new World Config
   Engine-->>Host: Map loaded
   Host->>Engine: re-apply Companion Flags

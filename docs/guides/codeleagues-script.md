@@ -393,6 +393,7 @@ on interact(Stray) with Guard, fluffy {
 
 - **Comparing.** A Companion Flag isn't a `bool`. Compare it with `==` or `!=` against `none` or a Character. It can't be used with `!` or as a condition on its own.
 - **The Player.** `companion[Player]` is a compile error, because the Player can't be a Companion.
+- **Across Maps.** A Companion comes along to every Map. It appears next to the Player's Spawn Point, trying the tiles below, left, right and above in that order. This is true on its own Map too, where it's never at its Tiled placement. If all four tiles are blocked, it sits that Map out and comes back on the next one.
 
 ## Jumps
 

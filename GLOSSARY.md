@@ -101,7 +101,7 @@ _Avoid_: Door, warp point, Exit
 ### Contract
 
 **World Config**:
-The data the Host supplies to the Engine describing what to render in the live game: the active Map, and the Player's position and Character. Entities, Zones, and Portals are defined in the Map itself (in Tiled) and are always live once their Map loads, not gated by World Config (ADR-0021). This is the Engine's entire input surface — distinct from Tiled's own editor preview of a placed object, a separate design-time-only concern. It is the live, per-session input *into* a World, not the World itself.
+The data the Host supplies to the Engine describing what to render in the live game: the active Map, the Player's position and Character, and the Companions that come along, each with its Character. Entities, Zones, and Portals are defined in the Map itself (in Tiled) and are always live once their Map loads, not gated by World Config (ADR-0021). This is the Engine's entire input surface — distinct from Tiled's own editor preview of a placed object, a separate design-time-only concern. It is the live, per-session input *into* a World, not the World itself.
 _Avoid_: Game state, props, initial state
 
 **Interaction**:
