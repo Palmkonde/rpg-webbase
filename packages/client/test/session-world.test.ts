@@ -28,7 +28,7 @@ test('the Engine starts on the manifest\'s Map, spawn and Player Character, ever
   const engine = createFakeEngine()
   await startSession({ createEngine: engine.createEngine })
 
-  assert.deepEqual(engine.created?.worldConfig, { mapId: 'town', player: { spawn: { x: 2, y: 3 }, characterId: 'fluffy' } })
+  assert.deepEqual(engine.created?.worldConfig, { mapId: 'town', player: { spawn: { x: 2, y: 3 }, characterId: 'fluffy' }, companions: [] })
   assert.deepEqual(engine.created?.catalogs, {
     maps: [{ id: 'town', tiledMapUrl: `${ASSET_BASE_URL}town.tmj`, spawnPoints: { gate: { x: 4, y: 0 } } }],
     characters: [{ id: 'fluffy', spriteUrl: `${ASSET_BASE_URL}fluffy.png`, frameWidth: 16, frameHeight: 20, offsetY: -8 }],
@@ -69,4 +69,11 @@ test('a Companion already dismissed is not saved as false again', async () => {
   const { fake } = await startWith({ 'companion:Guard': false }, withEntities([]))
 
   assert.deepEqual(fake.patches, [])
+})
+
+test('a Companion recruited in an earlier session starts next to the Player on the first Map', async () => {
+  const engine = createFakeEngine()
+  await startSession({ createEngine: engine.createEngine, service: createFakeService({ 'companion:Guard': 'fluffy' }).service })
+
+  assert.deepEqual(engine.created?.worldConfig.companions, [{ entityId: 'Guard', characterId: 'fluffy' }])
 })

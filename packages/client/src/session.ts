@@ -1,5 +1,5 @@
 import type { CgHandle, CgStep } from './play-cg.ts'
-import type { CreateEngineOptions, EngineEvent, EngineHandle, TransitionedEvent, WorldConfig } from '@codeleagues-rpg-engine/engine-core'
+import type { CreateEngineOptions, EngineEvent, EngineHandle, TransitionedEvent } from '@codeleagues-rpg-engine/engine-core'
 import type { GameService, SavedFlagStore, Wait } from './game-service.ts'
 import { ServiceCalls, createSavedFlagStore, waitFor } from './game-service.ts'
 import type { WorldContent, WorldVersion } from './world-version.ts'
@@ -172,14 +172,16 @@ class Session implements HostSession {
   }
 
   // Undefined once the session is destroyed meanwhile: no Engine is created after that, and one already coming is destroyed.
-  private async loadEngine(version: WorldVersion, worldConfig: WorldConfig = worldConfigOf(version)): Promise<EngineHandle | undefined> {
+  private async loadEngine(version: WorldVersion, arrival?: Pick<TransitionedEvent, 'toMapId' | 'spawn'>): Promise<EngineHandle | undefined> {
     if (this.destroyed) {return undefined}
+
     const engine = await this.options.createEngine({
-      worldConfig,
+      worldConfig: worldConfigOf(version, await this.flags.getFlags(), arrival),
       catalogs: catalogsOf(version),
       assetBaseUrl: version.assetBaseUrl,
       onEvent: (event) => { this.handleEvent(event) },
     }).catch((error: unknown) => { throw toEngineLoadError(error) })
+
     if (!this.destroyed) {return engine}
     engine.destroy()
     return undefined
@@ -214,13 +216,13 @@ class Session implements HostSession {
   }
 
   // The Engine is rebuilt on the target Map rather than switching Maps itself (adr/0005), with the Player as the same Character.
-  private async transition({ toMapId, spawn }: TransitionedEvent): Promise<void> {
+  private async transition(event: TransitionedEvent): Promise<void> {
     const { version } = this
     if (!version) {return}
     this.stop()
+
     try {
-      const { player } = worldConfigOf(version)
-      const engine = await this.loadEngine(version, { mapId: toMapId, player: { ...player, spawn } })
+      const engine = await this.loadEngine(version, event)
       if (engine) {await this.play(engine)}
     } catch (error: unknown) {
       this.fail(error)

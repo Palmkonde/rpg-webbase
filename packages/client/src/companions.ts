@@ -1,4 +1,4 @@
-import type { EngineHandle } from '@codeleagues-rpg-engine/engine-core'
+import type { EngineHandle, WorldConfigCompanion } from '@codeleagues-rpg-engine/engine-core'
 import type { Flags } from './flags.ts'
 import { PLAYER_CHAR_ID } from './player.ts'
 
@@ -40,6 +40,11 @@ function companionEntityIds(flags: Readonly<Flags>): string[] {
 
 export function activeCompanionIds(flags: Readonly<Flags>): string[] {
   return companionEntityIds(flags).filter((entityId) => isActiveCompanion(flags, entityId))
+}
+
+// What World Config carries onto every Map: each active Companion, with the Character its Flag holds (adr/0028).
+export function companionsOf(flags: Readonly<Flags>): WorldConfigCompanion[] {
+  return activeCompanionIds(flags).map((entityId) => ({ entityId, characterId: String(flags[companionFlag(entityId)]) }))
 }
 
 // Re-applies every Companion Flag to the Engine, since a Cutscene or remount can drop a chase. Any other value is left alone.
