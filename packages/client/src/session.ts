@@ -142,6 +142,9 @@ class Session implements HostSession {
 
   private readonly isDestroyed = (): boolean => this.destroyed
 
+  // A destroyed session, or one whose Transition failed, has no Engine left to arrive on.
+  private readonly isUnmounted = (): boolean => !this.engine
+
   // The token is asked for first (adr/0036), so a Student the Platform can't vouch for loads nothing.
   private async loadFlags(): Promise<void> {
     await this.calls.requestToken()
@@ -224,14 +227,14 @@ class Session implements HostSession {
     }
   }
 
+  // The arrival runs after the Transition, since a run drives whichever Engine is mounted.
   private async handleEvent(event: EngineEvent): Promise<void> {
     console.warn('[Engine Event]', event)
-    if (event.type === 'transitioned') {
-      await this.transition(event)
-      return
-    }
     try {
-      if (event.type === 'interacted') {
+      if (event.type === 'transitioned') {
+        await this.transition(event)
+        await this.player.runMapArrival(event.toMapId, this.isUnmounted)
+      } else if (event.type === 'interacted') {
         await this.player.runInteraction(event.entityId, this.isDestroyed)
       } else if (event.type === 'zoneEntered') {
         await this.player.runZoneEntered(event.zoneId, this.isDestroyed)

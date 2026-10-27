@@ -470,7 +470,7 @@ A Script's return type generalizes from `Dialogue` alone to a discriminated unio
 9. As a Host developer, I want `ScriptBuilder` to stay exactly as it is today, so that its `.say()`/`.choice()` API isn't stretched to represent content it wasn't designed for.
 10. As a Host developer, I want a CG/Cutscene trigger to be a plain, minimal `{ type, id }` object, so that a Script author can return one without learning a second builder API.
 11. As a content author, I want a Choice's `next` (already typed as `Script`) to automatically support returning a CG/Cutscene trigger too, so that a CG or Cutscene is reachable mid-conversation, not only as a Script's very first, top-level output.
-12. As a Host developer, I want this scoped to Entity-interaction Scripts only this round, so that Map-entry Scripts (ticket #13, not yet built) aren't entangled with this change — they inherit the same capability automatically once they exist, since the mechanism doesn't care which Engine Event invoked the Script.
+12. As a Host developer, I want this scoped to Entity-interaction Scripts only this round, so that Map-entry Scripts (ticket #13, since built as `on arrive` handlers — `adr/0047`) aren't entangled with this change — they inherit the same capability automatically once they exist, since the mechanism doesn't care which Engine Event invoked the Script.
 13. As a Host developer, I want `GameCanvas`'s currently boot-only CG state (hardcoded to one id) generalized to track whichever CG is currently active, so that a mid-game CG with a different id doesn't collide with or get blocked by the boot CG's own state.
 14. As a future maintainer, I want it recorded why Script's return type is a discriminated union rather than an imperative `playCG`/`playCutscene` call from inside a Script, so that I don't try to "simplify" it into a side-effecting call later (`adr/0018`).
 15. As a future maintainer, I want it recorded why `ScriptBuilder` didn't grow `.playCG()`/`.playCutscene()` methods, so that a future contributor doesn't add them expecting builder parity (`adr/0018`).
@@ -514,7 +514,7 @@ A Script's return type generalizes from `Dialogue` alone to a discriminated unio
 ### Out of Scope
 
 - `playCutscene(id)` and the Cutscene step-runner itself — issues #25-28.
-- Map-entry Scripts triggering a CG/Cutscene — ticket #13 (Map-entry Scripts) is itself still unbuilt; this mechanism is trigger-agnostic so Map-entry inherits it automatically once #13 ships, but that wiring isn't built here.
+- Map-entry Scripts triggering a CG/Cutscene — no longer deferred: ticket #13 built Map-entry Scripts as `on arrive` handlers (`adr/0047`), which play CGs and Cutscenes like any other handler.
 - `runOnce`/"don't replay" flag-gating — issue #24. A Script-triggered CG plays at most once per Student in principle, same as boot's, but the shared gating helper isn't built in this round either.
 - `ScriptBuilder` gaining `.playCG()`/`.playCutscene()` terminal methods — explicitly rejected, see `adr/0018`.
 - A Script calling `playCG`/`playCutscene` imperatively as a side effect — explicitly rejected, see `adr/0018`.
@@ -586,11 +586,11 @@ Class-tagged Spawn/Entity/Portal objects can now live on any number of object la
 
 ## Zone: Walking Into a Region Triggers a Script
 
-Confirmed 2026-09-27 via grilling session. Resolves the "tile/zone-entered Script trigger" item "Dialogue Scripts" Out of Scope left deferred (superseding that bullet and "CG & Cutscene"'s own matching deferral — both are updated to point here) and extends the Engine's set of Script-driving triggers with a third kind, alongside Interact (ticket 05/12) and the still-unbuilt Map-entry `transitioned` trigger (ticket #13). See `GLOSSARY.md`'s new **Zone** entry and `adr/0019` through `adr/0022` for the four architectural calls below.
+Confirmed 2026-09-27 via grilling session. Resolves the "tile/zone-entered Script trigger" item "Dialogue Scripts" Out of Scope left deferred (superseding that bullet and "CG & Cutscene"'s own matching deferral — both are updated to point here) and extends the Engine's set of Script-driving triggers with a third kind, alongside Interact (ticket 05/12) and the Map-entry `transitioned` trigger (ticket #13, since built as `on arrive` — `adr/0047`). See `GLOSSARY.md`'s new **Zone** entry and `adr/0019` through `adr/0022` for the four architectural calls below.
 
 ### Problem Statement
 
-Every existing way a Script can run today requires either an explicit action (pressing Interact while facing an Entity) or crossing a Map's outer boundary (the `transitioned` event, driving ticket #13's still-unbuilt Map-entry Scripts). Neither covers the reference-point beat this project is aiming for (Undertale, RPG tutorial sequences): a Player walking into a room or across a threshold *within* a Map and having a scene simply begin, with no button press and no full Map change. Content authors currently have no way to place that kind of trigger at all.
+Every existing way a Script can run today requires either an explicit action (pressing Interact while facing an Entity) or crossing a Map's outer boundary (the `transitioned` event, driving ticket #13's Map-entry Scripts). Neither covers the reference-point beat this project is aiming for (Undertale, RPG tutorial sequences): a Player walking into a room or across a threshold *within* a Map and having a scene simply begin, with no button press and no full Map change. Content authors currently have no way to place that kind of trigger at all.
 
 ### Solution
 
@@ -643,7 +643,7 @@ A new Map-object kind, **Zone** — a Tiled-authored rectangular region, tagged 
 - **Replay gating**: Reuses the existing `runOnce`/Flag mechanism unchanged (the same `<id>_seen` Flag convention CG/Cutscene already use) — a Zone's Script plays at most once per Student, exactly like a Script-triggered CG/Cutscene already does.
 - **Script dispatch**: No new dispatch logic — whatever Script a `zoneId` resolves to produces the same `ScriptResult` (Dialogue | CgTrigger | CutsceneTrigger) an Entity's Script already can, handled by the same existing Host-side dispatch.
 - **Script-lookup generalization**: The existing per-entityId Script lookup (dynamic import + try/catch) generalizes into one shared helper parameterized by kind (e.g. `entities/`, `zones/`), rather than either a fully duplicated parallel function per kind or a single flat cross-kind id namespace — avoiding both code duplication and cross-kind id collisions.
-- **Relationship to ticket #13 (Map-entry Script)**: Zone and Map-entry stay two separate, coexisting Engine Events. Zone does not touch, generalize, or reopen the already-shipped `transitioned` Engine Event or ticket #13's own (still-unbuilt) scope — they share the Script-lookup pattern, not the Engine Event contract.
+- **Relationship to ticket #13 (Map-entry Script)**: Zone and Map-entry stay two separate, coexisting Engine Events. Zone does not touch, generalize, or reopen the already-shipped `transitioned` Engine Event or ticket #13's own scope (since built as `on arrive` — `adr/0047`) — they share the Script-lookup pattern, not the Engine Event contract.
 - **Activation**: No WorldConfig-gated filtering — every Zone authored on the currently-loaded Map is simply always live, matching the actual (not originally-aspirational) behavior Entities/Portals already have.
 - **Character layer**: Fixed to this project's single existing character layer (`"ground"`) — no multi-layer/multi-floor concept exists elsewhere in the codebase to design around.
 
@@ -1322,7 +1322,7 @@ An Author draws a Portal: a rectangle on any object layer, Class `Portal`, over 
 - **Quests, XP, inventory, progression rules** beyond the Flags described above — these belong to the Host/main-repo backend, not the Engine, and Flags themselves stay a flat key/value store, not a full progression system.
 - **Ink language integration** for dialogue authoring — skip until needed, not designed now; the Dialogue Scripts system above is a separate, general dispatch mechanism Ink could plug into later, not a replacement for it.
 - **NPC/Entity sprite rendering** — no longer deferred; see "Entity Rendering: Character Entities and Prop Entities" above.
-- **Map-entry Script triggers, entityId→script lookup tables** — see Dialogue Scripts' own Out of Scope above. (CG/cutscene itself is no longer deferred — see "CG & Cutscene" above; zone-entered triggers are no longer deferred either — see "Zone: Walking Into a Region Triggers a Script" above.)
+- **entityId→script lookup tables** — see Dialogue Scripts' own Out of Scope above. (Map-entry Scripts are no longer deferred — they are `on arrive(<map id>)` handlers, `adr/0047`; CG/cutscene itself is no longer deferred — see "CG & Cutscene" above; zone-entered triggers are no longer deferred either — see "Zone: Walking Into a Region Triggers a Script" above.)
 - **Flag arithmetic, a Script→Host side-effect channel, timed/auto-advancing choices, a Player-facing locale switcher** — see "Dialogue Scripts: Choices, Speakers & Localization"'s own Out of Scope above.
 - **Portrait art normalization pipeline, Portrait animation, and any tie-in to NPC/Entity sprite rendering** — see "Dialogue Portraits & Expressions"'s own Out of Scope above (Portrait/Expression itself is no longer deferred — it's scoped there).
 
