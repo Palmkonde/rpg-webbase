@@ -19,12 +19,24 @@ export interface CharacterDefinition {
   offsetY?: number
 }
 
+// A Companion the Host carries onto every Map: the Character comes from its Flag, never from another Map's Tiled file (adr/0028).
+export interface WorldConfigCompanion {
+  entityId: string
+  characterId: string
+}
+
+export interface ResolvedCompanion {
+  entityId: string
+  character: CharacterDefinition
+}
+
 export interface WorldConfig {
   mapId: string
   player: {
     spawn: SpawnPoint
     characterId: string
   }
+  companions: WorldConfigCompanion[]
 }
 
 export interface InteractedEvent {

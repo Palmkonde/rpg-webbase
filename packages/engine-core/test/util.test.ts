@@ -1,4 +1,4 @@
-import { computeCameraBounds, findDuplicates } from '../src/util.ts'
+import { computeCameraBounds, findDuplicates, firstFreeNeighbour } from '../src/util.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
@@ -27,4 +27,19 @@ test('findDuplicates returns an empty array when nothing repeats', () => {
 
 test('findDuplicates returns each value that appears more than once, once each', () => {
   assert.deepEqual(findDuplicates(['a', 'b', 'a', 'c', 'b', 'a']), ['a', 'b'])
+})
+
+test('firstFreeNeighbour tries down, left, right, then up', () => {
+  const tried: string[] = []
+  const free = firstFreeNeighbour({ x: 5, y: 5 }, ({ x, y }) => {
+    tried.push(`${x},${y}`)
+    return tried.length < 4
+  })
+
+  assert.deepEqual(tried, ['5,6', '4,5', '6,5', '5,4'])
+  assert.deepEqual(free, { x: 5, y: 4 })
+})
+
+test('firstFreeNeighbour finds nothing when all four tiles are blocked', () => {
+  assert.equal(firstFreeNeighbour({ x: 5, y: 5 }, () => true), undefined)
 })
