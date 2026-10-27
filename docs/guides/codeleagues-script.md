@@ -50,16 +50,21 @@ on interact(Campfire) with Campfire {
 on enter(Clearing) with Narrator {
     Narrator: "The trees open onto a quiet clearing.";
 }
+
+on arrive(forest) with Narrator {
+    Narrator: "The air turns cold under the trees.";
+}
 ```
 
 - `on interact(Id)` runs every time the Player interacts with the Entity that has that id.
 - `on enter(Id)` runs the first time the Player walks into the Zone that has that id. It runs once per Student and never again.
+- `on arrive(Id)` runs every time the Player arrives on the Map that has that id through a Portal. It doesn't run when the game starts on the start Map. To play it only once, gate it on a Flag or play a once-only Cutscene.
 
-The id is the object's `entityId` in Tiled (see [`tiled-object-authoring.md`](tiled-object-authoring.md)). `interact` ids and `enter` ids are separate namespaces, so an Entity and a Zone can share an id.
+For `interact` the id is the object's `entityId` in Tiled, and for `enter` its `zoneId` (see [`tiled-object-authoring.md`](tiled-object-authoring.md)). For `arrive` it is the Map's file name without `.tmj`. The three triggers are separate namespaces, so an Entity, a Zone and a Map can share an id. An id has to be a valid name in the language, so a Map file named `town-square.tmj` can't have an `arrive` handler (see [`naming-conventions.md`](naming-conventions.md)).
 
 A handler can go in any file. Two handlers for the same trigger and id are a compile error, even when they're in different files.
 
-The Player can still walk around while a handler's Dialogue shows. Interacting with something else, entering a Zone, changing Map or dismissing the Dialogue ends the handler wherever it is. To take control away from the Player, put the scene in a [`cutscene`](#cutscenes-and-cgs).
+The Player can still walk around while a handler's Dialogue shows. Interacting with something else, entering a Zone, changing Map or dismissing the Dialogue ends the handler wherever it is. An `arrive` handler is the exception for Zones: a Zone the Player enters while it plays is skipped and stays unseen, so a Spawn Point inside a Zone doesn't cut the arrival off. To take control away from the Player, put the scene in a [`cutscene`](#cutscenes-and-cgs).
 
 ## The cast
 
@@ -531,7 +536,6 @@ These are deliberately not in the language, so don't go looking for them:
 - **Parameterised Cutscenes.** A Cutscene can't take arguments.
 - **Cross-block jumps.** You can't `goto` a section in another block.
 - **`play(dialogue::x)`.** Only Cutscenes and CGs can be played.
-- **Map-entry handlers.** The only triggers are `interact` and `enter`.
 - **A Follow gap.** A follower always trails right behind its leader.
 - **Commands that return values.**
 - **Editor support.** There's no syntax highlighting or live error squiggles yet. The compiler output in `[clsc]` is where errors show up.

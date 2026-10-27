@@ -26,6 +26,7 @@ Everything about each part, by role.
 - [Adding Dialogue Portrait art](dialogue-portrait-assets.md)
 - [Adding CG art](cg-art-assets.md)
 - [Naming a Zone's seen-flag](cg-cutscene-seen-flags.md)
+- [Naming things in a World](naming-conventions.md): every id, the characters it can use, and what refers to it
 
 ## Contributing
 
