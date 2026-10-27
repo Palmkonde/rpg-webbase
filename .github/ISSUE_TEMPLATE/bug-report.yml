@@ -1,0 +1,49 @@
+name: Bug report
+description: Something the engine already does, but does wrong. A maintainer reproduces it and decides whether it is a bug or a design question.
+title: "[Bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for behaviour that exists but goes wrong: a crash, a wrong result, a check that should fail and doesn't. To ask for something the engine can't do yet, file a **Feature request** instead.
+
+        Phrase the title as what goes wrong, e.g. `[Bug] Player isn't frozen while an on arrive handler plays`
+
+        What happens next: the bug is triaged and reproduced. A confirmed bug is fixed by a PR that closes it. If it turns out to be working as designed, it is closed with the reason, or turned into a feature request when the design should change. Vocabulary: [GLOSSARY.md](https://github.com/Palmkonde/rpg-webbase/blob/main/GLOSSARY.md).
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+      description: What you saw, as the Student playing or the Author building the World.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What should have happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The steps, in order, from a fresh session or a fresh `crpg publish`. Name the World, Map, Script and handler involved.
+      placeholder: |
+        1. Publish the `demo` World.
+        2. Walk from `main_test` through the Portal to `school`.
+        3. While the `on arrive(school)` handler plays, press an arrow key.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Errors and logs
+      description: Optional. Console output, `crpg` output or a stack trace. Pasted as-is.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Optional. The release tag or commit you saw it on.
