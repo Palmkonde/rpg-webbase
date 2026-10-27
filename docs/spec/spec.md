@@ -854,9 +854,9 @@ A Follow step ends when its Cutscene ends, so a character can never keep the Pla
 
 ### Solution
 
-A Script can turn any Character Entity into a **Companion**: it keeps chasing the Player outside any Cutscene for as long as a Flag says so. The Flag's value is the Companion's Character, so it's remembered across Map transitions once those exist. A Companion never blocks the Player. The Player can dismiss it with a button in the corner, which is hidden while a Cutscene or CG is playing. A Companion can't be talked to. The `guard-walk` Cutscene ends with a Choice that can recruit the Guard as the demo.
+A Script can turn any Character Entity into a **Companion**: it keeps chasing the Player outside any Cutscene for as long as a Flag says so. The Flag's value is the Companion's Character, so it's remembered across Map transitions. A Companion never blocks the Player. The Player can dismiss it with a button in the corner, which is hidden while a Cutscene or CG is playing. A Companion can't be talked to. The `guard-walk` Cutscene ends with a Choice that can recruit the Guard as the demo.
 
-This spec covers a Companion on the Map where it was recruited. Carrying a Companion onto other Maps is decided here but built in a later ticket, once Map transitions (#3) exist.
+A Companion comes along to every Map the Player walks onto (#38), carried by World Config.
 
 ### User Stories
 
@@ -874,13 +874,13 @@ This spec covers a Companion on the Map where it was recruited. Carrying a Compa
 12. As a Player, I want the dismiss button hidden while a Cutscene or CG is playing, so that I can't break a scene halfway through.
 13. As a Player, I want the Guard demo to end with "Follow me forever" or "Nah, stay here", so that recruiting is my choice.
 14. As a Player, I want picking "Nah, stay here" to leave the Guard at its post, so that declining really declines.
-15. As a Player, I want a Companion to come with me when I walk onto another Map, so that "forever" really means forever. (Later ticket, after #3.)
-16. As a Player, I want a Companion to appear next to me on each new Map, so that it's there as soon as I arrive. (Later ticket, after #3.)
+15. As a Player, I want a Companion to come with me when I walk onto another Map, so that "forever" really means forever.
+16. As a Player, I want a Companion to appear next to me on each new Map, so that it's there as soon as I arrive.
 17. As a Host developer, I want Companion state to live in the existing Flag store, so that it needs no new persistence.
 18. As a Host developer, I want one function that re-applies Companion Flags to the Engine, so that "is it following right now?" is decided in one place.
 19. As a Host developer, I want that function called when a Map finishes loading, after any Script finishes, and on dismiss, so that every way a chase can be lost is covered.
 20. As a Host developer, I want the Engine handle to be usable as soon as `createEngine` resolves, so that the first sync can't reach grid-engine before the Map Scene exists.
-21. As an Engine developer, I want the Engine to stay unaware of Companions, so that its only new surface is a generic "does this character block other characters" toggle.
+21. As an Engine developer, I want the Engine to never track whether a character is a Companion, so that its only new surfaces are a generic "does this character block other characters" toggle and World Config's `companions` list.
 22. As a future maintainer, I want it recorded why the Host, not the Engine, re-applies Companions (`adr/0028`), so that I don't move it into the Engine and lose Companions recruited mid-Map.
 23. As a future maintainer, I want it recorded that a Companion's Character is written twice (Tiled and the Flag value), so that I know it's a deliberate trade for never loading an unshown Map.
 24. As a future maintainer, I want it recorded that talking to a Companion is a future feature, so that I don't treat the missing Interaction as a bug.
@@ -899,7 +899,8 @@ This spec covers a Companion on the Map where it was recruited. Carrying a Compa
 - **Dismiss UI**: the Host overlay shows one "Dismiss <entityId>" button per active Companion, only while the Engine isn't paused. Clicking it sets the Flag to `false` and runs sync.
 - **Not interactable**: a Companion can't be talked to, even on its home Map.
 - **Demo**: `guard-walk` ends with a Choice: "Follow me forever" writes `companion:Guard = 'fluffy'`, and "Nah, stay here" writes nothing. `guard-walk` plays once, so this is the one chance to recruit the Guard.
-- **Across Maps (later ticket, blocked by #4)**: World Config gains a `companions` list (entity id plus Character) that the Host builds from the Companion Flags. On load, the Engine places each one on the first free tile next to the Player's Spawn Point (down, left, right, up), or warns and skips if all four are blocked. The Companion's own placement in Tiled is skipped on its home Map; this rule is provisional.
+- **Across Maps** (#38): World Config has a `companions` list (entity id plus Character) that the Host builds from the active Companion Flags on every mount, the first included. On load, the Engine places each one on the first free tile next to the Player's Spawn Point (down, left, right, up), or warns and skips if all four are blocked. The Companion's own placement in Tiled is skipped on its home Map; this rule is provisional.
+- **Open question: dismissing away from home.** A Companion dismissed on another Map stays there only until the Player leaves. Next time the Player visits its home Map, it's back at its Tiled placement. Whether it should stay where it was dismissed is undecided.
 
 ### Testing Decisions
 
@@ -916,11 +917,11 @@ This spec covers a Companion on the Map where it was recruited. Carrying a Compa
   - after another Cutscene moves the Guard, it resumes chasing;
   - "Dismiss Guard" is hidden during a Cutscene, and when clicked stops the Guard and makes it block again;
   - "Nah, stay here" leaves the Guard at its post.
+- **Across Maps** (#38): the World Config seam (`resolveCompanions` pairs each Companion with its Character, and skips an unknown one), the neighbour order (`firstFreeNeighbour` tries down, left, right, up, and finds nothing when all four are blocked), building the `companions` list from Flags (`companionsOf`), and the session passing it on the first mount and on a Transition. Placing Companions and skipping their Tiled placement happen in the Phaser Scene and are verified manually.
 - No tests for the call sites (Engine ready, after a Script, on dismiss), the Engine's blocking toggle (a thin grid-engine wrapper), or the Choice's Flag writes (the existing Choice path is already tested).
 
 ### Out of Scope
 
-- **Carrying a Companion across Maps**: decided above, built in a later ticket blocked by #3, because no Map transition exists yet.
 - **Talking to a Companion**: a future feature.
 - **Durable Companions across a page refresh**: waits on durable Flags, which is a separate concern.
 - **Companion-specific movement** (keeping a distance, trailing the Player's footsteps, formations): grid-engine's chase at gap 0 only.

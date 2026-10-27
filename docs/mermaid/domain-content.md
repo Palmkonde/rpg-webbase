@@ -36,6 +36,7 @@ classDiagram
   Host ..> WorldConfig : supplies
   WorldConfig --> Map : active
   WorldConfig --> Player : position and Character
+  WorldConfig --> Companion : carries onto every Map
   Engine ..> WorldConfig : reads
   Engine ..> EngineEvent : emits
   EngineEvent <|-- Interaction
