@@ -1,8 +1,10 @@
 import type { CgFrame, CgRegistry } from './cg.ts'
-import type { ContentCatalogs, WorldConfig } from '@codeleagues-rpg-engine/engine-core'
+import type { ContentCatalogs, TransitionedEvent, WorldConfig } from '@codeleagues-rpg-engine/engine-core'
+import type { Flags } from './flags.ts'
 import type { PortraitRegistry } from './portraits.ts'
 import type { ServiceCalls } from './game-service.ts'
 import type { StringTable } from './strings.ts'
+import { companionsOf } from './companions.ts'
 import { parseStringTable } from './strings.ts'
 
 // The manifest a World Version carries, as the Game Service serves it. Every `key` names a file under the version's `assetBaseUrl`.
@@ -32,8 +34,10 @@ export function fileUrl({ assetBaseUrl }: WorldVersion, key: string): string {
   return assetBaseUrl + key
 }
 
-export function worldConfigOf({ manifest: { start } }: WorldVersion): WorldConfig {
-  return { mapId: start.map, player: { spawn: start.spawn, characterId: start.player } }
+// At the World's start or where a Transition arrives, carrying the active Companions on every mount (adr/0028).
+export function worldConfigOf({ manifest: { start } }: WorldVersion, flags: Readonly<Flags>, arrival?: Pick<TransitionedEvent, 'toMapId' | 'spawn'>): WorldConfig {
+  const player = { spawn: arrival?.spawn ?? start.spawn, characterId: start.player }
+  return { mapId: arrival?.toMapId ?? start.map, player, companions: companionsOf(flags) }
 }
 
 export function catalogsOf(version: WorldVersion): ContentCatalogs {

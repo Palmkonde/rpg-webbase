@@ -1,4 +1,4 @@
-import { consoleCalls, settle, startSession } from './helpers.ts'
+import { consoleCalls, createFakeService, settle, startSession } from './helpers.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
@@ -12,7 +12,7 @@ test('a Transition destroys the Engine and starts one on the target Map at the S
   await settle()
 
   assert.ok(engine.calls.includes('destroy'))
-  assert.deepEqual(engine.created?.worldConfig, { mapId: 'school', player: { spawn: { x: 5, y: 1 }, characterId: 'fluffy' } })
+  assert.deepEqual(engine.created?.worldConfig, { mapId: 'school', player: { spawn: { x: 5, y: 1 }, characterId: 'fluffy' }, companions: [] })
 })
 
 test('a Transition ends the Dialogue on screen', async () => {
@@ -61,4 +61,23 @@ test('a Zone entered while the arrival Script plays is dropped, so the arrival s
   engine.emit({ type: 'zoneEntered', zoneId: 'Gate' })
   await settle()
   assert.deepEqual(session.getSnapshot().dialogue, { ...ARRIVAL_LINE, text: 'You pass the gate.' })
+})
+
+test('a Transition carries every recruited Companion to the target Map, with its Character', async () => {
+  const { engine } = await startSession({ service: createFakeService({ 'companion:Guard': 'fluffy' }).service })
+
+  engine.emit(TO_SCHOOL)
+  await settle()
+
+  assert.deepEqual(engine.created?.worldConfig.companions, [{ entityId: 'Guard', characterId: 'fluffy' }])
+})
+
+test('a Companion dismissed before a Transition stays behind', async () => {
+  const { session, engine } = await startSession({ service: createFakeService({ 'companion:Guard': 'fluffy' }).service })
+  await session.dismissCompanion('Guard')
+
+  engine.emit(TO_SCHOOL)
+  await settle()
+
+  assert.deepEqual(engine.created?.worldConfig.companions, [])
 })
