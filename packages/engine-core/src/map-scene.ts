@@ -1,15 +1,16 @@
 import * as Phaser from 'phaser'
 import type { AnimationFrame, TiledMapAssets } from './tiled-assets.ts'
 import { CHARACTER_COLLISION_GROUP, createCutsceneMovement } from './cutscene-movement.ts'
-import type { CharacterDefinition, EngineEvent, MapDefinition, WorldConfig } from './types.ts'
+import type { CharacterData, GridEngine } from 'grid-engine'
+import type { CharacterDefinition, EngineEvent, MapDefinition, ResolvedCompanion, WorldConfig } from './types.ts'
 import type { EntityObject, Facing, TileCoord } from './map-objects.ts'
 import type { RegionWatch, ResolvedPortal } from './regions.ts'
+import { computeCameraBounds, firstFreeNeighbour } from './util.ts'
 import { preloadCharacterSprite, resolveCharacterTexture } from './character-assets.ts'
 import { watchPortals, watchZones } from './regions.ts'
 import type { CutsceneMovement } from './cutscene-movement.ts'
 import { Direction } from 'grid-engine'
-import type { GridEngine } from 'grid-engine'
-import { computeCameraBounds } from './util.ts'
+import type { TileSize } from './character-assets.ts'
 import { stepAnimation } from './tile-animation.ts'
 
 export const PLAYER_ID = 'player'
@@ -48,6 +49,7 @@ export interface MapSceneConfig {
   map: MapDefinition
   character: CharacterDefinition
   characterEntities: CharacterEntity[]
+  companions: ResolvedCompanion[]
   portals: ResolvedPortal[]
   worldConfig: WorldConfig
   assets: TiledMapAssets
@@ -56,9 +58,8 @@ export interface MapSceneConfig {
   onCreated: () => void
 }
 
-export function createMapScene({ map, character, characterEntities, portals, worldConfig, assets, onEvent, onCreated }: MapSceneConfig): typeof Phaser.Scene {
-  const characterEntityIds = new Set(characterEntities.map(({ entity }) => entity.entityId))
-
+export function createMapScene({ map, character, characterEntities, companions, portals, worldConfig, assets, onEvent, onCreated }: MapSceneConfig): typeof Phaser.Scene {
+  const companionIds = new Set(worldConfig.companions.map(({ entityId }) => entityId))
   return class MapScene extends Phaser.Scene implements HostScene {
     public declare gridEngine: GridEngine
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
@@ -67,6 +68,7 @@ export function createMapScene({ map, character, characterEntities, portals, wor
     private animatedTiles: AnimatedTile[] = []
     private paused = false
     private cutsceneMovement!: CutsceneMovement
+    private tileSize!: TileSize
 
     public constructor() {
       super(MAP_SCENE_KEY)
@@ -102,7 +104,7 @@ export function createMapScene({ map, character, characterEntities, portals, wor
       for (const { key, url } of assets.images) {
         this.load.image(key, url)
       }
-      const sheets = new Map([character, ...characterEntities.map((entry) => entry.character)].map((sheet) => [sheet.id, sheet]))
+      const sheets = new Map([character, ...[...characterEntities, ...companions].map((entry) => entry.character)].map((sheet) => [sheet.id, sheet]))
       for (const sheet of sheets.values()) {
         preloadCharacterSprite(this, sheet)
       }
@@ -172,38 +174,41 @@ export function createMapScene({ map, character, characterEntities, portals, wor
     }
 
     private createCharacters(tilemap: Phaser.Tilemaps.Tilemap): void {
-      const tileSize = { width: tilemap.tileWidth, height: tilemap.tileHeight }
-      const playerTexture = resolveCharacterTexture(this, character, tileSize)
-      const playerSprite = this.add.sprite(0, 0, playerTexture.key)
+      this.tileSize = { width: tilemap.tileWidth, height: tilemap.tileHeight }
+      const entityCharacters = characterEntities.map(({ entity, character: sheet }) => ({
+        ...this.createCharacterData(entity.entityId, sheet, entity),
+        facingDirection: FACING_DIRECTIONS[entity.facing!],
+      }))
 
-      const entityCharacters = characterEntities.map(({ entity, character: sheet }) => {
-        const texture = resolveCharacterTexture(this, sheet, tileSize)
-        return {
-          id: entity.entityId,
-          sprite: this.add.sprite(0, 0, texture.key),
-          walkingAnimationMapping: texture.walkingAnimationMapping,
-          startPosition: { x: entity.x, y: entity.y },
-          facingDirection: FACING_DIRECTIONS[entity.facing!],
-          charLayer: PLAYER_LAYER,
-          offsetY: sheet.offsetY,
-          collides: { collisionGroups: [CHARACTER_COLLISION_GROUP] },
+      this.gridEngine.create(tilemap, { characters: [this.createCharacterData(PLAYER_ID, character, worldConfig.player.spawn), ...entityCharacters] })
+      this.placeCompanions()
+    }
+
+    private createCharacterData(id: string, sheet: CharacterDefinition, { x, y }: TileCoord): CharacterData {
+      const texture = resolveCharacterTexture(this, sheet, this.tileSize)
+      return {
+        id,
+        sprite: this.add.sprite(0, 0, texture.key),
+        walkingAnimationMapping: texture.walkingAnimationMapping,
+        startPosition: { x, y },
+        charLayer: PLAYER_LAYER,
+        offsetY: sheet.offsetY,
+        collides: { collisionGroups: [CHARACTER_COLLISION_GROUP] },
+      }
+    }
+
+    // Placed blocking, so the next Companion can't land on this one's tile until the Host's Companion sync unblocks it.
+    private placeCompanions(): void {
+      const isBlocked = (tile: TileCoord): boolean => this.gridEngine.isBlocked(tile, PLAYER_LAYER, [CHARACTER_COLLISION_GROUP])
+
+      for (const { entityId, character: sheet } of companions) {
+        const tile = firstFreeNeighbour(worldConfig.player.spawn, isBlocked)
+        if (tile) {
+          this.gridEngine.addCharacter(this.createCharacterData(entityId, sheet, tile))
+        } else {
+          console.warn(`[engine] Map "${map.id}" has no free tile next to the Spawn Point for Companion "${entityId}"; skipped`)
         }
-      })
-
-      this.gridEngine.create(tilemap, {
-        characters: [
-          {
-            id: PLAYER_ID,
-            sprite: playerSprite,
-            walkingAnimationMapping: playerTexture.walkingAnimationMapping,
-            startPosition: { x: worldConfig.player.spawn.x, y: worldConfig.player.spawn.y },
-            charLayer: PLAYER_LAYER,
-            offsetY: character.offsetY,
-            collides: { collisionGroups: [CHARACTER_COLLISION_GROUP] },
-          },
-          ...entityCharacters,
-        ],
-      })
+      }
     }
 
     private setupRegions(): void {
@@ -270,9 +275,10 @@ export function createMapScene({ map, character, characterEntities, portals, wor
 
       const facing = this.gridEngine.getFacingPosition(PLAYER_ID)
       const entity = assets.entities.find((candidate) => {
-        // A walked Character Entity is no longer at its authored tile.
-        const pos = characterEntityIds.has(candidate.entityId) ? this.gridEngine.getPosition(candidate.entityId) : candidate
-        return pos.x === facing.x && pos.y === facing.y
+        // A walked Character Entity is no longer at its authored tile, and a Companion's tile is never used, so a skipped one stays skipped.
+        const placed = this.gridEngine.hasCharacter(candidate.entityId)
+        const pos = placed ? this.gridEngine.getPosition(candidate.entityId) : candidate
+        return (placed || !companionIds.has(candidate.entityId)) && pos.x === facing.x && pos.y === facing.y
       })
       
       if (entity) {

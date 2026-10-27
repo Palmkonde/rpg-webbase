@@ -1,3 +1,5 @@
+import type { TileCoord } from './map-objects.ts'
+
 export interface CameraBounds {
   x: number
   y: number
@@ -21,4 +23,9 @@ export function findDuplicates(values: string[]): string[] {
     seen.add(value)
   }
   return [...duplicates]
+}
+
+export function firstFreeNeighbour(spawn: TileCoord, isBlocked: (tile: TileCoord) => boolean): TileCoord | undefined {
+  const { x, y } = spawn
+  return [{ x, y: y + 1 }, { x: x - 1, y }, { x: x + 1, y }, { x, y: y - 1 }].find((tile) => !isBlocked(tile))
 }

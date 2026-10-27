@@ -4,7 +4,7 @@ import type { CharacterEntity, HostScene, MapSceneConfig } from './map-scene.ts'
 import type { EntityObject, PortalObject, TileCoord } from './map-objects.ts'
 import { MAP_SCENE_KEY, PLAYER_ID, createMapScene } from './map-scene.ts'
 import { findOverlappingPortals, findOverlappingZoneIds } from './map-objects.ts'
-import { resolveCharacter, resolveMap } from './world-config.ts'
+import { resolveCharacter, resolveCompanions, resolveMap } from './world-config.ts'
 import { GridEngine } from 'grid-engine'
 import type { ResolvedPortal } from './regions.ts'
 import type { TiledMapAssets } from './tiled-assets.ts'
@@ -68,6 +68,12 @@ function resolvePortals(mapId: string, portals: PortalObject[], maps: MapDefinit
   })
 }
 
+// A Companion's own Tiled placement is skipped, since it appears beside the Player instead (adr/0028, provisional).
+function withoutCompanions(entities: EntityObject[], { companions }: WorldConfig): EntityObject[] {
+  const companionIds = new Set(companions.map(({ entityId }) => entityId))
+  return entities.filter(({ entityId }) => !companionIds.has(entityId))
+}
+
 // An unknown characterId is an authoring mistake: warn and skip that Entity rather than fail the whole Map load.
 function resolveCharacterEntities(mapId: string, entities: EntityObject[], catalog: CharacterDefinition[]): CharacterEntity[] {
   const resolved: CharacterEntity[] = []
@@ -122,11 +128,12 @@ export async function createEngine(container: HTMLElement, options: CreateEngine
   const character = resolveCharacter(worldConfig, catalogs.characters)
   const assets = await collectTiledMapAssets(map.tiledMapUrl, assetBaseUrl)
 
-  const characterEntities = resolveCharacterEntities(map.id, assets.entities, catalogs.characters)
+  const characterEntities = resolveCharacterEntities(map.id, withoutCompanions(assets.entities, worldConfig), catalogs.characters)
+  const companions = resolveCompanions(worldConfig, catalogs.characters)
   warnAuthoringMistakes(map.id, assets)
 
   const portals = resolvePortals(map.id, assets.portals, catalogs.maps)
-  const game = await startGame(container, { map, character, characterEntities, portals, worldConfig, assets, onEvent })
+  const game = await startGame(container, { map, character, characterEntities, companions, portals, worldConfig, assets, onEvent })
 
   return {
     destroy: () => {game.destroy(true)},
