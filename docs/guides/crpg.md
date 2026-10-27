@@ -131,7 +131,7 @@ An error stops the Publish. A warning doesn't, but it usually means something wo
 
 | Area | Warnings |
 |---|---|
-| Scripts | An `on interact(...)` or `on enter(...)` naming an Entity or Zone that is on no Map |
+| Scripts | An `on interact(...)` or `on enter(...)` naming an Entity or Zone that is on no Map, or an `on arrive(...)` naming no Map |
 
 How each file should look is in [`content-folder.md`](content-folder.md).
 

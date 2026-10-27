@@ -15,7 +15,7 @@ export interface ScriptFacts {
   characters: Mention[]
   cgs: Mention[]
   portraits: { speaker: string; expression: string; path: string; line: number }[]
-  handlers: { trigger: 'interact' | 'enter'; id: string; path: string; line: number }[]
+  handlers: { trigger: 'interact' | 'enter' | 'arrive'; id: string; path: string; line: number }[]
 }
 
 export type Compiled =
