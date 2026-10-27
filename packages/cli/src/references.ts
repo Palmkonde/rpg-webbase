@@ -1,7 +1,7 @@
 import type { Context, Problem } from './problem.ts'
+import type { MapInfo, Maps } from './maps.ts'
 import { errorAt, warningAt } from './problem.ts'
 import { extensionOf, filesUnder, isFile, isId, isRaw, readJsonObject } from './files.ts'
-import type { Maps } from './maps.ts'
 import type { ScriptFacts } from './clsc.ts'
 
 export const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif'])
@@ -69,8 +69,15 @@ export async function cgProblems(context: Context, facts: ScriptFacts): Promise<
   return checked.flat()
 }
 
-function isOnAMap(maps: Maps, trigger: string, id: string): boolean {
-  return [...maps.byId.values()].some((map) => (trigger === 'interact' ? map.entities : map.zones).includes(id))
+function isOnAMap(maps: Maps, objects: (map: MapInfo) => string[], id: string): boolean {
+  return [...maps.byId.values()].some((map) => objects(map).includes(id))
+}
+
+// What a handler's id must name for each trigger, and how a warning says it doesn't.
+const HANDLER_TARGETS: Record<ScriptFacts['handlers'][number]['trigger'], { exists: (maps: Maps, id: string) => boolean; missing: string }> = {
+  interact: { exists: (maps, id) => isOnAMap(maps, (map) => map.entities, id), missing: 'an Entity that is on no Map' },
+  enter: { exists: (maps, id) => isOnAMap(maps, (map) => map.zones, id), missing: 'a Zone that is on no Map' },
+  arrive: { exists: (maps, id) => maps.byId.has(id), missing: 'a Map that does not exist' },
 }
 
 // Only a warning: the handler may be waiting on a Map that isn't finished yet.
@@ -79,6 +86,6 @@ export function handlerProblems(facts: ScriptFacts, maps: Maps): Problem[] {
     return []
   }
   return facts.handlers
-    .filter(({ trigger, id }) => !isOnAMap(maps, trigger, id))
-    .map(({ trigger, id, path, line }) => warningAt(path, `on ${trigger}(${id}) names ${trigger === 'interact' ? 'an Entity' : 'a Zone'} that is on no Map`, line))
+    .filter(({ trigger, id }) => !HANDLER_TARGETS[trigger].exists(maps, id))
+    .map(({ trigger, id, path, line }) => warningAt(path, `on ${trigger}(${id}) names ${HANDLER_TARGETS[trigger].missing}`, line))
 }

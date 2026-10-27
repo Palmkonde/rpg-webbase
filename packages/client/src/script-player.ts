@@ -30,6 +30,9 @@ export class ScriptPlayer {
   // Only one run exists at a time (adr/0030).
   private run: Run | undefined
 
+  // The last arrival run started; it is the one in flight only while it equals `run`.
+  private arrival: Run | undefined
+
   // Set only while a prompt waits for the Player, so a stray or double click while the run is busy can't skip a line or pick twice.
   private waitingFor: ScriptPrompt['type'] | undefined
 
@@ -86,12 +89,25 @@ export class ScriptPlayer {
   }
 
   // The Zone-seen gate is the Host's, so it runs before dispatch (adr/0018 as amended by adr/0030).
+  // Dropped while an arrival plays, so a Zone under the arrival Spawn Point neither cuts it off nor counts as seen (adr/0047).
   public runZoneEntered = async (zoneId: string, isStale: () => boolean): Promise<void> => {
+    if (this.run !== undefined && this.run === this.arrival) {return}
     await this.endRun()
     const flags = await this.flags.getFlags()
     if (flags[zoneSeenFlag(zoneId)] === true || isStale()) {return}
     const run = this.program?.start('enter', zoneId, flags)
     if (run) {await this.startZoneRun(zoneId, run)}
+  }
+
+  // No seen gate: a Map-entry plays on every arrival unless its Script gates itself (adr/0047).
+  public runMapArrival = async (mapId: string, isStale: () => boolean): Promise<void> => {
+    await this.endRun()
+    const flags = await this.flags.getFlags()
+    if (isStale()) {return}
+    const run = this.program?.start('arrive', mapId, flags)
+    if (!run) {return}
+    this.arrival = run
+    await this.startRun(run)
   }
 
   // A Zone counts as seen when its run starts (adr/0030); the caller's stale check is the last one, so a stale entry never burns the Flag.

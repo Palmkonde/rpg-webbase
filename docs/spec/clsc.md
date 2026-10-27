@@ -131,7 +131,7 @@ The spec fixes what the file contains, not its byte layout. The layout is worked
 - A string pool: line text, keys and names.
 - Flag declarations, each with its type and default. This includes the compiler-declared once-only Flags.
 - Command declarations from the prelude: name, arguments, which block kinds allow it, and whether it waits.
-- A handler index keyed by (trigger, id), with `interact` and `enter` as separate namespaces.
+- A handler index keyed by (trigger, id), with `interact`, `enter` and `arrive` as separate namespaces (`arrive`: `adr/0047`).
 - The blocks, each a flat instruction list (`adr/0030`).
 - The opcode table lives in Rust, and `build.rs` generates the TS opcode constants.
 - `clsc disasm` prints all of the above.
@@ -165,7 +165,7 @@ The spec fixes what the file contains, not its byte layout. The layout is worked
 ### Host
 
 - **Startup.** The Host fetches the bytecode once, the same way it fetches Maps, then loads it into the VM with its command handlers. A missing file, a version mismatch or a missing handler fails startup with a message that says which.
-- **Dispatch.** The Script player, the Host's single entry for Interactions and Zone entries, runs its existing gates first (no talking to Companions, the Zone-seen Flag). It then calls `start` for (trigger, id). If a run comes back, the VM drives it. Otherwise nothing happens. Only one run exists at a time.
+- **Dispatch.** The Script player, the Host's single entry for Interactions, Zone entries and Map arrivals (`adr/0047`), runs its existing gates first (no talking to Companions, the Zone-seen Flag, no Zone entry while an arrival plays). It then calls `start` for (trigger, id). If a run comes back, the VM drives it. Otherwise nothing happens. Only one run exists at a time.
 - **Commands.** The prelude declares `move` (waits) and `follow` (doesn't wait). Their Host handlers call the Engine's existing Movement and Follow APIs. The Host tracks the followers that `follow` started and stops them at `unfreeze`. The Follow gap is always 0 in v1.
 - **Overlay.** One overlay serves every VM run. It resolves keys with the existing String Table lookup and the current Locale, shows Portraits from Speaker and Expression, and shows dismiss only while not frozen.
 - **CG.** A `cg` output plays through the existing CG playback. Once-only gating moves from `runOnce` to the Script's own marker.
@@ -210,7 +210,7 @@ The spec fixes what the file contains, not its byte layout. The layout is worked
 - **Resuming a run partway through** after a reload or remount.
 - **Player-switchable translation** (English and Thai, including translated Speaker names). That's v2, and `@key` lines are the route to it.
 - **Getting the compiler into a deploy build.** No deploy target exists yet.
-- **Left out of the v1 language:** numbers and arithmetic, string interpolation, `/* */` comments, a Follow gap other than 0, a default Speaker, parameterised Cutscenes, `play(dialogue::x)`, Map-entry handlers, and commands that return values.
+- **Left out of the v1 language:** numbers and arithmetic, string interpolation, `/* */` comments, a Follow gap other than 0, a default Speaker, parameterised Cutscenes, `play(dialogue::x)`, and commands that return values.
 - **Moving the VM to Rust/WASM.** That would be a separate effort.
 
 ## Further Notes

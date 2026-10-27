@@ -86,7 +86,7 @@
       ]
     },
     "handler-trigger": {
-      "match": "\\b(on)\\s+(interact|enter)\\b(?:\\s*\\(\\s*([A-Za-z_]\\w*)\\s*\\))?",
+      "match": "\\b(on)\\s+(interact|enter|arrive)\\b(?:\\s*\\(\\s*([A-Za-z_]\\w*)\\s*\\))?",
       "captures": {
         "1": { "name": "storage.type.clsc" },
         "2": { "name": "support.function.clsc" },

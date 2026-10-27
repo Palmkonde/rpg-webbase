@@ -17,3 +17,15 @@ test('an on enter handler naming a Zone on no Map is a warning', async () => {
   expectPass(run)
   assert.match(run.output, /Zone/u)
 })
+
+test('an on arrive handler naming no Map is a warning', async () => {
+  const run = await check({ [STORY]: 'speaker Sign;\non arrive(nowhere) with Sign {\n    Sign: "x";\n}\n' })
+  expectPass(run)
+  assert.match(run.output, /on arrive\(nowhere\) names a Map that does not exist/u)
+})
+
+test('an on arrive handler naming a Map is no warning', async () => {
+  const run = await check({ [STORY]: 'speaker Sign;\non arrive(start) with Sign {\n    Sign: "x";\n}\n' })
+  expectPass(run)
+  assert.match(run.output, /0 warnings/u)
+})

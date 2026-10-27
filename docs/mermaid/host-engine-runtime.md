@@ -33,4 +33,5 @@ sequenceDiagram
   Host->>Engine: tear down and recreate with the new World Config
   Engine-->>Host: Map loaded
   Host->>Engine: re-apply Companion Flags
+  Host->>VM: run the target Map's arrive Script, if it has one
 ```

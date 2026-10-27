@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { loadProgram } from '../src/program.ts'
 import { test } from 'node:test'
 
-test('interact and enter keep separate namespaces, so one id can have a handler for each', async () => {
+test('interact, enter and arrive keep separate namespaces, so one id can have a handler for each', async () => {
   const program = loadProgram(await compiled('basics'), {})
   assert.deepEqual(play(program, { on: ['interact', 'Camp'] }), [
     { type: 'line', speaker: 'Narrator', expression: 'Neutral', text: 'You talk to the camp.' },
@@ -11,6 +11,10 @@ test('interact and enter keep separate namespaces, so one id can have a handler 
   ])
   assert.deepEqual(play(program, { on: ['enter', 'Camp'] }), [
     { type: 'line', speaker: 'Narrator', expression: 'Neutral', text: 'You walk into the camp.' },
+    { type: 'done' },
+  ])
+  assert.deepEqual(play(program, { on: ['arrive', 'Camp'] }), [
+    { type: 'line', speaker: 'Narrator', expression: 'Neutral', text: 'You arrive at the camp.' },
     { type: 'done' },
   ])
 })

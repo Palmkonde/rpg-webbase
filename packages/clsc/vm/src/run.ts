@@ -1,6 +1,6 @@
 import { Opcode } from './opcodes.ts'
 
-export type Trigger = 'interact' | 'enter'
+export type Trigger = 'interact' | 'enter' | 'arrive'
 
 export type Flags = Readonly<Record<string, boolean | number | string>>
 

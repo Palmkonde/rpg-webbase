@@ -23,6 +23,16 @@ Judgement-call rules for review, adapted from Robert C. Martin's *Clean Code* (c
 - **Do one thing.** A function either answers a question or changes state (command-query separation). When it has to do both, the name says both.
 - **No flag arguments.** A boolean that picks between two behaviours means there are two functions.
 
+## Vertical spacing [ch. 5]
+
+Applies to TypeScript and Rust, tests included. No formatter enforces it, so review does. A change that edits a function spaces that whole function; code a change doesn't touch stays as it is.
+
+- **A blank line separates the steps of a function.** Each step is something a reader would name on its own (guard, gather inputs, act, report). The lines of one step stay together. *Hit:* `ScriptPlayer.runZoneEntered` ran its arrival guard, its Flag read and its dispatch as one unbroken block of seven lines.
+- **A function of three statements or fewer needs none.**
+- **A multi-line `if`, `try`, loop or `match` has a blank line before and after it**, unless it opens or closes the block around it.
+- **A comment inside a function keeps a blank line above it.**
+- **Never two blank lines in a row, and none straight after `{` or before `}`.**
+
 ## Boundaries [ch. 8]
 
 - **External data is parsed once, at its seam.** Raw Tiled JSON becomes typed values in `tiled-assets.ts` (tilesets) and `map-objects.ts` (Entities, Zones, Portals), including defaults. The Scene and Host consume those types and never re-parse or re-default a raw string. *Hit:* the `facing` default existed in both `tiled-assets.ts` and `map-scene.ts`.

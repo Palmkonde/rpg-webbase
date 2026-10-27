@@ -8,7 +8,7 @@ sequenceDiagram
   participant VM as Script VM (TypeScript)
   participant Engine as Engine
 
-  Author->>Src: write on interact(Guard), on enter(Zone), cutscene, cg
+  Author->>Src: write on interact(Guard), on enter(Zone), on arrive(Map), cutscene, cg
   Author->>Compiler: build (next build, clsc build --watch, or publish)
   Compiler->>Src: read every .clsc file as one program
   Compiler->>Compiler: type-check Flags, Speakers, Movers, Characters

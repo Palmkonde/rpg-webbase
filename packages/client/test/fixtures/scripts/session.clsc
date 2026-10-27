@@ -31,3 +31,7 @@ cutscene statue_stares with Narrator {
 on enter(Gate) with Narrator {
     Narrator: "You pass the gate.";
 }
+
+on arrive(school) with Narrator {
+    Narrator: "You arrive at the school.";
+}
