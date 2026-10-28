@@ -26,7 +26,7 @@
   "devDependencies": {
     "@codeleagues-rpg-engine/game-service": "*",
     "@types/node": "^26.6.5",
-    "tsdown": "^0.23.0",
+    "tsdown": "^0.23.2",
     "typescript": "^7.0.2"
   }
 }
