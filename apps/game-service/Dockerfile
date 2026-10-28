@@ -12,7 +12,7 @@ RUN case "$TARGETARCH" in amd64) target=bun-linux-x64 ;; arm64) target=bun-linux
       --no-compile-autoload-dotenv --no-compile-autoload-bunfig \
       --asset drizzle --outfile /out/game-service src/main.ts
 
-FROM gcr.io/distroless/base-nossl-debian13:nonroot@sha256:83df5862465415c1d5f3ade85adc4d58a922db94e0b4d26c83a1bf96d5adf72d
+FROM gcr.io/distroless/base-nossl-debian13:nonroot@sha256:6a2a3346335b94d3be0732472245f42ca3ce3cc1135a9521a2bda4b677f2ef0d
 COPY --from=build /out/game-service /game-service
 USER 65532
 EXPOSE 3000
