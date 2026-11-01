@@ -33,6 +33,15 @@ Anyone asking for something new (a Platform developer, a future adopter of this 
   - **Declined**: label `wontfix`, write or extend `.out-of-scope/<concept>.md` (the `/triage` knowledge base, one file per concept), close as not planned.
   - **Deferred**: close as not planned, with a "Revisit when" line naming what would reopen it, and no `.out-of-scope/` entry, since it isn't rejected.
 - An accepted request never takes `/triage`'s `ready-for-agent`/`ready-for-human` shortcut: it always goes through the spec and tickets.
+
+## Bug reports
+
+Behaviour that exists but goes wrong is filed with `.github/ISSUE_TEMPLATE/bug-report.yml`, not as a request or a ticket.
+
+- **Title**: what goes wrong, with a `[Bug] ` prefix ("[Bug] Player isn't frozen while an `on arrive` handler plays"). Like `[Request] `, an exception to the no-prefix title rule for tickets.
+- **Lifecycle**: filed with `bug` + `needs-triage` → `/triage` (to `needs-info` while waiting on the filer), which reproduces it, then:
+  - **Confirmed**: `/diagnosing-bugs` finds the root cause, then the fix goes on a branch `<issue>-<slug>` with a PR whose body says `Closes #<number>`, as for a ticket.
+  - **Working as designed**: close as not planned, with a comment naming the ADR or spec section that says so. If the design should change, link a feature request filed for it.
 - **Decision comment** (an agent posting it starts with `/triage`'s AI disclaimer line):
 
   ```markdown

@@ -135,15 +135,19 @@ A Cutscene step in which one character (the Player or a Character Entity, the *f
 _Avoid_: Escort, chase, target (a Movement step's *target* is a destination tile, not a character)
 
 **CG**:
-A full-screen illustrated slideshow — static art and captions the Player advances by clicking, and can skip entirely. Has no Dialogue/Choice/Movement steps and never takes control through them the way a Cutscene does; that structural difference, not what triggers it, is what separates the two. Freezes the Player for its duration the same way a Cutscene does whenever a Script plays one mid-game. Like a Cutscene, it plays every time unless it's marked once-only.
+A full-screen illustrated slideshow — static art and Captions the Player advances by clicking, and can skip entirely. Each click shows the next Caption; the art changes only where the CG says to, so one picture can carry several Captions. It can check Flags to vary what it shows, but its own steps never change one. Has no Dialogue/Choice/Movement steps and never takes control through them the way a Cutscene does; that structural difference, not what triggers it, is what separates the two. Freezes the Player for its duration the same way a Cutscene does whenever a Script plays one mid-game. Like a Cutscene, it plays every time unless it's marked once-only.
 _Avoid_: Cutscene (differ only in structure — no Dialogue/Choice/Movement steps — not in trigger; a CG can be a Script's output the same way a Cutscene can), splash screen
+
+**Caption**:
+A piece of text a CG shows over its art, attributed to no one. One click of the Player moves past it.
+_Avoid_: Line (a line is Dialogue and always has a Speaker), subtitle, message
 
 **Speaker**:
 The character (or narrator) a line of Dialogue is attributed to. Not necessarily the Entity whose Script produced it — a Script can voice a different character, or an unplaced narrator, within its own Dialogue.
 _Avoid_: Entity (a Speaker need not be a placed, interactable Entity on the Map)
 
 **String Table**:
-The translatable home of Player-facing text: each entry is a key with one text per Locale. A line, choice, or locked reason in a Script either writes its English text in place or names a key from the String Table; only the keyed ones can be translated.
+The translatable home of Player-facing text: each entry is a key with one text per Locale. A line, choice, locked reason, or CG caption in a Script either writes its English text in place or names a key from the String Table; only the keyed ones can be translated.
 _Avoid_: Strings file, translation file, dictionary
 
 **Locale**:
