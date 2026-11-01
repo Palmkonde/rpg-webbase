@@ -2,7 +2,7 @@
 import { t } from 'elysia'
 
 // `<sha256 hex>.<extension>` (adr/0034): the same shape the blob routes accept.
-const key = t.String({ pattern: '^[0-9a-f]{64}\\.[a-z0-9]{1,16}$' })
+const key = t.String({ pattern: String.raw`^[0-9a-f]{64}\.[a-z0-9]{1,16}$` })
 
 const spawn = t.Object({ x: t.Integer(), y: t.Integer() })
 const start = t.Object({ map: t.String(), spawn, player: t.String() })
