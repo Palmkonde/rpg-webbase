@@ -210,7 +210,7 @@ The spec fixes what the file contains, not its byte layout. The layout is worked
 - **Resuming a run partway through** after a reload or remount.
 - **Player-switchable translation** (English and Thai, including translated Speaker names). That's v2, and `@key` lines are the route to it.
 - **Getting the compiler into a deploy build.** No deploy target exists yet.
-- **Left out of the v1 language:** numbers and arithmetic, string interpolation, `/* */` comments, a Follow gap other than 0, a default Speaker, parameterised Cutscenes, `play(dialogue::x)`, and commands that return values.
+- **Left out of the v1 language:** numbers and arithmetic, string interpolation, `/* */` comments, a Follow gap other than 0, a default Speaker, parameterised Cutscenes and `play(dialogue::x)`. Commands that return values were left out too, until `adr/0048` added Platform commands and `let` locals (`spec.md` → "Platform Commands: Battles and Lessons Started From a Script").
 - **Moving the VM to Rust/WASM.** That would be a separate effort.
 
 ## Further Notes
