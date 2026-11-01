@@ -138,6 +138,18 @@ _Avoid_: Escort, chase, target (a Movement step's *target* is a destination tile
 A full-screen illustrated slideshow — static art and captions the Player advances by clicking, and can skip entirely. Has no Dialogue/Choice/Movement steps and never takes control through them the way a Cutscene does; that structural difference, not what triggers it, is what separates the two. Freezes the Player for its duration the same way a Cutscene does whenever a Script plays one mid-game. Like a Cutscene, it plays every time unless it's marked once-only.
 _Avoid_: Cutscene (differ only in structure — no Dialogue/Choice/Movement steps — not in trigger; a CG can be a Script's output the same way a Cutscene can), splash screen
 
+**Platform command**:
+A step in a Script that hands control to one of the Platform's own features shown over the game, such as a coding challenge or a lesson page. The game knows only its name, its arguments, whether the Script waits for it to finish, and any result it hands back; what the feature does, and anything the Student earns from it, belongs to the Platform. The Player is frozen while the Script waits on one.
+_Avoid_: Hook, callback, integration, Engine Event (the Engine's facts outward; a Platform command is a Script's request to the Platform)
+
+**Battle**:
+A Platform command that opens a coding challenge over the game. The Script waits for it and learns only whether the Student won or gave up; grading, rewards and retries are the Platform's.
+_Avoid_: Combat, fight, coding combat, encounter
+
+**Lesson**:
+A Platform command that opens one of the Platform's learning pages over the game. The Script waits until the Student closes it and learns nothing else from it.
+_Avoid_: Tutorial, page, course (the Platform's own larger concept)
+
 **Speaker**:
 The character (or narrator) a line of Dialogue is attributed to. Not necessarily the Entity whose Script produced it — a Script can voice a different character, or an unplaced narrator, within its own Dialogue.
 _Avoid_: Entity (a Speaker need not be a placed, interactable Entity on the Map)
