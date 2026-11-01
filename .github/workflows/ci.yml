@@ -8,6 +8,9 @@ on:
   # The release workflow runs these same checks before it publishes anything.
   workflow_call:
 
+  # A PR opened with GITHUB_TOKEN never triggers `pull_request`, so combine-prs.yml dispatches CI on its branch.
+  workflow_dispatch:
+
 permissions:
   contents: read
 
