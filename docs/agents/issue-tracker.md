@@ -4,7 +4,7 @@ Tickets for this repo live as GitHub issues on `origin` (`Palmkonde/rpg-webbase`
 
 ## Conventions
 
-- The spec is a single, continuously-updated file: `docs/spec/spec.md`. Each grilling session appends/amends it in place — it is never published to the issue tracker.
+- The spec lives in `docs/spec/`: one file per feature, grouped by domain (`docs/spec/<domain>/<feature>.md`: `world`, `content`, `language`, `platform`), indexed by `docs/spec/README.md`, which also holds the cross-cutting decisions. A grilling session adds a new feature file or amends an existing one in place, and adds a new file to the index — the spec is never published to the issue tracker.
 - A ticket is one GitHub issue. There is no local `NN` numbering anymore — the issue number is the ticket's identifier.
 - A ticket's body follows `.github/ISSUE_TEMPLATE/ticket.md` — its sections, in its order. This overrides any skill's own built-in ticket template (e.g. `/to-tickets`'s `## Parent`-first shape).
 - A ticket's title is a present-tense behaviour sentence ("Walking into a Zone runs its Script, once"), with no prefix.
@@ -40,7 +40,7 @@ Anyone asking for something new (a Platform developer, a future adopter of this 
 
   **Why:** <one paragraph>
 
-  **Recorded in:** ADR-00NN, docs/spec/spec.md §<section>, GLOSSARY terms touched
+  **Recorded in:** ADR-00NN, docs/spec/<domain>/<feature>.md, GLOSSARY terms touched
   **Tickets:** #N, #N                          ← Accepted only
   **Revisit when:** <trigger>                  ← Deferred only
   **Out of scope:** .out-of-scope/<concept>.md ← Declined only

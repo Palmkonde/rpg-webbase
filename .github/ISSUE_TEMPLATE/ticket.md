@@ -16,7 +16,7 @@ about: Maintainers only — one tracer-bullet slice of the spec, pickable by an 
 
 ## Architecture notes
 
-<!-- The docs/spec/spec.md section and docs/adr/ entries this ticket must respect, plus any constraint an implementer needs. -->
+<!-- The docs/spec/<domain>/<feature>.md file and docs/adr/ entries this ticket must respect, plus any constraint an implementer needs. -->
 
 ## Acceptance criteria
 

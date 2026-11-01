@@ -1,13 +1,13 @@
 # CLAUDE.md
 
-RPG-gamification game-engine playground (Phaser + Tiled). Full spec: `docs/spec/spec.md`; domain vocab: `GLOSSARY.md`.
+RPG-gamification game-engine playground (Phaser + Tiled). Spec: `docs/spec/` (index `docs/spec/README.md`); domain vocab: `GLOSSARY.md`.
 
 ## Workflow
 
 New feature work flow, in order:
 
 1. `/grill-with-docs` — sharpen idea, write decisions into `GLOSSARY.md` and `docs/adr/`
-2. `/to-spec` — collapse grilled thread into `docs/spec/spec.md`
+2. `/to-spec` — collapse grilled thread into `docs/spec/<domain>/<feature>.md` (new file, or amend existing), indexed in `docs/spec/README.md`
 3. `/to-tickets` — split spec into tracer-bullet tickets, published as GitHub issues (convention: `docs/agents/issue-tracker.md`)
 4. `/implement` per ticket
 
@@ -36,7 +36,7 @@ Atomic: group by logical concern (new package, new app, docs change = separate c
 - Hard-to-reverse architectural decisions → `docs/adr/`, sequentially numbered
 - Domain vocab → `GLOSSARY.md`, pure glossary, no implementation detail
 - Ticket completion → GitHub issue closes when PR merges (`Closes #NN` in PR body or commit message). No separate ticket-status commit; acceptance-criteria checkboxes not ticked live. Issue open/closed state = "is this finished" signal
-- Architecture, flow, domain diagrams → `docs/mermaid/`, one fenced `mermaid` block per file. Derived views: on conflict, ADRs, `GLOSSARY.md`, `docs/spec/spec.md` and `apps/game-service/src/schema.ts` win. Update matching diagram when one changes
+- Architecture, flow, domain diagrams → `docs/mermaid/`, one fenced `mermaid` block per file. Derived views: on conflict, ADRs, `GLOSSARY.md`, `docs/spec/` and `apps/game-service/src/schema.ts` win. Update matching diagram when one changes
 - Human-facing how-to reference (e.g. "what shape should this asset be") → `docs/guides/`, one topic per file. *How*, not *why* (ADR) or *what's confirmed* (spec). `.github/workflows/wiki.yml` mirrors it to GitHub wiki on merge; edit `docs/guides/`, never wiki. Add new guide to `docs/guides/README.md`, the index (and wiki Home)
 
 ## Assets
@@ -47,7 +47,7 @@ Atomic: group by logical concern (new package, new app, docs change = separate c
 
 ### Issue tracker
 
-GitHub Issues on repo `origin` (`Palmkonde/rpg-webbase`), via `gh` CLI. Spec = single, continuously-updated `docs/spec/spec.md`, never published to tracker. See `docs/agents/issue-tracker.md`, which also holds the feature-request lifecycle and the `/triage` label mapping ("Triage labels").
+GitHub Issues on repo `origin` (`Palmkonde/rpg-webbase`), via `gh` CLI. Spec = one file per feature under `docs/spec/<domain>/`, indexed by `docs/spec/README.md`, never published to tracker. See `docs/agents/issue-tracker.md`, which also holds the feature-request lifecycle and the `/triage` label mapping ("Triage labels").
 
 ### Domain docs
 
