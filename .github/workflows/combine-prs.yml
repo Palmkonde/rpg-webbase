@@ -1,0 +1,36 @@
+name: Combine Dependabot PRs
+
+# Merges every open `dependabot*` PR whose checks pass into one PR, so a week's bumps land in one rebase merge.
+# Dependabot opens its weekly PRs on Monday; this runs after CI has had time to finish on them. A PR that
+# conflicts with the others is skipped and listed in the combined PR's body: merge it on its own afterwards.
+on:
+  schedule:
+    - cron: '0 1 * * 3' # Wednesday 01:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write # pushes the combined branch
+  pull-requests: write # opens the combined PR
+  checks: read # `ci_required` reads each PR's check status
+  actions: write # dispatches ci.yml on the combined branch
+
+concurrency: combine-prs
+
+jobs:
+  combine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: github/combine-prs@v5.2.0
+        id: combine
+        with:
+          combine_branch_name: combined-dependabot-bumps
+          labels: combined-pr
+
+      # A PR opened with GITHUB_TOKEN never triggers `pull_request` workflows, and `main` requires lint,
+      # typecheck and test. `workflow_dispatch` is the one event GITHUB_TOKEN may trigger.
+      - name: Run CI on the combined branch
+        if: steps.combine.outputs.pr_number != ''
+        run: gh workflow run ci.yml --ref combined-dependabot-bumps
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
