@@ -63,7 +63,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@elysiajs/eden": "^1.4.9",
-        "grid-engine": "^2.52.1",
+        "grid-engine": "^2.53.0",
         "phaser": "^4.2.1",
       },
       "devDependencies": {
@@ -98,7 +98,7 @@
       "name": "@codeleagues-rpg-engine/engine-core",
       "version": "0.0.0",
       "dependencies": {
-        "grid-engine": "^2.52.1",
+        "grid-engine": "^2.53.0",
         "phaser": "^4.2.1",
       },
       "devDependencies": {
@@ -486,7 +486,7 @@
 
     "get-tsconfig": ["get-tsconfig@5.0.0-beta.6", "", { "dependencies": { "resolve-pkg-maps": "^1.0.0" } }, "sha512-X6fBC0pmImC70gvX2zm56go9hx0MyoGVdG0tUCkg/D+Xnh5TJsOZ7iDbOdI3PvmtrDxnu1YdDufpK2QJX1Meqw=="],
 
-    "grid-engine": ["grid-engine@2.52.1", "", { "dependencies": { "mnemonist": "^0.40.3", "rxjs": "^7.8.2", "tiled-property-flattener": "^1.1.1" }, "peerDependencies": { "phaser": "~4.0.0" } }, "sha512-+EAYI/L6g6wtHW0/gFRD1jnry20zeD6KOlCqKYEuilyrfbX2KF4UPnwRKsSynfzlRuvxkNsG/kmoViir6xxDuA=="],
+    "grid-engine": ["grid-engine@2.53.0", "", { "dependencies": { "mnemonist": "^0.40.3", "rxjs": "^7.8.2", "tiled-property-flattener": "^1.1.1" }, "peerDependencies": { "phaser": "~4.0.0" } }, "sha512-6Il+L4yWKfKcS7xJdzRUPaS1d8uEUDEiyO8Vo/j8KpsTw4FEljS4Je+DLmG3nH7jXnhAM4h5sHzGFf9/+rAQdg=="],
 
     "hookable": ["hookable@6.1.2", "", {}, "sha512-+abwxtiEA52GCVIsQqut3S/uKTbUwYIp4Pe/vv+6py5XiXBCqMZHg6pA6Y5qhgLSEys0/cYuPbO0z1QFj5ZCmg=="],
 
