@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "grid-engine": "^2.52.1",
+    "grid-engine": "^2.53.0",
     "phaser": "^4.2.1"
   },
   "devDependencies": {
