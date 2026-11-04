@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@codeleagues-rpg-engine/client": "*",
-    "jose": "^6.2.12",
+    "jose": "^6.2.14",
     "next": "^16.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.3.1"
