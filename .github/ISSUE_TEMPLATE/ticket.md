@@ -11,7 +11,7 @@ about: Maintainers only — one tracer-bullet slice of the spec, pickable by an 
 
 ## Blocked by
 
-<!-- One bullet per blocker with why it gates this one, e.g. "- #33 — needs EntityObject's characterId parsing". Otherwise: -->
+<!-- Mirrors the native "blocked by" edges (`gh issue create --blocked-by 33`), which win on drift. One bullet per blocker with why it gates this one, e.g. "- #33 — needs EntityObject's characterId parsing". Otherwise: -->
 - None (can start immediately)
 
 ## Architecture notes
