@@ -1,3 +1,7 @@
+---
+status: accepted (blocking clause superseded by adr/0049: blockers are native issue dependencies)
+---
+
 # Tickets Are Tracked as GitHub Issues, Not Local Markdown Files
 
 Local tickets under `docs/issues/<NN>-<slug>.md` made "is this done" only answerable by opening a file and reading a `**Status:**` line — the exact complaint that triggered this decision. We migrate ticket tracking to GitHub Issues on this repo's own `origin` (`Palmkonde/rpg-webbase`), via the `gh` CLI: `done` → closed issue, `ready-for-agent` → open issue + `ready-for-agent` label. `Blocked by:` stays a plain `#N` reference in the issue body (not GitHub's native issue-dependencies API — no UI-native chip is needed here, and it avoids resolving a database id per edge). Completing a ticket closes its issue via `Closes #NN` in the implementing commit rather than a separate ticket-file commit; acceptance criteria remain listed in the issue body but are no longer ticked box-by-box as work progresses — the issue's open/closed state alone is now the "is this finished" signal.
